@@ -65,9 +65,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 ### `REPO_MAP.md`
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` with no undocumented tracked files.
-- **Current assessment:** PASS after staged-index validation
-- **Evidence:** This file documents every intended G0 tracked path.
-- **Last meaningful change:** T0 Gate G0 completion, 2026-07-07.
+- **Current assessment:** PASS
+- **Evidence:** G0 commit `868d20d2d2cf17bef2992abe6b95d9d4152cd223` matched the map exactly; this update adds the two T0 tracked paths before the next staged-index validation.
+- **Last meaningful change:** T0 bootstrap map update, 2026-07-08.
 - **Owning task or gate:** All tasks; current T0 / G0.
 
 ### `SPEC.md`
@@ -97,24 +97,39 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 ### `package.json`
 - **Purpose:** Package identity, Node floor, executable mapping, exact dependencies, and validation scripts.
 - **Success check:** No dependency ranges; Node `>=22`; exact runtime pins; build/typecheck/test/start/pack scripts present.
-- **Current assessment:** PARTIAL
-- **Evidence:** Exact dependency pins and scripts exist; minimum bootstrap source/tests remain for T0 after G0.
-- **Last meaningful change:** T0 initialization, 2026-07-07.
+- **Current assessment:** PASS
+- **Evidence:** `npm ci`, `npm run typecheck`, `npm test`, and `npm run build` pass with exact dependency pins.
+- **Last meaningful change:** T0 bootstrap validation, 2026-07-08.
 - **Owning task or gate:** T0 / G1; later T15 packaging.
+
+### `src/cli.ts`
+- **Purpose:** Minimal executable bootstrap for version/help and explicit YOLO opt-in before runtime tasks begin.
+- **Success check:** `--version` prints package version, `--help` lists `loom launch --yolo` and macOS 14+, and plain `launch` exits nonzero without enabling access.
+- **Current assessment:** PASS
+- **Evidence:** Real subprocess tests pass 4/4 after the expected missing-module RED failure.
+- **Last meaningful change:** T0 CLI bootstrap, 2026-07-08.
+- **Owning task or gate:** T0 / G1; expanded by later CLI/runtime tasks.
+
+### `test/cli.test.ts`
+- **Purpose:** Real-process tests for package metadata and the minimum CLI security boundary.
+- **Success check:** Runs compiled CLI as a subprocess and proves version, help, macOS floor, exact pins, and refusal of plain launch.
+- **Current assessment:** PASS
+- **Evidence:** `node --test dist/test/cli.test.js` reports 4 passed, 0 failed.
+- **Last meaningful change:** T0 test-first bootstrap, 2026-07-08.
+- **Owning task or gate:** T0 / G1.
 
 ### `tsconfig.json`
 - **Purpose:** Strict NodeNext TypeScript compilation for source and tests.
-- **Success check:** `npm run typecheck` and `npm run build` pass once T0 bootstrap source/tests are added.
-- **Current assessment:** PARTIAL
-- **Evidence:** Strict options and source/test includes are configured; no source exists at G0.
-- **Last meaningful change:** T0 initialization, 2026-07-07.
+- **Success check:** `npm run typecheck` and `npm run build` pass with Node types loaded explicitly.
+- **Current assessment:** PASS
+- **Evidence:** Added `types: ["node"]`; clean-install typecheck and build pass.
+- **Last meaningful change:** T0 test-infrastructure correction, 2026-07-08.
 - **Owning task or gate:** T0 / G1.
 
 ## Planned paths by owning task
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T0 after G0:** minimum `src/cli.ts` and `test/cli.test.ts` package bootstrap.
 - **T1:** `src/limits.ts`, `src/paths.ts`, `src/atomic-file.ts`, `src/config.ts`, and corresponding tests.
 - **T2:** `src/output.ts`, `src/child-wrapper.ts`, `src/process-manager.ts`, `src/watchdog.ts`, and corresponding tests.
 - **T3:** `src/audit.ts`, `test/audit.test.ts`.

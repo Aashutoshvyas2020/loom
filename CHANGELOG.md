@@ -39,3 +39,40 @@ typescript@6.0.3
 wc -l ALGORITHM.md
 17 ALGORITHM.md
 ```
+
+## 2026-07-08
+
+### G0 — governance baseline complete
+
+- Committed the exact thirteen-file governance baseline at `868d20d2d2cf17bef2992abe6b95d9d4152cd223`.
+- Staged-index paths and `REPO_MAP.md` paths matched with an empty `comm -3` result.
+- `git diff --cached --check` returned no errors.
+- Repository was clean immediately after the commit.
+
+### T0 — minimum CLI/package bootstrap
+
+- Added a real subprocess test before production code.
+- Initial test compilation failed because Node types were not explicitly loaded; added `types: ["node"]` to `tsconfig.json` and reran.
+- Required RED then failed because `dist/src/cli.js` did not exist: metadata test passed and three CLI behavior tests failed as expected.
+- Added the minimum `src/cli.ts` implementation for `--version`, `--help`, and refusal of plain `loom launch` with the explicit `loom launch --yolo` instruction.
+- Targeted GREEN: 4 tests passed, 0 failed.
+- Full clean-install validation passed: `npm ci`, typecheck, full tests, and build; npm reported zero vulnerabilities.
+
+Evidence:
+
+```text
+node --test dist/test/cli.test.js
+pass 4
+fail 0
+
+npm ci
+added 106 packages, audited 107 packages
+found 0 vulnerabilities
+
+npm run typecheck
+PASS
+npm test
+PASS (4/4)
+npm run build
+PASS
+```

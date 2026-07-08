@@ -1,12 +1,12 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-07 23:59:35 PDT
+**Date and local time:** 2026-07-08 00:01:50 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA:** no commit yet
-**Repository state:** dirty; prepared G0 baseline is untracked
+**HEAD SHA:** `868d20d2d2cf17bef2992abe6b95d9d4152cd223`
+**Repository state:** dirty; completed T0 bootstrap changes are not yet committed
 **Current task:** T0 — Fresh repository and package bootstrap
-**Last completed gate:** none; G0 prepared but not yet committed/verified against the staged index
+**Last completed gate:** G0
 **Pushed or published:** no
 
 ## Required startup command
@@ -15,74 +15,63 @@
 cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build && git status --short
 ```
 
-## Commands run
+## Commands run this session
 
 ```bash
-git init -b planning/loom-v1-cavekit
-node --version
-npm --version
-npm view @modelcontextprotocol/sdk version dist-tags --json
-npm view express version --json
-npm view zod version --json
-npm view playwright-core version --json
-npm view typescript version --json
-npm view @types/node version --json
-npm view @types/express version --json
 cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build && git status --short
 npm install
 npm ls --depth=0
 wc -l ALGORITHM.md
+git add <G0 files>
+git ls-files | sort
+comm -3 <tracked paths> <REPO_MAP paths>
+git diff --cached --check
+git commit -m "chore: establish loom governance baseline"
+npm run build && node --test dist/test/cli.test.js
+npm run build && node --test dist/test/cli.test.js
+npm ci && npm run typecheck && npm test && npm run build
 ```
 
 ## Results
 
-- The exact startup command was run before edits. It failed at `npm ci` because the initial repository had no package lock, matching the prior handoff.
-- `npm install` generated `package-lock.json`, added 106 packages, audited 107 packages, and reported zero vulnerabilities.
-- Direct installed versions match the exact package pins:
-  - `@modelcontextprotocol/sdk@1.29.0`
-  - `express@5.2.1`
-  - `playwright-core@1.61.1`
-  - `zod@4.4.3`
-  - `typescript@6.0.3`
-  - `@types/node@26.1.0`
-  - `@types/express@5.0.6`
-- The full canonical implementation plan now exists at the required path.
-- The plan and SPEC incorporate the latest independent audit corrections and make `loom launch --yolo` the sole unrestricted launch path.
-- `REPO_MAP.md` documents the complete intended G0 tracked baseline and lists later source paths as planned rather than tracked.
-- `ALGORITHM.md` is 17 lines, within the 20-line limit.
-- The incomplete transfer fragment and temporary transfer test were removed.
+- Exact startup command was run before edits and initially failed at `npm ci` because no lockfile existed.
+- `npm install` generated the lockfile with exact pins and zero reported vulnerabilities.
+- G0 map comparison was empty, staged diff check passed, and the clean governance baseline was committed at `868d20d2d2cf17bef2992abe6b95d9d4152cd223`.
+- T0 test-first cycle:
+  - First run exposed missing explicit Node type loading; corrected `tsconfig.json`.
+  - Required RED then produced one pass and three failures because `dist/src/cli.js` was absent.
+  - Minimum `src/cli.ts` implementation added.
+  - Targeted GREEN: 4 passed, 0 failed.
+- Full validation passed:
+  - `npm ci`: 106 packages added, 107 audited, zero vulnerabilities.
+  - `npm run typecheck`: pass.
+  - `npm test`: pass, 4/4.
+  - `npm run build`: pass.
+- The minimum CLI now prints version/help, declares macOS 14+, lists `loom launch --yolo`, and refuses plain `loom launch` without starting unrestricted access.
 
 ## Known failures
 
-- G0 is not complete until the baseline is staged, the map is compared with `git ls-files`, the commit is created, and the repository is clean.
-- Typecheck/test/build are not expected to pass yet because the minimum T0 source and test bootstrap are intentionally deferred until after G0, per the no-production-code-before-G0 rule.
+None in T0 automated validation.
 
 ## Real blockers
 
 None.
 
-## Files changed
+## Files changed since HEAD
 
-- `.gitignore`
-- `AGENTS.md`
-- `ALGORITHM.md`
 - `CHANGELOG.md`
 - `HANDOFF.md`
-- `LICENSE`
-- `README.md`
 - `REPO_MAP.md`
-- `SPEC.md`
-- `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
-- `package-lock.json`
-- `package.json`
+- `src/cli.ts`
+- `test/cli.test.ts`
 - `tsconfig.json`
 
 ## Exact next command
 
 ```bash
-git add .gitignore AGENTS.md ALGORITHM.md CHANGELOG.md HANDOFF.md LICENSE README.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt package-lock.json package.json tsconfig.json && git ls-files | sort
+git add CHANGELOG.md HANDOFF.md REPO_MAP.md src/cli.ts test/cli.test.ts tsconfig.json && actual=$(mktemp) && mapped=$(mktemp) && git ls-files | sort > "$actual" && grep '^### `' REPO_MAP.md | sed -E 's/^### `([^`]*)`$/\1/' | sort > "$mapped" && comm -3 "$actual" "$mapped" && git diff --cached --check && rm -f "$actual" "$mapped"
 ```
 
 ## Next expected result
 
-The staged index contains exactly the thirteen paths documented under `## Tracked files` in `REPO_MAP.md`, with no temporary transfer files or undocumented implementation files. After exact map validation, commit the G0 governance baseline, record its SHA, and begin the minimum T0 CLI/test bootstrap.
+The staged index and `REPO_MAP.md` match exactly with no diff-check errors. Commit T0, verify a clean repository, then begin T1 with a failing test for the central limits/path contract.
