@@ -147,21 +147,19 @@ function oauthFailure(response: Response, error: unknown): void {
   });
 }
 
-function authorizationForm(query: Record<string, unknown>): string {
-  const hiddenFields = [
-    'response_type',
-    'client_id',
-    'redirect_uri',
-    'scope',
-    'state',
-    'code_challenge',
-    'code_challenge_method',
-    'resource',
-  ].map((name) => {
-    const value = typeof query[name] === 'string' ? query[name] : '';
-    return `<input type="hidden" name="${name}" value="${escapeHtml(value)}">`;
-  }).join('\n');
+function setAuthorizationSecurityHeaders(response: Response): Response {
+  return response
+    .set('Cache-Control', 'no-store')
+    .set(
+      'Content-Security-Policy',
+      "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    )
+    .set('X-Frame-Options', 'DENY')
+    .set('X-Content-Type-Options', 'nosniff')
+    .set('Referrer-Policy', 'no-referrer');
+}
 
+function authorizationForm(transactionId: string): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -175,7 +173,7 @@ function authorizationForm(query: Record<string, unknown>): string {
 <h1>Authorize Loom</h1>
 <p>This client is requesting full access to the Loom tools enabled on this Mac.</p>
 <form method="post" action="/oauth/authorize">
-${hiddenFields}
+<input type="hidden" name="transaction_id" value="${escapeHtml(transactionId)}">
 <label>Owner password <input type="password" name="owner_password" autocomplete="current-password" required></label>
 <button type="submit">Authorize</button>
 </form>
@@ -265,7 +263,9 @@ export class LoomMcpHttpServer {
       await this.closeAllSessions();
     }
     this.publicResource = binding.resource;
-    const metadataUrl = getOAuthProtectedResourceMetadataUrl(new URL(binding.resource));
+    const metadataUrl = new URL(
+      getOAuthProtectedResourceMetadataUrl(new URL(binding.resource)),
+    );
     this.bearerMiddleware = async (request, response, next) => {
       const authorization = request.headers.authorization;
       if (authorization === undefined) {
@@ -411,46 +411,50 @@ export class LoomMcpHttpServer {
       }
     });
 
-    this.app.get('/oauth/authorize', (request, response) => {
+    this.app.get('/oauth/authorize', async (request, response) => {
       if (!this.requireReady(response)) {
         return;
       }
-      response
-        .set('Cache-Control', 'no-store')
-        .set('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
-        .set('X-Content-Type-Options', 'nosniff')
-        .set('Referrer-Policy', 'no-referrer')
-        .type('html')
-        .send(authorizationForm(request.query as Record<string, unknown>));
+      setAuthorizationSecurityHeaders(response);
+      try {
+        const query = request.query as Record<string, unknown>;
+        if (query.response_type !== 'code') {
+          throw new OAuthError('Only response_type=code is supported.', 'unsupported_response_type');
+        }
+        if (query.code_challenge_method !== 'S256') {
+          throw new OAuthError('S256 PKCE is required.', 'invalid_request');
+        }
+        const state = optionalString(query.state);
+        const transaction = await this.authStore.createAuthorizationTransaction({
+          clientId: requiredString(query.client_id, 'client_id'),
+          redirectUri: requiredString(query.redirect_uri, 'redirect_uri'),
+          scopes: scopeList(query.scope) ?? ['loom:tools'],
+          resource: requiredString(query.resource, 'resource'),
+          ...(state === undefined ? {} : { state }),
+          codeChallenge: requiredString(query.code_challenge, 'code_challenge'),
+          codeChallengeMethod: 'S256',
+        });
+        response.type('html').send(authorizationForm(transaction.transactionId));
+      } catch (error) {
+        oauthFailure(response, error);
+      }
     });
 
     this.app.post('/oauth/authorize', async (request, response) => {
       if (!this.requireReady(response)) {
         return;
       }
+      setAuthorizationSecurityHeaders(response);
       try {
         const body = request.body as Record<string, unknown>;
-        if (body.response_type !== 'code') {
-          throw new OAuthError('Only response_type=code is supported.', 'unsupported_response_type');
-        }
-        if (body.code_challenge_method !== 'S256') {
-          throw new OAuthError('S256 PKCE is required.', 'invalid_request');
-        }
-        const redirectUri = requiredString(body.redirect_uri, 'redirect_uri');
-        const issued = await this.authStore.issueAuthorizationCode({
-          clientId: requiredString(body.client_id, 'client_id'),
-          redirectUri,
-          scopes: scopeList(body.scope) ?? ['loom:tools'],
-          resource: requiredString(body.resource, 'resource'),
+        const issued = await this.authStore.consumeAuthorizationTransaction({
+          transactionId: requiredString(body.transaction_id, 'transaction_id'),
           ownerPassword: requiredString(body.owner_password, 'owner_password'),
-          codeChallenge: requiredString(body.code_challenge, 'code_challenge'),
-          codeChallengeMethod: 'S256',
         });
-        const location = new URL(redirectUri);
+        const location = new URL(issued.redirectUri);
         location.searchParams.set('code', issued.code);
-        const state = optionalString(body.state);
-        if (state !== undefined) {
-          location.searchParams.set('state', state);
+        if (issued.state !== null) {
+          location.searchParams.set('state', issued.state);
         }
         response.redirect(302, location.toString());
       } catch (error) {

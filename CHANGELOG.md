@@ -314,3 +314,29 @@ PASS
 ps -axo pid,ppid,pgid,command | grep -E 'dist/test/mcp.test.js|loom-mcp-|dist/src/mcp.js' | grep -v grep
 <no output>
 ```
+
+### T5 recovery — adversarial-review hardening
+
+- Reproduced the committed T5 TypeScript failure caused by the MCP SDK metadata helper returning a string where the local bearer-challenge boundary required a `URL`; normalized it explicitly with `new URL(...)` without casts or SDK modification.
+- Replaced authorization POST parameter replay with a persistent, short-lived, single-use server-side transaction bound to client, redirect URI, scope, resource, endpoint generation, PKCE challenge, and OAuth state.
+- The authorization page now posts only `transaction_id` and `owner_password`; attacker-supplied client, redirect, and resource fields are ignored because they are not read. Successful consumption is atomic and replay returns `invalid_request`.
+- Added `X-Frame-Options: DENY` alongside strict CSP `frame-ancestors 'none'`, no-store, no-sniff, and no-referrer headers.
+- Amended the canonical plan and SPEC only for findings verified against the actual repository: direct argument-vector spawning for Loom-owned binaries, a static terminal adapter, safe symlink canonicalization, memory tombstone recovery, malformed skill frontmatter, browser module separation/evaluation recovery/screenshot persistence, and integrated runtime-lock testing.
+- Hardened the execution contract: task regrouping requires an explicit plan amendment and no task commit may occur without green typecheck, full tests, build, map, and governance checks.
+- Found that stale compiled tests remained in `dist/` after later untracked sources were quarantined. Added an explicit clean step before every build so abandoned output can never create false failures or false greens.
+- Required RED: the authorization page lacked `X-Frame-Options` and still mirrored OAuth parameters into hidden fields.
+- Targeted GREEN: MCP and OAuth suites passed 15/15.
+- Full clean-output validation: typecheck passed, tracked tests passed 64/64, and build passed.
+
+Evidence:
+
+```text
+npm run typecheck
+PASS
+node --test dist/test/mcp.test.js dist/test/oauth.test.js
+PASS (15/15)
+npm test
+PASS (64/64 after clean build)
+npm run build
+PASS
+```

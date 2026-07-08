@@ -9,7 +9,7 @@ Run the exact startup command in `HANDOFF.md` before editing.
 - Use `superpowers:executing-plans` task by task.
 - Keep Ponytail active: smallest correct implementation, standard library first, no speculative abstractions.
 - Use test-first development for behavior changes. Record the expected RED failure before implementation and the GREEN result afterward.
-- Implement tasks in the approved plan order. Do not skip gates or claim untested external integrations.
+- Implement tasks in the approved plan order. Regrouping, skipping, or reassigning task scope requires an explicit amendment to the canonical plan before proceeding. Do not skip gates or claim untested external integrations.
 - Do not push, publish, deploy, or modify Spindle/DevSpace without explicit user instruction.
 
 ## Governance
@@ -28,6 +28,6 @@ Each tracked-file entry in `REPO_MAP.md` must include path, purpose, success che
 
 ## Completion
 
-A task is complete only when intended files exist, targeted tests pass, full tests and typecheck pass, evidence is recorded, the handoff contains the resulting SHA and exact next command, and the repository is clean unless a real blocker is documented.
+A task is complete only when intended files exist, targeted tests pass, full tests, typecheck, and build pass, the repository map matches the exact tracked tree, evidence is recorded, the handoff contains the resulting SHA and exact next command, and the repository is clean unless a real blocker is documented.
 
 Never claim ChatGPT, named-tunnel, process-cleanup, browser-persistence, clean-machine packaging, or production readiness without the exact required real-world evidence.

@@ -60,6 +60,31 @@ export interface IssuedAuthorizationCode {
   expiresIn: number;
 }
 
+export interface CreateAuthorizationTransactionInput {
+  clientId: string;
+  redirectUri: string;
+  scopes: string[];
+  resource: string;
+  state?: string;
+  codeChallenge: string;
+  codeChallengeMethod: 'S256';
+}
+
+export interface CreatedAuthorizationTransaction {
+  transactionId: string;
+  expiresIn: number;
+}
+
+export interface ConsumeAuthorizationTransactionInput {
+  transactionId: string;
+  ownerPassword: string;
+}
+
+export interface ConsumedAuthorizationTransaction extends IssuedAuthorizationCode {
+  redirectUri: string;
+  state: string | null;
+}
+
 export interface ExchangeAuthorizationCodeInput {
   code: string;
   clientId: string;
@@ -157,6 +182,18 @@ const tokenSchema = z.object({
   createdAt: z.number().int().nonnegative(),
 }).strict();
 
+const authorizationTransactionSchema = z.object({
+  clientId: z.string().min(1),
+  redirectUri: z.string().url(),
+  scopes: z.array(z.string()).min(1),
+  resource: z.string().url(),
+  state: z.string().nullable(),
+  generation: z.number().int().nonnegative(),
+  codeChallenge: z.string().min(1),
+  expiresAt: z.number().int().nonnegative(),
+  createdAt: z.number().int().nonnegative(),
+}).strict();
+
 const authStateSchema = z.object({
   version: z.literal(1),
   installationId: z.string().min(1),
@@ -169,19 +206,21 @@ const authStateSchema = z.object({
   authorizationCodes: z.record(z.string(), authorizationCodeSchema),
   accessTokens: z.record(z.string(), tokenSchema),
   refreshTokens: z.record(z.string(), tokenSchema),
-  pendingTransactions: z.record(z.string(), z.unknown()),
+  pendingTransactions: z.record(z.string(), authorizationTransactionSchema),
 }).strict();
 
 type AuthState = z.infer<typeof authStateSchema>;
 type ClientRecord = z.infer<typeof clientSchema>;
 type AuthorizationCodeRecord = z.infer<typeof authorizationCodeSchema>;
 type TokenRecord = z.infer<typeof tokenSchema>;
+type AuthorizationTransactionRecord = z.infer<typeof authorizationTransactionSchema>;
 
 const OWNER_KEY_LENGTH = 32;
 const SCRYPT_COST = 16_384;
 const SCRYPT_BLOCK_SIZE = 8;
 const SCRYPT_PARALLELIZATION = 1;
 const CODE_TTL_SECONDS = 300;
+const AUTHORIZATION_TRANSACTION_TTL_SECONDS = 300;
 const ACCESS_TTL_SECONDS = 900;
 const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60;
 const ALLOWED_SCOPES = ['loom:tools'] as const;
@@ -474,6 +513,91 @@ export class AuthStore {
     }));
   }
 
+  createAuthorizationTransaction(
+    input: CreateAuthorizationTransactionInput,
+  ): Promise<CreatedAuthorizationTransaction> {
+    return this.exclusive(() => this.mutate(async (state) => {
+      const resource = this.requireExactResource(state, input.resource);
+      const client = this.requireCurrentClient(state, input.clientId);
+      const redirectUri = canonicalRedirectUri(input.redirectUri);
+      if (!client.redirectUris.includes(redirectUri)) {
+        throw new OAuthError('redirect_uri does not match the registered client.', 'invalid_redirect_uri');
+      }
+      const scopes = normalizeScopes(input.scopes);
+      if (!scopesAreSubset(scopes, client.scopes)) {
+        throw new OAuthError('Requested scopes exceed the client registration.', 'invalid_scope');
+      }
+      if (input.codeChallengeMethod !== 'S256' || !PKCE_CHALLENGE.test(input.codeChallenge)) {
+        throw new OAuthError('S256 PKCE is required.', 'invalid_request');
+      }
+
+      const now = this.now().getTime();
+      for (const [transactionHash, transaction] of Object.entries(state.pendingTransactions)) {
+        if (transaction.expiresAt <= now) {
+          delete state.pendingTransactions[transactionHash];
+        }
+      }
+
+      const transactionId = randomSecret(32);
+      state.pendingTransactions[sha256(transactionId)] = {
+        clientId: input.clientId,
+        redirectUri,
+        scopes,
+        resource,
+        state: input.state?.slice(0, 2_048) ?? null,
+        generation: state.endpoint.generation,
+        codeChallenge: input.codeChallenge,
+        expiresAt: now + AUTHORIZATION_TRANSACTION_TTL_SECONDS * 1_000,
+        createdAt: now,
+      };
+      return {
+        transactionId,
+        expiresIn: AUTHORIZATION_TRANSACTION_TTL_SECONDS,
+      };
+    }));
+  }
+
+  consumeAuthorizationTransaction(
+    input: ConsumeAuthorizationTransactionInput,
+  ): Promise<ConsumedAuthorizationTransaction> {
+    return this.exclusive(async () => {
+      if (!await verifyOwner(this.state.owner, input.ownerPassword)) {
+        throw new OAuthError('Owner password is invalid.', 'access_denied');
+      }
+      return this.mutate(async (state) => {
+        const transactionHash = sha256(input.transactionId);
+        const transaction = state.pendingTransactions[transactionHash];
+        if (transaction === undefined) {
+          throw new OAuthError(
+            'Authorization transaction is invalid or has already been used.',
+            'invalid_request',
+          );
+        }
+        this.validateAuthorizationTransaction(state, transaction);
+        delete state.pendingTransactions[transactionHash];
+
+        const code = randomSecret(32);
+        const createdAt = this.now().getTime();
+        state.authorizationCodes[sha256(code)] = {
+          clientId: transaction.clientId,
+          redirectUri: transaction.redirectUri,
+          scopes: [...transaction.scopes],
+          resource: transaction.resource,
+          generation: state.endpoint.generation,
+          codeChallenge: transaction.codeChallenge,
+          expiresAt: createdAt + CODE_TTL_SECONDS * 1_000,
+          createdAt,
+        };
+        return {
+          code,
+          expiresIn: CODE_TTL_SECONDS,
+          redirectUri: transaction.redirectUri,
+          state: transaction.state,
+        };
+      });
+    });
+  }
+
   issueAuthorizationCode(input: IssueAuthorizationCodeInput): Promise<IssuedAuthorizationCode> {
     return this.exclusive(async () => {
       if (!await verifyOwner(this.state.owner, input.ownerPassword)) {
@@ -702,6 +826,28 @@ export class AuthStore {
       throw new OAuthError('OAuth client authentication failed.', 'invalid_client');
     }
     return client;
+  }
+
+  private validateAuthorizationTransaction(
+    state: AuthState,
+    transaction: AuthorizationTransactionRecord,
+  ): void {
+    const resource = this.requireBoundResource(state);
+    if (transaction.expiresAt <= this.now().getTime()) {
+      throw new OAuthError('Authorization transaction expired.', 'invalid_request');
+    }
+    if (transaction.generation !== state.endpoint.generation
+      || transaction.resource !== resource) {
+      throw new OAuthError('Authorization transaction is stale.', 'invalid_request');
+    }
+    const client = this.requireCurrentClient(state, transaction.clientId);
+    if (!client.redirectUris.includes(transaction.redirectUri)
+      || !scopesAreSubset(transaction.scopes, client.scopes)) {
+      throw new OAuthError('Authorization transaction binding is invalid.', 'invalid_request');
+    }
+    if (!PKCE_CHALLENGE.test(transaction.codeChallenge)) {
+      throw new OAuthError('Authorization transaction PKCE binding is invalid.', 'invalid_request');
+    }
   }
 
   private validateCodeRecord(

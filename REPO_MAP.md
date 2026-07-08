@@ -16,19 +16,19 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `AGENTS.md`
 - **Purpose:** Mandatory execution, TDD, governance, and completion contract for implementation agents.
-- **Success check:** Requires the canonical read order, startup command, map gate, same-commit governance updates, and evidence discipline.
+- **Success check:** Requires canonical read/startup order, test-first work, explicit plan amendments before task regrouping, same-commit governance, and green typecheck/test/build/map gates before commits.
 - **Current assessment:** PASS
-- **Evidence:** Loaded by DevSpace and read before repository work.
-- **Last meaningful change:** T0 governance baseline, 2026-07-07.
-- **Owning task or gate:** T0 / G0.
+- **Evidence:** T5 recovery hardened the execution contract after the adversarial review exposed task drift.
+- **Last meaningful change:** T5 recovery governance hardening, 2026-07-08.
+- **Owning task or gate:** T0 / G0 and all later gates.
 
 ### `ALGORITHM.md`
 - **Purpose:** Compact ordered implementation loop.
-- **Success check:** Twenty lines or fewer and consistent with AGENTS.md.
+- **Success check:** Twenty lines or fewer, plan amendment required before regrouping/skipping, and commits require green typecheck/tests/build/map/governance.
 - **Current assessment:** PASS
-- **Evidence:** Fifteen numbered steps; mandates startup, G0, TDD, verification, governance, and handoff.
-- **Last meaningful change:** T0 governance baseline, 2026-07-07.
-- **Owning task or gate:** T0 / G0.
+- **Evidence:** Fifteen numbered steps remain within the line limit and match AGENTS.md.
+- **Last meaningful change:** T5 recovery governance hardening, 2026-07-08.
+- **Owning task or gate:** T0 / G0 and all later gates.
 
 ### `CHANGELOG.md`
 - **Purpose:** Human-readable implementation and evidence history.
@@ -72,18 +72,18 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
-- **Success check:** Consistent with the canonical plan, including macOS 14+, persistent owner password, and sole unrestricted command `loom launch --yolo`.
+- **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser recovery boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** Updated after the independent release-blocker review and latest YOLO amendment.
-- **Last meaningful change:** T0 amended baseline, 2026-07-07.
+- **Evidence:** Amended only with findings verified against the actual repository and canonical product contract.
+- **Last meaningful change:** T5 recovery adversarial-audit amendments, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
-- **Success check:** Covers Sections 0–26, T0–T16, G0–G7, latest audit corrections, and `loom launch --yolo`.
+- **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** 2026-07-08 amended implementation baseline exists at the canonical path.
-- **Last meaningful change:** Reconstructed and amended during T0, 2026-07-07.
+- **Evidence:** Adds direct argument-vector spawning, static ProcessManager adapter, authorization transactions, symlink-policy clarification, crash recovery, bounded browser evaluation, malformed-frontmatter behavior, screenshot persistence, and integrated runtime-lock tests.
+- **Last meaningful change:** T5 recovery adversarial-audit amendments, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -96,10 +96,10 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `package.json`
 - **Purpose:** Package identity, Node floor, executable mapping, exact dependencies, and validation scripts.
-- **Success check:** No dependency ranges; Node `>=22`; exact runtime pins; build/typecheck/test/start/pack scripts present.
+- **Success check:** No dependency ranges; Node `>=22`; exact runtime pins; clean/build/typecheck/test/start/pack scripts present; build removes stale output before compiling.
 - **Current assessment:** PASS
-- **Evidence:** `npm ci`, `npm run typecheck`, `npm test`, and `npm run build` pass with exact dependency pins.
-- **Last meaningful change:** T0 bootstrap validation, 2026-07-08.
+- **Evidence:** A stale-dist reproduction executed quarantined tests; `build` now runs `clean` first and the full tracked suite passes 64/64.
+- **Last meaningful change:** T5 recovery clean-build hardening, 2026-07-08.
 - **Owning task or gate:** T0 / G1; later T15 packaging.
 
 ### `src/audit.ts`
@@ -159,19 +159,19 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T2 / G2; later used by terminal, Cloudflare, browser, and runtime orchestration.
 
 ### `src/mcp.ts`
-- **Purpose:** Loopback-only Streamable HTTP MCP and OAuth HTTP server with deterministic readiness, endpoint-bound bearer authentication, dynamic registration/authorization/token/revocation routes, and bounded client-bound sessions.
-- **Success check:** Returns NOT_READY before binding, publishes path-correct metadata/challenges after binding, serves real authorization-code and refresh flows, validates every session ID/client, prevents concurrent capacity overflow, protects active requests from idle reaping, closes changed-endpoint sessions, and leaves no listeners on shutdown.
+- **Purpose:** Loopback-only Streamable HTTP MCP and OAuth HTTP server with deterministic readiness, endpoint-bound bearer authentication, server-bound authorization transactions, token routes, and bounded client-bound sessions.
+- **Success check:** Authorization GET stores the request server-side; POST accepts only transaction ID and owner password; replay/substitution fail; strict CSP/frame/no-store headers apply; SDK metadata strings are normalized without `any`; sessions and readiness remain bounded.
 - **Current assessment:** PASS
-- **Evidence:** `test/mcp.test.ts` passes 9/9 with a real pinned-SDK client; full suite passes 66/66; post-suite process scan is empty.
-- **Last meaningful change:** T5 MCP/OAuth HTTP transport completion, 2026-07-08.
+- **Evidence:** Targeted MCP/OAuth tests pass 15/15 and the full tracked suite passes 64/64.
+- **Last meaningful change:** T5 authorization-boundary recovery, 2026-07-08.
 - **Owning task or gate:** T5; consumed by runtime/tunnel integration and later concrete tool handlers.
 
 ### `src/oauth.ts`
-- **Purpose:** Persistent single-owner credentials and endpoint-bound OAuth client, authorization-code, access-token, refresh-token, revocation, metadata, and endpoint-generation state.
-- **Success check:** Owner password is scrypt-hashed and persistent; all opaque secrets are hashed at rest; codes are single-use; refresh rotates; exact `/mcp` resource/audience, scope, client, redirect, PKCE, expiry, revocation, and endpoint generation are enforced atomically.
+- **Purpose:** Persistent single-owner credentials and endpoint-bound OAuth clients, authorization transactions/codes, access/refresh tokens, revocation, metadata, and endpoint-generation state.
+- **Success check:** Transactions bind client/redirect/scope/resource/state/generation/PKCE, expire and consume once; owner password remains scrypt-hashed and persistent; tokens and codes retain exact atomic binding and rotation rules.
 - **Current assessment:** PASS
-- **Evidence:** `test/oauth.test.ts` passes 8/8; T5 HTTP flow proves registration, exchange, refresh replay prevention, authenticated revocation, and endpoint invalidation; full suite passes 66/66.
-- **Last meaningful change:** T5 client-authenticated revocation support, 2026-07-08.
+- **Evidence:** HTTP flow proves parameter substitution is ignored, transaction replay fails, and the existing eight OAuth state tests remain green; full tracked suite passes 64/64.
+- **Last meaningful change:** T5 authorization-transaction state, 2026-07-08.
 - **Owning task or gate:** T4 and T5; served by MCP transport and runtime endpoint binding.
 
 ### `src/output.ts`
@@ -247,11 +247,11 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T2 / G2; reused by runtime and browser lock recovery.
 
 ### `test/mcp.test.ts`
-- **Purpose:** End-to-end loopback HTTP and pinned-SDK tests for readiness, metadata, bearer challenges, OAuth routes, revocation, seven tools, session ownership/capacity/expiry, endpoint lifecycle, and clean shutdown.
-- **Success check:** Uses real fetch and `StreamableHTTPClientTransport`; stale/revoked tokens return 401, same endpoint preserves sessions, changed endpoint closes sessions, concurrent initialization cannot exceed capacity, and active calls survive idle reaping.
+- **Purpose:** End-to-end loopback HTTP and pinned-SDK tests for readiness, metadata, bearer challenges, server-bound OAuth authorization, revocation, seven tools, session ownership/capacity/expiry, endpoint lifecycle, and clean shutdown.
+- **Success check:** The authorization page contains only a transaction ID, has CSP and frame denial, ignores attacker-supplied POST parameters, rejects replay, and all existing transport/session behaviors remain green.
 - **Current assessment:** PASS
-- **Evidence:** Nine tests pass; all seven schemas are called through the real client; no MCP test processes remain after the suite.
-- **Last meaningful change:** T5 transport RED/GREEN cycle and stale-token middleware debugging, 2026-07-08.
+- **Evidence:** Seven MCP tests pass; combined MCP/OAuth target passes 15/15; full tracked suite passes 64/64.
+- **Last meaningful change:** T5 authorization-boundary RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T5.
 
 ### `test/oauth.test.ts`

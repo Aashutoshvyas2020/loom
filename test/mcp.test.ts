@@ -184,20 +184,40 @@ test('standard HTTP OAuth registration, authorization, exchange, refresh, and re
   };
 
   const verifier = 'p'.repeat(64);
+  const authorizeUrl = new URL(`${server.origin}/oauth/authorize`);
+  authorizeUrl.search = new URLSearchParams({
+    response_type: 'code',
+    client_id: registration.client_id,
+    redirect_uri: registration.redirect_uris[0]!,
+    scope: 'loom:tools',
+    state: 'state-123',
+    code_challenge: AuthStore.pkceChallenge(verifier),
+    code_challenge_method: 'S256',
+    resource,
+  }).toString();
+  const authorizationPage = await fetch(authorizeUrl);
+  assert.equal(authorizationPage.status, 200);
+  assert.equal(authorizationPage.headers.get('x-frame-options'), 'DENY');
+  assert.match(
+    authorizationPage.headers.get('content-security-policy') ?? '',
+    /frame-ancestors 'none'/,
+  );
+  const authorizationHtml = await authorizationPage.text();
+  const transactionId = /name="transaction_id" value="([^"]+)"/.exec(authorizationHtml)?.[1];
+  assert.ok(transactionId);
+  assert.doesNotMatch(authorizationHtml, /name="client_id"/);
+  assert.doesNotMatch(authorizationHtml, /name="redirect_uri"/);
+
   const authorizationResponse = await fetch(`${server.origin}/oauth/authorize`, {
     method: 'POST',
     redirect: 'manual',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      response_type: 'code',
-      client_id: registration.client_id,
-      redirect_uri: registration.redirect_uris[0]!,
-      scope: 'loom:tools',
-      state: 'state-123',
-      code_challenge: AuthStore.pkceChallenge(verifier),
-      code_challenge_method: 'S256',
-      resource,
+      transaction_id: transactionId,
       owner_password: ownerPassword,
+      client_id: 'attacker-controlled-client',
+      redirect_uri: 'https://attacker.example/callback',
+      resource: 'https://attacker.example/mcp',
     }),
   });
   assert.equal(authorizationResponse.status, 302);
@@ -206,6 +226,21 @@ test('standard HTTP OAuth registration, authorization, exchange, refresh, and re
   assert.equal(redirect.searchParams.get('state'), 'state-123');
   const code = redirect.searchParams.get('code');
   assert.ok(code);
+
+  const replayAuthorization = await fetch(`${server.origin}/oauth/authorize`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      transaction_id: transactionId,
+      owner_password: ownerPassword,
+    }),
+  });
+  assert.equal(replayAuthorization.status, 400);
+  assert.equal(
+    (await replayAuthorization.json() as { error: string }).error,
+    'invalid_request',
+  );
 
   const tokenResponse = await fetch(`${server.origin}/oauth/token`, {
     method: 'POST',

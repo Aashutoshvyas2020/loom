@@ -71,8 +71,9 @@ For every behavior change:
 5. Run the targeted test to GREEN.
 6. Run typecheck, full tests, and build.
 7. Update governance files.
-8. Commit one coherent task or subtask.
-9. Record the SHA and exact next command.
+8. Verify the working tree and repository map describe exactly the files owned by the task. Regrouping, skipping, or reassigning task scope requires an explicit plan amendment before proceeding.
+9. Commit one coherent task or subtask only while typecheck, full tests, build, map validation, and governance checks are green.
+10. Record the SHA and exact next command.
 
 1.6 Evidence discipline
 
@@ -124,6 +125,9 @@ src/
   audit.ts
   atomic-file.ts
   browser.ts
+  browser/
+    backend.ts
+    setup.ts
   catalog.ts
   child-wrapper.ts
   cli.ts
@@ -238,7 +242,9 @@ Define once in src/limits.ts and test boundary values:
 
 Expand only `~/...`; reject `~other`, bare relative paths, NUL bytes, malformed Unicode, and empty paths. Canonicalize before authorization and locking.
 
-Reads may follow the final regular file but must reject unsupported types. Writes and edits must walk each existing path component with lstat and reject any symlink component. Parent creation is optional and bounded. Recheck identity immediately before replacement to reduce race exposure.
+Reads may follow a final symbolic link only after resolving it to a stable regular-file target and rechecking the opened target identity before returning bytes. Writes and edits must walk each existing path component with lstat and reject any symlink component. Parent creation is optional and bounded. Recheck identity immediately before replacement to reduce race exposure.
+
+Terminal cwd accepts only absolute or `~/...` input, then canonicalizes through `realpath` and requires the resolved target to be a directory. A safe cwd is not rejected merely because its input path traversed a symbolic link. Loom-owned executable discovery may likewise accept a PATH symlink only after resolving and verifying the canonical target, ownership, version, hash, and stable identity.
 
 Use a per-canonical-path async mutex. Write to a random same-directory temporary file with restrictive mode, fsync when required, preserve existing regular-file mode, check expected SHA-256 when supplied, then rename atomically. Clean temporary files on failure.
 
@@ -255,6 +261,8 @@ A synchronous tool call may wait at most 60 seconds. Longer commands return a jo
 11. CHILD WRAPPER, WATCHDOG, AND PROCESS GROUPS
 
 Every terminal, Cloudflared, and Chromium tree starts through a Loom child wrapper in its own process group. Record PID, PGID, launch ID, canonical executable path, process start time, and canonical Loom state path.
+
+Loom-owned binaries such as Cloudflared and Chromium must be started directly through ProcessManager using a verified executable path and an explicit `string[]` argument vector. Shell command construction, quoting, parsing, or routing those binaries through the public terminal adapter is forbidden. The unrestricted terminal tool may intentionally invoke `/bin/sh -lc <command>` through one static, strongly typed adapter to ProcessManager; reflection, `Function.toString()`, alternate method-name guessing, and result-shape guessing are forbidden.
 
 The parent sends a heartbeat every second. After three missed heartbeats, the watchdog verifies parent identity through PID plus start time plus canonical executable path. It also scans the process table every two seconds as fallback. Never rely on pipe closure or `kill(pid, 0)` alone.
 
@@ -290,7 +298,7 @@ Audit-start records precede terminal start, write, edit, memory save/delete, bro
 
 Single-owner OAuth is local-password-gated and endpoint-bound. Cloudflare never receives or validates the owner password; it is only the reverse proxy.
 
-Persist OAuth client registrations, authorization codes, access tokens, refresh tokens, scopes, expiry, resource URI, and endpoint generation in private atomic state. Hash opaque secrets at rest where practical. Authorization codes are single use and short lived. Refresh tokens are supported, rotated on use, revocable, and bound to the same client, scope, owner installation, endpoint generation, and canonical `/mcp` resource.
+Persist OAuth client registrations, authorization transactions, authorization codes, access tokens, refresh tokens, scopes, expiry, resource URI, and endpoint generation in private atomic state. Hash opaque secrets at rest where practical. The authorization GET route creates a cryptographically random, short-lived server-side transaction bound to client, redirect URI, scope, resource, endpoint generation, PKCE challenge, and client state. The password POST submits only the transaction ID, owner password, and decision; it atomically consumes the stored transaction and must reject expiry, replay, endpoint change, or parameter substitution. Authorization codes are single use and short lived. Refresh tokens are supported, rotated on use, revocable, and bound to the same client, scope, owner installation, endpoint generation, and canonical `/mcp` resource.
 
 Tunnel URL changes invalidate endpoint-bound OAuth clients/codes/tokens because their resource/redirect assumptions may no longer be valid. They must not rotate the owner password.
 
@@ -334,13 +342,19 @@ Allowed navigation schemes: https, http, and about:blank. Reject file, javascrip
 
 Use `fs/promises`, bounded concurrency, and no synchronous recursive scans in request handling. Do not follow directory symlinks. Skip file symlinks.
 
-Limits per root: 10,000 files, 1 MiB per file, 64 MiB indexed bytes, depth 12, and 10-second scan budget. Build a candidate catalog separately, keep the current catalog available during rescan, and atomically swap only after completion. Record skipped, malformed, timed-out, and over-limit counts.
+Limits per root: 10,000 files, 1 MiB per file, 64 MiB indexed bytes, depth 12, and 10-second scan budget. Build a candidate catalog separately, keep the current catalog available during rescan, and atomically swap only after completion. Record skipped, malformed, timed-out, and over-limit counts. A SKILL.md opening YAML delimiter without a closing delimiter is malformed and must be skipped with a deterministic diagnostic; it must not be partially interpreted as both metadata and body text.
+
+At memory initialization or rescan, recognize only exact Loom-owned tombstone names. After verifying containment, regular-file type, current-user ownership, restrictive permissions, and no symlink, remove stale tombstones left by an interrupted committed delete. Cleanup failures remain visible as diagnostics and must not be silently ignored.
 
 18. BROWSER MODEL
 
 Load playwright-core through guarded dynamic import so a missing or broken browser subsystem does not disable terminal, file, skills, or memory tools.
 
-Use the dedicated profile and recorded pinned Chromium revision. Enforce 12-tab maximum, deterministic tab IDs, bounded snapshots, safe selector handling, navigation-scheme validation, explicit permission state, and profile-lock recovery from Section 12.
+Use the dedicated profile and recorded pinned Chromium revision. Enforce 12-tab maximum, deterministic tab IDs, bounded snapshots, safe selector handling, navigation-scheme validation, explicit permission state, and profile-lock recovery from Section 12. Keep public schema validation, audit policy, result shaping, and MCP dispatch in `src/tools/browser.ts`; keep Playwright loading, CDP lifecycle, process ownership, tab state, downloads, screenshots, and profile recovery in the browser backend modules.
+
+Every evaluate call has a fixed deadline. On timeout, mark only that tab unhealthy, attempt bounded `page.close({ runBeforeUnload: false })`, and verify that another tab remains usable. Restart the whole browser only when page-level cleanup fails or CDP health is lost. Tests must prove that a hung evaluation does not unnecessarily destroy unrelated tabs.
+
+Downloads and screenshots are persisted under their approved directories using no-overwrite atomic creation. Screenshot names are human-sortable and collision-safe by combining UTC timestamp, deterministic tab identifier, a monotonic counter, and random suffix. Screenshot bytes are also returned through MCP when within the central limit.
 
 Never put secrets in command-line flags. Do not attach to the user's normal Chrome profile. Browser restart must preserve the dedicated profile. Browser clear/reset actions must be explicit and locally confirmed when destructive.
 
@@ -469,11 +483,11 @@ A real local client completes OAuth and calls safe test paths through every tool
 
 T6 — File tools
 
-Implement read/text/image behavior, write, edit, exact matching, conflict detection, symlink rejection, audit integration, byte limits, and atomic replacement. Use real temporary files and magic-byte image fixtures.
+Implement read/text/image behavior, final-symlink-to-stable-regular-file resolution, write, edit, exact matching, conflict detection, mutating-path symlink rejection, audit integration, byte limits, and atomic replacement. Use real temporary files and magic-byte image fixtures.
 
 T7 — Skills and memory catalogs
 
-Implement bounded async discovery, atomic catalog swaps, read-only external skills/memory, Loom-owned stable memory IDs, safe save/delete, search, and rescan.
+Implement bounded async discovery, atomic catalog swaps, deterministic malformed-frontmatter diagnostics, read-only external skills/memory, Loom-owned stable memory IDs, crash-recovered delete tombstones, safe save/delete, search, and rescan.
 
 T8 — Dashboard
 
@@ -481,7 +495,7 @@ Implement static dashboard, nonce/session/CSRF, exact Host/Origin checks, strict
 
 T9 — Browser subsystem
 
-Implement explicit browser setup, pinned revision verification, guarded dynamic import, wrapper-owned Chromium, persistent profile, lock recovery, tabs/actions/navigation validation/downloads/screenshots/permissions/geolocation, and bounded output.
+Implement explicit browser setup, pinned revision verification, guarded dynamic import, separated public tool and backend modules, wrapper-owned Chromium with direct executable/argument spawning, persistent profile, lock recovery, bounded per-tab evaluation recovery, tabs/actions/navigation validation/downloads/collision-safe persisted screenshots/permissions/geolocation, and bounded output.
 
 G4 — Local complete runtime
 
@@ -489,7 +503,7 @@ All seven tools, dashboard, browser-degraded mode, and browser-enabled mode pass
 
 T10 — Cloudflared acquisition and validation
 
-Implement pinned architecture-aware download, SHA-256 verification, atomic install, permissions, known PATH-binary reporting, and `--no-autoupdate` wrapper launch.
+Implement pinned architecture-aware download, SHA-256 verification, atomic install, permissions, safe canonicalization of normal PATH symlinks, known PATH-binary path/version reporting, and direct executable-plus-argument `--no-autoupdate` wrapper launch.
 
 T11 — Tunnel-independent runtime readiness
 
@@ -505,7 +519,7 @@ Implement stable hostname config, credentials validation, explicit ephemeral ori
 
 T14 — Full runtime orchestration and signal cleanup
 
-Implement exact startup/shutdown order, signals, foreground lifetime, browser/tunnel/terminal cleanup, audit flush, locks, watchdog confirmation, and public-access termination.
+Implement exact startup/shutdown order, signals, foreground lifetime, browser/tunnel/terminal cleanup, audit flush, lock acquisition/removal, watchdog confirmation, and public-access termination. `test/runtime.test.ts` must exercise the integrated MCP, tunnel, browser, process supervisor, audit, and runtime-lock lifecycle and prove complete reverse-order cleanup after normal stop, startup failure, and signal termination.
 
 G5 — Real named-tunnel and ChatGPT prerequisite gate
 
