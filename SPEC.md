@@ -21,7 +21,8 @@ Loom exposes exactly seven tools: `loom_terminal`, `loom_read`, `loom_write`, `l
 - File paths and terminal `cwd` accept only absolute paths or `~/...`; bare relative paths are rejected. Reads may follow a final symbolic link only after resolving and verifying a stable regular-file target. Terminal `cwd` canonicalizes through `realpath` and may traverse safe symbolic links.
 - Writes and edits reject any existing symbolic-link component and use per-path serialization, conflict detection, required audit start records, and same-directory atomic replacement.
 - `loom_read` recognizes PNG, JPEG, GIF, and WebP by magic bytes and returns MCP image content within the fixed limit.
-- Loom uses a dedicated persistent browser profile at `~/.loom/browser-profile/` and never attaches to the normal Chrome profile.
+- Loom installs the pinned Playwright Chromium build only through explicit `loom setup browser` into `~/.loom/browser/`. Setup resolves the bundled Playwright CLI independently of the caller’s working directory, forces the official Playwright CDN, verifies the exact architecture-specific executable hash, proves a real wrapper-owned loopback CDP launch, and atomically rolls back a failed replacement.
+- Loom uses a dedicated persistent browser profile at `~/.loom/browser-profile/` and never attaches to the normal Chrome profile. Browser shutdown sends CDP `Browser.close` and waits for natural managed-process exit so profile data is flushed, with bounded process-group cancellation only as fallback.
 - State lives under `~/.loom/`, created with restrictive permissions and atomic writes.
 - Audit is private best-effort local activity logging, not tamper-proof against the same macOS user. Audit failure closes mutating operations while reads remain available.
 - All terminal, Cloudflared, and Chromium process trees launch through the child wrapper and watchdog protocol with heartbeat, process-table fallback, PID/start-time/executable identity checks, five-second graceful termination, and a fifteen-second absolute shutdown deadline. Loom-owned binaries use direct verified executable paths and explicit argument arrays; only the intentionally unrestricted terminal tool invokes `/bin/sh -lc` through a static typed adapter.
@@ -29,7 +30,7 @@ Loom exposes exactly seven tools: `loom_terminal`, `loom_read`, `loom_write`, `l
 - OAuth supports rotating refresh tokens bound to the exact canonical public `/mcp` resource URI. The authorization page uses a short-lived, single-use server-side transaction so the password POST cannot substitute client, redirect, resource, scope, state, endpoint generation, or PKCE parameters.
 - Cloudflared runs with `--no-autoupdate`; named tunnels use an explicit ephemeral origin mapping and never fall back to Quick Tunnel. Normal PATH symlinks are canonicalized and the resolved binary is verified by ownership, version, hash, and stable identity.
 - Skill files with an unterminated frontmatter block are skipped with a malformed diagnostic. Interrupted Loom-owned memory-delete tombstones are safely cleaned during initialization or rescan.
-- Browser public-tool policy is separated from the Playwright backend. Evaluate calls are deadline-bounded with per-tab recovery before whole-browser restart. Downloads and collision-safe, human-sortable screenshots persist under `~/.loom/downloads/`.
+- Browser public-tool policy is separated from the Playwright backend. All internal page evaluations, including snapshots, are deadline-bounded with per-tab recovery before whole-browser restart. Downloads and collision-safe, human-sortable screenshots persist under `~/.loom/downloads/` using private no-overwrite creation.
 
 ## Technology
 

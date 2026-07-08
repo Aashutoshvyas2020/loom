@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, realpath, stat, symlink, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { setupBrowser } from '../src/cli.js';
 import { initializeState, writeRuntimeLock } from '../src/config.js';
 import { AuthStore } from '../src/oauth.js';
 import { inspectProcess } from '../src/watchdog.js';
@@ -65,12 +66,53 @@ test('--version prints the package version', () => {
   assert.equal(result.stdout.trim(), '0.1.0');
 });
 
+test('CLI executes when invoked through a package-bin symlink', async () => {
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), 'loom-cli-link-')));
+  const linkedCli = path.join(root, 'loom');
+  await symlink(cliPath.pathname, linkedCli);
+
+  const result = spawnSync(process.execPath, [linkedCli, '--version'], {
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0);
+  assert.equal(result.stderr, '');
+  assert.equal(result.stdout.trim(), '0.1.0');
+});
+
 test('--help exposes the explicit YOLO launch command and support floor', () => {
   const result = runCli('--help');
 
   assert.equal(result.status, 0);
   assert.match(result.stdout, /loom launch --yolo/);
   assert.match(result.stdout, /macOS 14\+/);
+});
+
+test('browser setup initializes the dedicated install directory and invokes the pinned installer', async () => {
+  const home = await realpath(await mkdtemp(path.join(tmpdir(), 'loom-cli-home-')));
+  const stateRoot = path.join(home, '.loom');
+  let requestedDirectory = '';
+
+  const manifest = await setupBrowser(stateRoot, async (options) => {
+    requestedDirectory = options.installationDirectory;
+    return {
+      schemaVersion: 1,
+      playwrightVersion: '1.61.1',
+      chromiumRevision: '1228',
+      chromiumVersion: '149.0.7827.55',
+      architecture: process.arch === 'x64' ? 'x64' : 'arm64',
+      archiveUrl: 'https://example.invalid/chromium.zip',
+      archiveSha256: 'a'.repeat(64),
+      executablePath: path.join(options.installationDirectory, 'Chromium'),
+      executableSha256: 'b'.repeat(64),
+      installedAt: '2026-07-08T12:00:00.000Z',
+    };
+  });
+
+  assert.equal(requestedDirectory, path.join(stateRoot, 'browser'));
+  assert.equal(manifest.chromiumRevision, '1228');
+  assert.equal((await stat(path.join(stateRoot, 'browser'))).mode & 0o777, 0o700);
+  assert.equal((await stat(path.join(stateRoot, 'browser-profile'))).mode & 0o777, 0o700);
 });
 
 test('plain launch refuses to start unrestricted access', () => {

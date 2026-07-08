@@ -113,7 +113,7 @@ Pin development dependencies exactly. Do not use version ranges. Record the exac
 
 Supported production floor is macOS 14.0 or newer and Node.js 22 or newer. Earlier macOS versions are unsupported unless later proven and explicitly added to SPEC.md.
 
-Playwright browser setup is explicit. `npm install` must not download Chromium. `loom setup browser` must invoke the locally installed Playwright Core CLI, install its pinned Chromium revision, record the expected revision and resolved executable path, and verify a real launch. Runtime must refuse browser startup when the executable does not match the recorded supported revision, while leaving non-browser tools available.
+Playwright browser setup is explicit. `npm install` must not download Chromium. `loom setup browser` must resolve and invoke the locally installed Playwright Core CLI independently of the caller’s working directory, force the official Playwright CDN rather than honoring caller download-host overrides, install its pinned Chromium revision, record the expected revision and resolved executable path, verify the exact architecture-specific executable SHA-256, and prove a real wrapper-owned loopback CDP launch. Installation promotion is atomic and restores the prior installation if promoted verification fails. Runtime must refuse browser startup when the executable does not match the recorded supported revision, while leaving non-browser tools available.
 
 5. TARGET REPOSITORY LAYOUT
 
@@ -179,6 +179,7 @@ State root: `~/.loom/`
 - auth.json
 - config.json
 - audit/
+- browser/
 - browser-profile/
 - cloudflared/
 - downloads/
@@ -352,9 +353,11 @@ Load playwright-core through guarded dynamic import so a missing or broken brows
 
 Use the dedicated profile and recorded pinned Chromium revision. Enforce 12-tab maximum, deterministic tab IDs, bounded snapshots, safe selector handling, navigation-scheme validation, explicit permission state, and profile-lock recovery from Section 12. Keep public schema validation, audit policy, result shaping, and MCP dispatch in `src/tools/browser.ts`; keep Playwright loading, CDP lifecycle, process ownership, tab state, downloads, screenshots, and profile recovery in the browser backend modules.
 
-Every evaluate call has a fixed deadline. On timeout, mark only that tab unhealthy, attempt bounded `page.close({ runBeforeUnload: false })`, and verify that another tab remains usable. Restart the whole browser only when page-level cleanup fails or CDP health is lost. Tests must prove that a hung evaluation does not unnecessarily destroy unrelated tabs.
+Every internal page evaluation, including snapshot extraction and the public evaluate action, has a fixed deadline. On timeout, mark only that tab unhealthy, attempt bounded `page.close({ runBeforeUnload: false })`, and verify that another tab remains usable. Restart the whole browser only when page-level cleanup fails or CDP health is lost. Tests must prove that a hung evaluation does not unnecessarily destroy unrelated tabs.
 
-Downloads and screenshots are persisted under their approved directories using no-overwrite atomic creation. Screenshot names are human-sortable and collision-safe by combining UTC timestamp, deterministic tab identifier, a monotonic counter, and random suffix. Screenshot bytes are also returned through MCP when within the central limit.
+Downloads and screenshots are persisted under their approved directories using private no-overwrite creation. Screenshot names are human-sortable and collision-safe by combining UTC timestamp, deterministic tab identifier, a monotonic counter, and random suffix. Screenshot bytes are also returned through MCP when within the central limit.
+
+Because Playwright `connectOverCDP()` disconnects rather than terminating the remote browser, normal browser shutdown must send CDP `Browser.close`, wait within the soft shutdown grace for the wrapper-owned process to exit naturally and flush the dedicated profile, then use process-group cancellation only as fallback. Shutdown does not return until the managed group and browser lock are cleaned.
 
 Never put secrets in command-line flags. Do not attach to the user's normal Chrome profile. Browser restart must preserve the dedicated profile. Browser clear/reset actions must be explicit and locally confirmed when destructive.
 

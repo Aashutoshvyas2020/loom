@@ -386,3 +386,45 @@ PASS
 - Required RED: `src/dashboard.ts` did not exist. A later test correction replaced fetch’s normalized Host header with a raw HTTP request.
 - Targeted GREEN: dashboard passed 2/2.
 - Full validation: typecheck passed, tracked tests passed 99/99, and build passed.
+
+### T9 — managed persistent browser subsystem
+
+- Added the browser contract/error module, separated public browser policy and MCP result shaping from the Playwright/CDP backend, and retained guarded dynamic Playwright loading so a browser failure cannot statically disable other tools.
+- Added explicit `loom setup browser`. It initializes private `~/.loom/browser/` state, resolves the installed Playwright Core CLI independently of the caller’s working directory, installs Chromium without the unused headless shell, forces the official Playwright CDN, verifies the exact architecture-specific executable SHA-256, performs a real wrapper-owned loopback CDP launch, and atomically promotes or rolls back the installation.
+- Added the dedicated persistent profile backend with direct executable/argument ProcessManager launch, loopback ephemeral CDP, twelve-tab enforcement, stable per-page IDs, bounded navigation/actions/snapshots/evaluation/screenshots, explicit permissions/geolocation, and no attachment to normal Chrome.
+- Added private `runtime/browser.lock` identity using wrapper PID, start time, executable, launch ID, and canonical profile. Recovery rejects live or identity-uncertain owners, distinguishes actual Chrome executables from unrelated commands mentioning the profile, and removes stale Chromium singleton artifacts only after process-table verification.
+- Added audited no-overwrite download persistence and audited collision-safe screenshots under `~/.loom/downloads/`; page text, expressions, typed values, screenshot bytes, selectors, and URL query values remain absent from audit bytes.
+- Added one deadline/recovery boundary for both public evaluation and internal snapshot evaluation. A timed-out tab is closed without `beforeunload`, surviving CDP health is checked, and whole-browser restart occurs only when tab cleanup or CDP health fails.
+- Replaced the original `--dump-dom about:blank` setup probe after the real pinned Chrome build hung with no DOM output. The replacement waits for safe `DevToolsActivePort` metadata and validates a loopback `/json/version` response while the browser remains wrapper-owned.
+- Fixed persistent-profile loss: Playwright `connectOverCDP()` close only disconnected and Loom immediately killed Chrome before storage flush. Shutdown now sends CDP `Browser.close`, waits for natural managed-process exit within the soft grace, and cancels the group only as fallback.
+- Fixed package-bin execution through symlinks and proved `loom setup browser` does not depend on the caller’s current directory.
+- Required RED evidence included strict TypeScript failures, final-symlink executable acceptance, install rollback loss, stale-lock false positives, missing CDP launch verifier, `--dump-dom` real hang, profile storage returning `null` after restart, unbounded snapshot evaluation, package-bin no-op, CWD-relative CLI resolution, and download-host override drift.
+- Deterministic final validation: typecheck passed, browser/CLI/config targets passed, full tracked suite passed 120/120, and build passed.
+- Real macOS arm64 evidence: official Chromium archive SHA-256 `311211b54c429245e2cec0314ee1e314085e9c00350215b95e1a879350786630`; installed executable SHA-256 `b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7`; Chrome 149.0.7827.55 revision 1228 launched through ProcessManager, produced a private manifest and no setup/process residue, and restored localStorage value `"v"` across two controlled backend restarts with no remaining Chrome process or browser lock.
+
+Evidence:
+
+```text
+npm run typecheck
+PASS
+npm test
+PASS (120/120)
+npm run build
+PASS
+
+real setup manifest
+playwrightVersion: 1.61.1
+chromiumRevision: 1228
+chromiumVersion: 149.0.7827.55
+architecture: arm64
+executableSha256: b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7
+browser directory: 0700
+manifest: 0600
+staging residue: none
+process residue: none
+
+controlled profile restart
+first launch: set "v"
+second launch: restored "v"
+post-shutdown process/browser-lock residue: none
+```

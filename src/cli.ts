@@ -1,10 +1,18 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { open, type FileHandle } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { checkConfig, readRuntimeLock, resetConfig } from './config.js';
+import {
+  installPinnedChromium,
+  type ChromiumInstallManifest,
+  type InstallPinnedChromiumOptions,
+} from './browser/setup.js';
+import { checkConfig, initializeState, readRuntimeLock, resetConfig } from './config.js';
 import { AuthStore } from './oauth.js';
+import { resolveUserPath } from './paths.js';
 import { inspectProcess, observableIdentityMatches } from './watchdog.js';
 
 const packageJson = JSON.parse(
@@ -147,6 +155,18 @@ async function runtimeIsLive(stateRoot = '~/.loom'): Promise<boolean> {
   return observableIdentityMatches(lock, observed);
 }
 
+export async function setupBrowser(
+  stateRoot = '~/.loom',
+  installBrowser: (
+    options: InstallPinnedChromiumOptions,
+  ) => Promise<ChromiumInstallManifest> = installPinnedChromium,
+): Promise<ChromiumInstallManifest> {
+  await initializeState(stateRoot);
+  return installBrowser({
+    installationDirectory: path.join(resolveUserPath(stateRoot), 'browser'),
+  });
+}
+
 async function resetOwnerPassword(): Promise<void> {
   if (await runtimeIsLive()) {
     fail('Loom is currently running. Stop Loom before rotating the owner password.');
@@ -188,6 +208,15 @@ async function main(args: string[]): Promise<void> {
     fail('Unrestricted access is disabled. Start it explicitly with: loom launch --yolo');
   }
 
+  if (args.length === 2 && args[0] === 'setup' && args[1] === 'browser') {
+    const manifest = await setupBrowser();
+    process.stdout.write(
+      `Installed Playwright Chromium ${manifest.chromiumVersion} `
+      + `(revision ${manifest.chromiumRevision}) at ${manifest.executablePath}\n`,
+    );
+    return;
+  }
+
   if (args.length === 2 && args[0] === 'auth' && args[1] === 'reset') {
     await resetOwnerPassword();
     return;
@@ -214,8 +243,18 @@ async function main(args: string[]): Promise<void> {
   fail(`Unknown command.\n\n${HELP}`);
 }
 
-main(process.argv.slice(2)).catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
-  process.stderr.write(`${message}\n`);
-  process.exitCode = 2;
-});
+let invokedPath: string | undefined;
+try {
+  invokedPath = process.argv[1] === undefined
+    ? undefined
+    : realpathSync(path.resolve(process.argv[1]));
+} catch {
+  invokedPath = undefined;
+}
+if (invokedPath !== undefined && realpathSync(fileURLToPath(import.meta.url)) === invokedPath) {
+  main(process.argv.slice(2)).catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    process.exitCode = 2;
+  });
+}

@@ -104,6 +104,7 @@ const configSchema = z.object({
 
 const stateDirectories = [
   'audit',
+  'browser',
   'browser-profile',
   'cloudflared',
   'downloads',

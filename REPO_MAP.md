@@ -41,10 +41,10 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
-- **Current assessment:** PARTIAL
-- **Evidence:** Captures initial no-commit state and startup command; must be refreshed before the G0 commit.
-- **Last meaningful change:** T0 initialization, 2026-07-07 23:36 PDT.
-- **Owning task or gate:** All tasks; current T0 / G0.
+- **Current assessment:** PASS
+- **Evidence:** Records the completed T9 deterministic and real-browser evidence, unchanged parent HEAD, dirty scope, and exact T9 commit command.
+- **Last meaningful change:** T9 browser completion handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T9.
 
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -66,24 +66,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** G0 commit `868d20d2d2cf17bef2992abe6b95d9d4152cd223` matched the map exactly; this update adds the two T0 tracked paths before the next staged-index validation.
-- **Last meaningful change:** T0 bootstrap map update, 2026-07-08.
-- **Owning task or gate:** All tasks; current T0 / G0.
+- **Evidence:** T9 adds the five browser source/test paths and updates the existing CLI/config ledgers; staged-index validation must remain empty before commit.
+- **Last meaningful change:** T9 browser map update, 2026-07-08.
+- **Owning task or gate:** All tasks; current T9.
 
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
-- **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser recovery boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
+- **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** Amended only with findings verified against the actual repository and canonical product contract.
-- **Last meaningful change:** T5 recovery adversarial-audit amendments, 2026-07-08.
+- **Evidence:** T9 records explicit pinned browser setup under `~/.loom/browser/`, official-CDN pinning, wrapper-owned CDP verification, bounded internal page evaluations, private no-overwrite artifacts, and graceful profile-flushing shutdown.
+- **Last meaningful change:** T9 browser contract, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** Adds direct argument-vector spawning, static ProcessManager adapter, authorization transactions, symlink-policy clarification, crash recovery, bounded browser evaluation, malformed-frontmatter behavior, screenshot persistence, and integrated runtime-lock tests.
-- **Last meaningful change:** T5 recovery adversarial-audit amendments, 2026-07-08.
+- **Evidence:** T9 clarification adds private browser-install state, CWD-independent official-CDN setup, exact executable verification, wrapper-owned CDP readiness, bounded snapshot evaluation, and CDP graceful shutdown before cancellation fallback.
+- **Last meaningful change:** T9 browser implementation clarification, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -118,6 +118,30 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 atomic-file foundation, 2026-07-08.
 - **Owning task or gate:** T1; reused by config, OAuth, audit state, memory, and file tools.
 
+### `src/browser.ts`
+- **Purpose:** Dependency-free browser backend contract, result types, and typed public/backend error hierarchy.
+- **Success check:** Defines every approved browser action result and shutdown contract without loading Playwright or performing side effects.
+- **Current assessment:** PASS
+- **Evidence:** Imported by both public policy and backend modules; browser target and full 120-test suite typecheck and pass.
+- **Last meaningful change:** T9 browser contract separation, 2026-07-08.
+- **Owning task or gate:** T9 / G4.
+
+### `src/browser/backend.ts`
+- **Purpose:** Wrapper-owned persistent Chromium/CDP lifecycle, tabs/actions, browser lock recovery, bounded page operations, downloads, screenshots, permissions, geolocation, and graceful shutdown.
+- **Success check:** Uses direct ProcessManager executable/argv launch, guarded Playwright import, dedicated profile, PID-reuse-safe lock recovery, twelve-tab bound, per-tab timeout recovery, private no-overwrite artifacts, CDP `Browser.close`, and bounded cancellation fallback.
+- **Current assessment:** PASS
+- **Evidence:** Deterministic browser tests cover lock identity, false positives, downloads, shutdown, snapshot/evaluate recovery, and dispatcher boundaries; real Chrome restored localStorage across two controlled restarts with no process or lock residue.
+- **Last meaningful change:** T9 managed Chromium backend and profile-persistence repair, 2026-07-08.
+- **Owning task or gate:** T9 / G4; composed by T14 runtime.
+
+### `src/browser/setup.ts`
+- **Purpose:** Explicit architecture-pinned Chromium acquisition, exact executable verification, wrapper-owned CDP launch proof, private manifest, atomic promotion, and rollback.
+- **Success check:** Resolves the local Playwright CLI independent of cwd, forces the official CDN, skips the unused headless shell, rejects symlinks/hash mismatches, verifies real loopback CDP readiness, and restores an old installation after promoted verification failure.
+- **Current assessment:** PASS
+- **Evidence:** Deterministic install/rollback/CWD/launch tests pass; real arm64 setup verified revision 1228, Chrome 149.0.7827.55, executable SHA-256 `b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7`, private modes, and no residue.
+- **Last meaningful change:** T9 pinned browser setup and real launch correction, 2026-07-08.
+- **Owning task or gate:** T9 / G4 and T16 certification.
+
 ### `src/child-wrapper.ts`
 - **Purpose:** Detached process-group leader that receives launch data only over IPC, starts targets with ignored stdin, forwards separate output streams, and independently watches parent identity.
 - **Success check:** Wrapper and target share one dedicated PGID; missed heartbeat or process-table parent mismatch triggers whole-group TERM then KILL cleanup without relying on IPC closure.
@@ -127,19 +151,19 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T2 / G2; reused for terminal, Cloudflared, and Chromium.
 
 ### `src/cli.ts`
-- **Purpose:** Executable command boundary for version/help, explicit YOLO opt-in, configuration management, and owner-credential rotation.
-- **Success check:** Plain launch refuses access; reset commands require bounded direct `/dev/tty` confirmation; auth reset refuses a live runtime lock and emits the new owner password only to the local terminal.
+- **Purpose:** Executable command boundary for version/help, explicit YOLO opt-in, browser setup, configuration management, and owner-credential rotation.
+- **Success check:** Plain launch refuses access; `setup browser` initializes private state and invokes the pinned installer; package-bin symlinks execute; reset commands require bounded direct `/dev/tty` confirmation; auth reset refuses a live runtime lock.
 - **Current assessment:** PASS
-- **Evidence:** Eight real subprocess/PTTY tests pass, including live process-table lock matching, genuinely sessionless `/dev/tty` failure, config reset, and credential rotation.
-- **Last meaningful change:** T4 owner reset command, 2026-07-08.
-- **Owning task or gate:** T0 / G1, T1, and T4; expanded by later CLI/runtime tasks.
+- **Evidence:** Ten CLI tests pass, including real subprocess/PTTY flows, package-bin symlink invocation, browser setup routing, live process-table lock matching, genuinely sessionless `/dev/tty` failure, config reset, and credential rotation.
+- **Last meaningful change:** T9 explicit browser setup and symlink-safe main guard, 2026-07-08.
+- **Owning task or gate:** T0 / G1, T1, T4, and T9; expanded by later runtime tasks.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, invalid-config reset/preservation, private runtime-lock persistence, and PID-reuse identity comparison.
-- **Success check:** Creates the exact 0700 state tree, writes 0600 files atomically, repairs current-owner permissions, rejects symlink/wrong-shape state, validates config without mutation, preserves invalid bytes on reset, and requires all runtime identity fields to match.
+- **Success check:** Creates the exact 0700 state tree including `browser/` and `browser-profile/`, writes 0600 files atomically, repairs current-owner permissions, rejects symlink/wrong-shape state, validates config without mutation, preserves invalid bytes on reset, and requires all runtime identity fields to match.
 - **Current assessment:** PASS
-- **Evidence:** `test/config.test.ts` passes 7/7 and the real PTY CLI reset test passes through macOS Expect.
-- **Last meaningful change:** T1 secure state/config completion, 2026-07-08.
+- **Evidence:** `test/config.test.ts` passes 7/7; T9 CLI setup test proves both browser directories are private 0700 state.
+- **Last meaningful change:** T9 browser-install state directory, 2026-07-08.
 - **Owning task or gate:** T1; reused by T4, T9, T11, and T14.
 
 ### `src/limits.ts`
@@ -206,13 +230,21 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 atomic-file RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T1.
 
-### `test/cli.test.ts`
-- **Purpose:** Real-process and real-PTY tests for package metadata, launch refusal, config commands, live-lock safety, and owner-password reset.
-- **Success check:** Proves exact pins/support floor, no plain launch, `/dev/tty` confirmation, refusal while a matching runtime is live, no sessionless bypass, non-auth-state preservation, new-password verification, and OAuth revocation.
+### `test/browser.test.ts`
+- **Purpose:** Deterministic and real-local boundary tests for pinned setup, wrapper-owned launch, install rollback, browser locks, artifacts, audit policy, validation, dispatch, graceful shutdown, and per-tab recovery.
+- **Success check:** Proves exact hashes and symlink rejection, CWD-independent official-CDN installer arguments, CDP readiness cleanup, stale-lock identity rules, no-overwrite downloads, audit secrecy/fail-closed behavior, all actions, bounded snapshot/evaluate recovery, natural shutdown, and cancellation fallback.
 - **Current assessment:** PASS
-- **Evidence:** Eight tests pass using macOS Expect and Python `setsid()` for a genuinely terminal-less child.
-- **Last meaningful change:** T4 auth reset RED/GREEN and terminal-cleanup debugging, 2026-07-08.
-- **Owning task or gate:** T0 / G1, T1, and T4.
+- **Evidence:** Targeted browser suite passes 19/19; real external evidence additionally proves pinned arm64 setup and profile persistence across controlled restarts.
+- **Last meaningful change:** T9 browser RED/GREEN and real-browser debugging, 2026-07-08.
+- **Owning task or gate:** T9 / G4.
+
+### `test/cli.test.ts`
+- **Purpose:** Real-process and real-PTY tests for package metadata, package-bin execution, browser setup, launch refusal, config commands, live-lock safety, and owner-password reset.
+- **Success check:** Proves exact pins/support floor, symlink invocation, private browser setup routing, no plain launch, `/dev/tty` confirmation, live-lock refusal, no sessionless bypass, non-auth-state preservation, new-password verification, and OAuth revocation.
+- **Current assessment:** PASS
+- **Evidence:** Ten tests pass using real subprocesses, a package-bin symlink, macOS Expect, and Python `setsid()` for a genuinely terminal-less child.
+- **Last meaningful change:** T9 browser setup and symlink-entry regression, 2026-07-08.
+- **Owning task or gate:** T0 / G1, T1, T4, and T9.
 
 ### `test/config.test.ts`
 - **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, and full identity matching.
@@ -261,6 +293,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/dashboard.test.ts` passes 2/2; full tracked suite passes 99/99.
 - **Last meaningful change:** T8 secure dashboard, 2026-07-08.
 - **Owning task or gate:** T8.
+
+### `src/tools/browser.ts`
+- **Purpose:** Public `loom_browser` validation, audit policy, bounded result shaping, image return, typed error preservation, and dispatcher composition.
+- **Success check:** Accepts only approved actions/schemes/origins/permissions/bounds, audits every browser mutation before backend work without secret content, keeps reads available after audit degradation, and never statically loads Playwright.
+- **Current assessment:** PASS
+- **Evidence:** Browser tests cover every action, unsafe URLs/origins/tabs/permissions/bounds, audit failure, audit secrecy, typed backend errors, screenshots, and six-tool fallback dispatch.
+- **Last meaningful change:** T9 public browser tool boundary, 2026-07-08.
+- **Owning task or gate:** T9 / G4.
 
 ### `src/tools/files.ts`
 - **Purpose:** Concrete bounded text/image/binary read, audited atomic write, exact audited edit, and dispatcher composition for the three public file tools.
@@ -392,12 +432,8 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ## Planned paths by owning task
 
-These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
+These remain intentionally untracked until their owning task begins.
 
-- **T6:** `src/tools/files.ts`, `test/files.test.ts`.
-- **T7:** `src/catalog.ts`, `src/tools/knowledge.ts`, `test/catalog.test.ts`.
-- **T8:** `src/dashboard.ts`, `public/dashboard.html`, `public/dashboard.css`, `public/dashboard.js`, `test/dashboard.test.ts`.
-- **T9:** `src/browser.ts`, `src/tools/browser.ts`, `test/browser.test.ts`.
 - **T10–T13:** `src/cloudflare.ts`, `test/cloudflare.test.ts`.
 - **T14:** `src/runtime.ts`, `test/runtime.test.ts`.
 - **T15:** release documentation/notices and `docs/release-evidence/` index as required.
