@@ -76,3 +76,29 @@ PASS (4/4)
 npm run build
 PASS
 ```
+
+### T1 — central limits and path-policy foundation
+
+- Added the approved central limits as one dependency-free module.
+- Added absolute/`~/` path resolution with rejection of empty input, bare relative paths, alternate-user home syntax, NUL bytes, and malformed UTF-16 surrogate sequences.
+- Added real `lstat` component walking for mutating paths: existing symbolic-link parents and final symlinks are rejected, non-directory intermediate components fail, and a missing tail beneath real directories is allowed for later atomic creation.
+- Required RED: TypeScript failed because `src/limits.ts` and `src/paths.ts` did not exist.
+- First GREEN attempt exposed one production bug and two test-platform issues: an unmatched high surrogate was not rejected because `charCodeAt` returned `NaN`; ESM namespace objects have a null prototype; and macOS `/var` is itself a symlink to `/private/var`.
+- Fixed the Unicode check and canonicalized test temporary roots with `realpath` without weakening the production symlink policy.
+- Targeted GREEN: 5/5 tests passed.
+- Full validation: typecheck, 9/9 tests, and build passed.
+
+Evidence:
+
+```text
+node --test dist/test/limits.test.js dist/test/paths.test.js
+pass 5
+fail 0
+
+npm run typecheck
+PASS
+npm test
+PASS (9/9)
+npm run build
+PASS
+```

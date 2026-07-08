@@ -1,0 +1,29 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import * as limits from '../src/limits.js';
+
+test('central limits match the approved Loom v1 contract', () => {
+  assert.deepEqual({ ...limits }, {
+    AUDIT_RETENTION_DAYS: 30,
+    AUDIT_START_DEADLINE_MS: 2_000,
+    DASHBOARD_BOOTSTRAP_NONCE_TTL_MS: 5_000,
+    MAX_AUDIT_FILE_BYTES: 50 * 1024 * 1024,
+    MAX_BROWSER_SNAPSHOT_BYTES: 128 * 1024,
+    MAX_BROWSER_TABS: 12,
+    MAX_CATALOG_DEPTH: 12,
+    MAX_EDIT_WINDOW_BYTES: 256 * 1024,
+    MAX_FILE_BYTES_PER_ROOT: 1024 * 1024,
+    MAX_FILES_PER_ROOT: 10_000,
+    MAX_SCAN_SECONDS: 10,
+    MAX_SCREENSHOT_BYTES: 2 * 1024 * 1024,
+    MAX_TOTAL_INDEXED_BYTES: 64 * 1024 * 1024,
+    MAX_WRITE_BYTES: 8 * 1024 * 1024,
+    QUICK_TUNNEL_URL_DEADLINE_MS: 15_000,
+    SHUTDOWN_ABSOLUTE_DEADLINE_MS: 15_000,
+    SHUTDOWN_SOFT_GRACE_MS: 5_000,
+    WATCHDOG_HEARTBEAT_INTERVAL_MS: 1_000,
+    WATCHDOG_MISSED_HEARTBEAT_LIMIT: 3,
+    WATCHDOG_PROCESS_SCAN_FALLBACK_MS: 2_000,
+  });
+});

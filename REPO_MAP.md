@@ -110,6 +110,22 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T0 CLI bootstrap, 2026-07-08.
 - **Owning task or gate:** T0 / G1; expanded by later CLI/runtime tasks.
 
+### `src/limits.ts`
+- **Purpose:** Single source of truth for all fixed Loom v1 byte, time, count, and shutdown limits.
+- **Success check:** Every exported value exactly matches plan Section 8 and boundary tests import the production constants.
+- **Current assessment:** PASS
+- **Evidence:** `test/limits.test.ts` passes and verifies all nineteen approved constants.
+- **Last meaningful change:** T1 limits foundation, 2026-07-08.
+- **Owning task or gate:** T1 / G2 and later consumers.
+
+### `src/paths.ts`
+- **Purpose:** Parse absolute or `~/` user paths, reject malformed input, and prevent writes through existing symbolic-link components.
+- **Success check:** Rejects empty, relative, alternate-home, NUL, malformed-Unicode, symlink-parent, symlink-final, and non-directory-intermediate paths while allowing a missing tail under real directories.
+- **Current assessment:** PASS
+- **Evidence:** `test/paths.test.ts` passes 4/4 against real temporary files and symlinks on macOS.
+- **Last meaningful change:** T1 path-policy foundation, 2026-07-08.
+- **Owning task or gate:** T1; reused by T6, T7, T9, and runtime state.
+
 ### `test/cli.test.ts`
 - **Purpose:** Real-process tests for package metadata and the minimum CLI security boundary.
 - **Success check:** Runs compiled CLI as a subprocess and proves version, help, macOS floor, exact pins, and refusal of plain launch.
@@ -117,6 +133,22 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `node --test dist/test/cli.test.js` reports 4 passed, 0 failed.
 - **Last meaningful change:** T0 test-first bootstrap, 2026-07-08.
 - **Owning task or gate:** T0 / G1.
+
+### `test/limits.test.ts`
+- **Purpose:** Locks every centralized Loom v1 limit to the approved specification.
+- **Success check:** Exact value comparison passes without duplicating runtime logic.
+- **Current assessment:** PASS
+- **Evidence:** Targeted and full test suites pass.
+- **Last meaningful change:** T1 limits RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T1.
+
+### `test/paths.test.ts`
+- **Purpose:** Real-filesystem tests for user-path parsing and symbolic-link rejection.
+- **Success check:** Covers accepted absolute/home paths, hostile path strings, malformed surrogate pairs, missing tails, and real directory/file symlinks.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite passes 4/4 after canonicalizing macOS temporary roots through `realpath`.
+- **Last meaningful change:** T1 path-policy RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T1.
 
 ### `tsconfig.json`
 - **Purpose:** Strict NodeNext TypeScript compilation for source and tests.
@@ -130,7 +162,7 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T1:** `src/limits.ts`, `src/paths.ts`, `src/atomic-file.ts`, `src/config.ts`, and corresponding tests.
+- **T1 remaining:** `src/atomic-file.ts`, `src/config.ts`, and corresponding tests; runtime-lock identity and secure state-root behavior may remain in these modules or the smallest existing T1 module that fits.
 - **T2:** `src/output.ts`, `src/child-wrapper.ts`, `src/process-manager.ts`, `src/watchdog.ts`, and corresponding tests.
 - **T3:** `src/audit.ts`, `test/audit.test.ts`.
 - **T4:** `src/oauth.ts`, `test/oauth.test.ts`.
