@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="loom-csrf" content="{{LOOM_CSRF}}">
+  <title>Loom Dashboard</title>
+  <link rel="stylesheet" href="/dashboard.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="eyebrow">Local control surface</p>
+        <h1>Loom</h1>
+      </div>
+      <p id="connection-state" role="status">Loading status…</p>
+    </header>
+
+    <section aria-labelledby="runtime-heading">
+      <h2 id="runtime-heading">Runtime</h2>
+      <pre id="runtime-status" aria-live="polite">Loading…</pre>
+      <button type="button" id="refresh-status">Refresh status</button>
+    </section>
+
+    <section aria-labelledby="actions-heading">
+      <h2 id="actions-heading">Actions</h2>
+      <div class="actions">
+        <button type="button" data-action="rescan_catalog">Rescan catalog</button>
+        <button type="button" data-action="restart_browser">Restart browser</button>
+        <button type="button" data-action="reveal_audit_folder">Reveal audit folder</button>
+        <button type="button" data-action="revoke_all_oauth">Revoke all OAuth</button>
+        <button type="button" data-action="stop_loom" class="danger">Stop Loom</button>
+      </div>
+      <p id="action-result" role="status" aria-live="polite"></p>
+    </section>
+
+    <section aria-labelledby="config-heading">
+      <h2 id="config-heading">Next-launch configuration</h2>
+      <label for="config-json">JSON configuration</label>
+      <textarea id="config-json" rows="10" spellcheck="false">{
+  "tunnel": { "type": "quick" },
+  "extraRoots": []
+}</textarea>
+      <button type="button" id="save-config">Save for next launch</button>
+    </section>
+  </main>
+  <script src="/dashboard.js" defer></script>
+</body>
+</html>

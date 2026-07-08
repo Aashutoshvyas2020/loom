@@ -230,6 +230,38 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 limits RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T1.
 
+### `public/dashboard.css`
+- **Purpose:** Minimal responsive styling for the authenticated loopback dashboard without inline CSS.
+- **Success check:** Loads only inside an authenticated dashboard session and remains compatible with the strict self-only CSP.
+- **Current assessment:** PASS
+- **Evidence:** Targeted dashboard HTTP tests pass 2/2; full tracked suite passes 99/99.
+- **Last meaningful change:** T8 secure dashboard, 2026-07-08.
+- **Owning task or gate:** T8.
+
+### `public/dashboard.html`
+- **Purpose:** Static dashboard shell containing only redacted status surfaces, allowlisted controls, and the injected per-session CSRF meta value.
+- **Success check:** Contains no inline executable content or secrets; requires an authenticated session; uses text-only rendering through dashboard.js.
+- **Current assessment:** PASS
+- **Evidence:** Bootstrap/session/CSRF/redaction tests pass through real HTTP.
+- **Last meaningful change:** T8 secure dashboard, 2026-07-08.
+- **Owning task or gate:** T8.
+
+### `public/dashboard.js`
+- **Purpose:** Same-origin dashboard client for redacted status and the fixed action allowlist.
+- **Success check:** Sends credentials and X-Loom-CSRF, renders with textContent, never evaluates returned HTML, and exposes no generic command/action endpoint.
+- **Current assessment:** PASS
+- **Evidence:** Targeted dashboard action tests pass and unknown actions return 404.
+- **Last meaningful change:** T8 secure dashboard, 2026-07-08.
+- **Owning task or gate:** T8.
+
+### `src/dashboard.ts`
+- **Purpose:** Loopback-only dashboard HTTP server with one-time bootstrap, bounded sessions, exact Host/Origin validation, CSRF, strict headers, recursive redaction, and allowlisted actions.
+- **Success check:** Nonces are single-use/expiring; cookies are HttpOnly SameSite=Strict; all pages/APIs require a session; mutations require exact Origin and CSRF; hostile Host and unknown actions fail.
+- **Current assessment:** PASS
+- **Evidence:** `test/dashboard.test.ts` passes 2/2; full tracked suite passes 99/99.
+- **Last meaningful change:** T8 secure dashboard, 2026-07-08.
+- **Owning task or gate:** T8.
+
 ### `src/tools/files.ts`
 - **Purpose:** Concrete bounded text/image/binary read, audited atomic write, exact audited edit, and dispatcher composition for the three public file tools.
 - **Success check:** Reads safely follow only a stable final symlink to a regular-file target, reject symlinked parents, detect image MIME by magic bytes, bound output, and hash the complete stable snapshot; writes/edits retain strict symlink rejection, audit-before-mutation, conflict detection, and atomic replacement.
@@ -269,6 +301,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/watchdog.test.ts` passes 3/3 against live macOS processes.
 - **Last meaningful change:** T2 watchdog identity completion, 2026-07-08.
 - **Owning task or gate:** T2 / G2; reused by runtime and browser lock recovery.
+
+### `test/dashboard.test.ts`
+- **Purpose:** Real HTTP tests for one-time bootstrap, cookies, strict headers, session/CSRF/Origin/Host boundaries, recursive redaction, and action allowlisting.
+- **Success check:** Replayed nonces, missing sessions, wrong Origin/CSRF/Host, leaked secrets, and unknown actions are all rejected deterministically.
+- **Current assessment:** PASS
+- **Evidence:** Two targeted tests pass; full tracked suite passes 99/99.
+- **Last meaningful change:** T8 dashboard RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T8.
 
 ### `test/files.test.ts`
 - **Purpose:** Real-filesystem proof for stable/ranged reads, image magic bytes, explicit binary base64, stable final-symlink reads, parent/mutation symlink rejection, audited writes/edits, conflicts, concurrency, and dispatcher composition.

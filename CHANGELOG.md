@@ -375,3 +375,14 @@ PASS
 - Required RED: malformed frontmatter was indexed, recoverable tombstones remained, and the aggregate test accidentally exercised oversized-file skipping.
 - Targeted GREEN: skills and memory passed 22/22.
 - Full validation: typecheck passed, tracked tests passed 97/97, and build passed.
+
+### T8 — secure loopback dashboard
+
+- Added a loopback-only dashboard server and static client with no permissive CORS or generic action endpoint.
+- A 256-bit five-second bootstrap nonce is single-use and exchanged for a bounded HttpOnly SameSite=Strict session cookie.
+- Every page and API requires the session; mutations additionally require exact Origin and a per-session `X-Loom-CSRF` value.
+- Exact Host validation, strict self-only CSP, frame denial, no-store, no-sniff, no-referrer, and restrictive Permissions-Policy are applied.
+- Status values are recursively redacted before serialization. Static JavaScript renders with `textContent` and exposes only rescan, browser restart, audit reveal, next-launch config, OAuth revoke, and stop actions.
+- Required RED: `src/dashboard.ts` did not exist. A later test correction replaced fetch’s normalized Host header with a raw HTTP request.
+- Targeted GREEN: dashboard passed 2/2.
+- Full validation: typecheck passed, tracked tests passed 99/99, and build passed.
