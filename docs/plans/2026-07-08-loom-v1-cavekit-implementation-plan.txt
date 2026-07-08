@@ -1,0 +1,589 @@
+LOOM V1 — CAVEKIT IMPLEMENTATION PLAN
+
+Status: APPROVED IMPLEMENTATION BASELINE, amended after independent release-blocker review
+Target repository: /Users/aashu/loom
+Target branch: planning/loom-v1-cavekit
+Target platform: macOS 14 or newer, Apple Silicon and Intel where dependencies support both
+Runtime: Node.js 22 or newer
+Primary executable: loom
+Primary unrestricted command: loom launch --yolo
+
+This document is the complete handoff for a new implementation agent. It replaces earlier Loom v1 drafts. Follow it in order. Do not modify Spindle or DevSpace. Do not push, publish, deploy, or claim production readiness without explicit user instruction and the evidence required below.
+
+0. PRODUCT CONTRACT
+
+Loom is a foreground-only, single-owner remote MCP server for a computer owned and controlled by the person launching it. Unrestricted terminal and filesystem capability is disabled unless the owner explicitly starts `loom launch --yolo` in a visible local terminal. The process must print an unmistakable warning that this grants authenticated remote clients the same practical access as the current macOS user, including environment secrets and personal files.
+
+The visible foreground process is the security boundary. Closing its terminal, pressing Ctrl+C, or terminating the main process must stop public access and clean all Loom-owned children. Loom must not install launchd jobs, login items, hidden daemons, persistent supervisors, browser extensions, cloud control planes, or auto-start behavior.
+
+Loom exposes exactly seven MCP tools:
+
+- loom_terminal
+- loom_read
+- loom_write
+- loom_edit
+- loom_skills
+- loom_memory
+- loom_browser
+
+Normal `loom launch` must not silently enable unrestricted tools. It must exit with a concise message directing the owner to the explicit `loom launch --yolo` command. There is no second spelling or hidden environment-variable bypass for YOLO mode.
+
+1. CAVEKIT OPERATING CONTRACT
+
+1.1 Required repository files
+
+- SPEC.md
+- AGENTS.md
+- REPO_MAP.md
+- CHANGELOG.md
+- HANDOFF.md
+- ALGORITHM.md
+- docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt
+
+1.2 Mandatory read order
+
+Read the seven files above in the listed order. Then run the exact startup command recorded in HANDOFF.md before editing.
+
+1.3 Repository-map gate
+
+Before production code changes, run `git ls-files | sort`. REPO_MAP.md must document every tracked file with:
+
+- Path
+- Purpose
+- Success check
+- Current assessment: PASS, PARTIAL, FAIL, or PLANNED
+- Evidence
+- Last meaningful change
+- Owning task or gate
+
+1.4 Same-commit governance rule
+
+Every commit changing repository files must update REPO_MAP.md, CHANGELOG.md, and HANDOFF.md in the same commit. Update SPEC.md when behavior, architecture, scope, security policy, tool contract, or release criteria change. Update AGENTS.md when execution rules change. Keep ALGORITHM.md at 20 lines or fewer.
+
+1.5 Test-first execution
+
+For every behavior change:
+
+1. Record the current task and acceptance check in HANDOFF.md.
+2. Write the smallest failing test.
+3. Run the exact test and record the expected RED failure.
+4. Implement the minimum production code.
+5. Run the targeted test to GREEN.
+6. Run typecheck, full tests, and build.
+7. Update governance files.
+8. Commit one coherent task or subtask.
+9. Record the SHA and exact next command.
+
+1.6 Evidence discipline
+
+Never claim external behavior from mocks. Real ChatGPT, OAuth, named-tunnel, browser-persistence, sleep/wake, package-install, and process-cleanup claims require the exact real-world evidence described in T16. Tests may prove deterministic local behavior only.
+
+2. LOCKED PRODUCT DECISIONS
+
+- Foreground-only runtime.
+- `loom launch --yolo` is the only command that enables unrestricted remote access.
+- No approvals, command classification, path allowlist, PTY, usable stdin, workspaces, database, vector database, plugin runtime, generic event bus, monorepo, dependency-injection container, or one-implementation interfaces.
+- Terminal commands are unrestricted but noninteractive. No PTY. stdin is ignored or `/dev/null`.
+- Owner password is a persistent installation credential. It changes only through `loom auth reset`.
+- Restarts, Quick Tunnel URL changes, named-tunnel hostname changes, OAuth refresh, browser reset, config reset, and package upgrades must not rotate the owner password.
+- Quick Tunnel is setup/testing only and can never satisfy production certification.
+- Named Cloudflare Tunnel with a stable HTTPS hostname is required for production certification.
+- File paths and terminal cwd accept only absolute paths or `~/...`. Bare relative paths are rejected.
+- Writes and edits reject every existing symlink component, serialize per canonical path, detect conflicts, write an audit-start record before mutation, and replace atomically in the same directory.
+- loom_read detects PNG, JPEG, GIF, and WebP by magic bytes and returns MCP image content within the fixed limit.
+- Browser uses a dedicated persistent profile at `~/.loom/browser-profile/`; it never attaches to the normal Chrome profile.
+- Audit is private best-effort local logging, not tamper-proof against the same macOS user. Audit failure closes mutations while reads remain available.
+- All terminal, Cloudflared, and Chromium process trees are wrapper-owned and watchdog-covered.
+
+3. NON-GOALS
+
+No Windows release claim, Linux claim, hidden service, mobile client, browser extension, normal-Chrome attachment, incognito support, command replay, undo, multi-user auth, cloud storage, remote update system, custom MCP UI, or automatic owner-password recovery.
+
+4. DEPENDENCIES AND SUPPORT FLOOR
+
+Pin exact versions in package.json and package-lock.json:
+
+- @modelcontextprotocol/sdk 1.29.0
+- express 5.2.1
+- zod 4.4.3
+- playwright-core 1.61.1
+
+Pin development dependencies exactly. Do not use version ranges. Record the exact MCP SDK version in SPEC.md and REPO_MAP.md.
+
+Supported production floor is macOS 14.0 or newer and Node.js 22 or newer. Earlier macOS versions are unsupported unless later proven and explicitly added to SPEC.md.
+
+Playwright browser setup is explicit. `npm install` must not download Chromium. `loom setup browser` must invoke the locally installed Playwright Core CLI, install its pinned Chromium revision, record the expected revision and resolved executable path, and verify a real launch. Runtime must refuse browser startup when the executable does not match the recorded supported revision, while leaving non-browser tools available.
+
+5. TARGET REPOSITORY LAYOUT
+
+public/
+  dashboard.html
+  dashboard.css
+  dashboard.js
+src/
+  audit.ts
+  atomic-file.ts
+  browser.ts
+  catalog.ts
+  child-wrapper.ts
+  cli.ts
+  cloudflare.ts
+  config.ts
+  dashboard.ts
+  limits.ts
+  mcp.ts
+  oauth.ts
+  output.ts
+  paths.ts
+  process-manager.ts
+  runtime.ts
+  watchdog.ts
+  tools/
+    browser.ts
+    files.ts
+    knowledge.ts
+    register.ts
+    terminal.ts
+test/
+  audit.test.ts
+  atomic-file.test.ts
+  browser.test.ts
+  catalog.test.ts
+  cli.test.ts
+  cloudflare.test.ts
+  config.test.ts
+  dashboard.test.ts
+  files.test.ts
+  mcp.test.ts
+  oauth.test.ts
+  output.test.ts
+  paths.test.ts
+  process-manager.test.ts
+  runtime.test.ts
+  terminal.test.ts
+  watchdog.test.ts
+docs/
+  plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt
+  release-evidence/
+
+Do not create speculative modules. A planned path may remain absent until its owning task starts.
+
+6. RUNTIME STATE AND PERMISSIONS
+
+State root: `~/.loom/`
+
+- auth.json
+- config.json
+- audit/
+- browser-profile/
+- cloudflared/
+- downloads/
+- downloads/screenshots/
+- memory/
+- runtime/browser.lock
+- runtime/current.json
+- runtime/loom.lock
+
+Create directories with mode 0700. auth.json, config.json, audit files, and runtime files use 0600. Reject insecure existing ownership or permissions when they cannot be repaired safely. All state writes use same-directory temporary files, fsync where correctness requires it, atomic rename, and restrictive creation modes.
+
+7. CLI CONTRACT
+
+Required commands:
+
+- loom launch
+- loom launch --yolo
+- loom setup browser
+- loom auth reset
+- loom config check
+- loom config reset
+- loom --version
+- loom --help
+
+`loom launch` exits nonzero without starting listeners and prints the exact explicit opt-in command.
+
+`loom launch --yolo` validates local interactive ownership through `/dev/tty`, prints the full-computer-access warning, starts foreground runtime, and remains visible until shutdown. It must not accept YOLO through config or environment variables.
+
+`loom setup browser` installs only the pinned Playwright Chromium revision on explicit invocation and verifies launch. No browser download during npm install.
+
+`loom auth reset` refuses while Loom is running, requires confirmation from `/dev/tty`, revokes OAuth clients, codes, access tokens, refresh tokens, and pending transactions, generates a new high-entropy owner password, hashes it using Node crypto.scrypt with a fresh salt, stores it atomically, and prints the new password only to `/dev/tty`. It preserves tunnel, memory, browser, and catalog configuration.
+
+`loom config check` validates without modifying state. `loom config reset` requires local confirmation, timestamps and preserves invalid prior config, then writes valid defaults atomically.
+
+8. CENTRAL LIMITS
+
+Define once in src/limits.ts and test boundary values:
+
+- MAX_WRITE_BYTES = 8 MiB
+- MAX_EDIT_WINDOW_BYTES = 256 KiB
+- MAX_FILES_PER_ROOT = 10,000
+- MAX_FILE_BYTES_PER_ROOT = 1 MiB
+- MAX_TOTAL_INDEXED_BYTES = 64 MiB
+- MAX_CATALOG_DEPTH = 12
+- MAX_SCAN_SECONDS = 10
+- MAX_BROWSER_TABS = 12
+- MAX_BROWSER_SNAPSHOT_BYTES = 128 KiB
+- MAX_SCREENSHOT_BYTES = 2 MiB
+- MAX_AUDIT_FILE_BYTES = 50 MiB
+- AUDIT_RETENTION_DAYS = 30
+- AUDIT_START_DEADLINE_MS = 2,000
+- QUICK_TUNNEL_URL_DEADLINE_MS = 15,000
+- WATCHDOG_HEARTBEAT_INTERVAL_MS = 1,000
+- WATCHDOG_MISSED_HEARTBEAT_LIMIT = 3
+- WATCHDOG_PROCESS_SCAN_FALLBACK_MS = 2,000
+- SHUTDOWN_SOFT_GRACE_MS = 5,000
+- SHUTDOWN_ABSOLUTE_DEADLINE_MS = 15,000
+- DASHBOARD_BOOTSTRAP_NONCE_TTL_MS = 5,000
+
+9. PATH AND ATOMIC-FILE CONTRACT
+
+Expand only `~/...`; reject `~other`, bare relative paths, NUL bytes, malformed Unicode, and empty paths. Canonicalize before authorization and locking.
+
+Reads may follow the final regular file but must reject unsupported types. Writes and edits must walk each existing path component with lstat and reject any symlink component. Parent creation is optional and bounded. Recheck identity immediately before replacement to reduce race exposure.
+
+Use a per-canonical-path async mutex. Write to a random same-directory temporary file with restrictive mode, fsync when required, preserve existing regular-file mode, check expected SHA-256 when supplied, then rename atomically. Clean temporary files on failure.
+
+Memory save/delete resolves a stable Loom-owned ID to a canonical path strictly inside `~/.loom/memory/`; user-supplied paths are never accepted.
+
+10. OUTPUT MODEL
+
+Terminal output is noninteractive. stdout and stderr are piped separately into one ordered bounded stream. Strip ANSI and unsafe control sequences. Detect binary output and suppress it with a deterministic marker.
+
+Track total bytes, retained head/tail, truncation, first available cursor, next cursor, running/completed/cancelled/timed-out state, exit code, signal, and sanitized output. Cursor reads return `requestedCursor`, `availableFrom`, `nextCursor`, and `gap` so truncation cannot silently corrupt polling.
+
+A synchronous tool call may wait at most 60 seconds. Longer commands return a job ID and cursor and continue only while the foreground Loom runtime remains alive.
+
+11. CHILD WRAPPER, WATCHDOG, AND PROCESS GROUPS
+
+Every terminal, Cloudflared, and Chromium tree starts through a Loom child wrapper in its own process group. Record PID, PGID, launch ID, canonical executable path, process start time, and canonical Loom state path.
+
+The parent sends a heartbeat every second. After three missed heartbeats, the watchdog verifies parent identity through PID plus start time plus canonical executable path. It also scans the process table every two seconds as fallback. Never rely on pipe closure or `kill(pid, 0)` alone.
+
+On shutdown, send SIGTERM to the negative PGID, wait at most five seconds, then SIGKILL the negative PGID. Drain pipes, record final state, and deregister the group. Every shutdown path has an absolute 15-second deadline after which remaining owned groups are killed. PID reuse checks must fail closed when identity is uncertain.
+
+Chromium launched by Playwright must still be wrapper-owned. Use the browser executable with a wrapper-controlled transport or launch arrangement that preserves Playwright control while placing the browser process tree in the owned process group. A browser process that bypasses watchdog ownership is a release blocker.
+
+12. RUNTIME LOCKS AND PID REUSE
+
+`runtime/loom.lock` and `runtime/browser.lock` store PID, start time, canonical executable path, launch ID, and canonical state/profile path. A lock is live only when all identity fields match. Stale locks may be removed only after process-table verification.
+
+For the dedicated browser profile, remove stale Chromium `SingletonLock`, `SingletonCookie`, and `SingletonSocket` only after confirming no live Loom or Chromium process uses the canonical profile path. Never remove them while ownership is uncertain.
+
+13. MCP TRANSPORT AND SESSION MODEL
+
+Bind MCP and dashboard listeners only to `127.0.0.1` on ephemeral ports. Do not expose an unauthenticated public MCP route at any point.
+
+Before endpoint-bound OAuth is ready, `/mcp` must fail closed with deterministic NOT_READY behavior. After the public HTTPS endpoint is resolved, configure one canonical protected resource URI equal to the exact public MCP URL ending in `/mcp`, enable OAuth metadata, then mark the route ready.
+
+Implement the MCP SDK's supported Streamable HTTP transport and explicit session lifecycle. Validate session identifiers, bound inactive sessions, clean sessions on shutdown, and return structured protocol errors rather than generic Express pages.
+
+Unauthenticated protected-resource responses must provide the correct `WWW-Authenticate` challenge pointing to protected-resource metadata. Publish path-correct protected-resource metadata and authorization-server metadata. The resource value and audience checks must use the exact canonical `/mcp` URL.
+
+14. AUDIT SYSTEM
+
+Write private JSONL logs to `~/.loom/audit/YYYY-MM-DD.jsonl`. Serialize rotation at 50 MiB inside the same critical section. Delete files older than 30 days at startup.
+
+Use a bounded async queue with no silent drops. A mutating operation is rejected if its audit-start record cannot be durably accepted within two seconds or the queue is saturated. Mark runtime `audit degraded`. Read-only operations remain available.
+
+Audit-start records precede terminal start, write, edit, memory save/delete, browser mutations, permission changes, and downloads. Finish records include status and duration. Never log owner password, OAuth secrets, authorization headers, environment values, command output, file content, typed browser values, cookies, storage, page text, or screenshot bytes.
+
+15. OAUTH MODEL
+
+Single-owner OAuth is local-password-gated and endpoint-bound. Cloudflare never receives or validates the owner password; it is only the reverse proxy.
+
+Persist OAuth client registrations, authorization codes, access tokens, refresh tokens, scopes, expiry, resource URI, and endpoint generation in private atomic state. Hash opaque secrets at rest where practical. Authorization codes are single use and short lived. Refresh tokens are supported, rotated on use, revocable, and bound to the same client, scope, owner installation, endpoint generation, and canonical `/mcp` resource.
+
+Tunnel URL changes invalidate endpoint-bound OAuth clients/codes/tokens because their resource/redirect assumptions may no longer be valid. They must not rotate the owner password.
+
+Startup is fail closed. Public routing is not considered ready until OAuth metadata and token validation are bound to the resolved public endpoint. Tests must cover discovery, challenge headers, authorization-code exchange, refresh, rotation, expiry, revocation, wrong audience, wrong resource, endpoint change, replay, and owner-password persistence.
+
+Real ChatGPT certification requires an eligible ChatGPT workspace/account and developer-mode/custom-connector support. This external prerequisite must be recorded in T16; local tests cannot prove it.
+
+16. TOOL CONTRACTS
+
+16.1 loom_terminal
+
+Actions: start, poll, cancel. Input includes command, optional absolute-or-home cwd, optional environment overrides, timeout, cursor, and max wait within central limits. No PTY and no usable stdin. Commands run as the current macOS user through the wrapper/watchdog process group.
+
+16.2 loom_read
+
+Input: path and optional byte range/text controls. Reject unsupported file types and over-limit files. Detect PNG, JPEG, GIF, and WebP by magic bytes, not extension, and return MCP ImageContent with correct MIME type when within limit. Text decoding is deterministic and reports truncation.
+
+16.3 loom_write
+
+Input: `{ path, content, createParents?, expectedSha256? }`. Maximum 8 MiB. Require audit start, canonical path mutex, symlink rejection, expected-hash conflict detection, atomic replacement, and mode preservation.
+
+16.4 loom_edit
+
+Input: `{ path, oldText, newText, replaceAll?, expectedSha256? }`. Reject empty oldText. Maximum editable window 256 KiB. Exact matching only. By default require exactly one match; replaceAll must be explicit. Require audit, mutex, conflict detection, and atomic replacement.
+
+16.5 loom_skills
+
+Actions: list, search, read, rescan. Read-only. Catalog configured roots asynchronously with bounded concurrency and return source path plus safe metadata.
+
+16.6 loom_memory
+
+Actions: list, search, read, save, delete, rescan. save/delete operate only on Loom-owned stable IDs under `~/.loom/memory/`. Imported external memory is read-only unless copied into Loom-owned storage through an explicit local setup flow added by a later approved change.
+
+16.7 loom_browser
+
+Actions: status, tabs, open, navigate, snapshot, click, type, evaluate, screenshot, close, grant_permissions, clear_permissions, set_geolocation.
+
+Allowed navigation schemes: https, http, and about:blank. Reject file, javascript, direct data, and unsupported custom schemes. Localhost/private IP navigation remains allowed because Loom is an explicitly owner-controlled developer tool. Browser output and screenshots obey central limits. Downloads go to `~/.loom/downloads/`; screenshots go to `~/.loom/downloads/screenshots/`.
+
+17. CATALOG MODEL
+
+Use `fs/promises`, bounded concurrency, and no synchronous recursive scans in request handling. Do not follow directory symlinks. Skip file symlinks.
+
+Limits per root: 10,000 files, 1 MiB per file, 64 MiB indexed bytes, depth 12, and 10-second scan budget. Build a candidate catalog separately, keep the current catalog available during rescan, and atomically swap only after completion. Record skipped, malformed, timed-out, and over-limit counts.
+
+18. BROWSER MODEL
+
+Load playwright-core through guarded dynamic import so a missing or broken browser subsystem does not disable terminal, file, skills, or memory tools.
+
+Use the dedicated profile and recorded pinned Chromium revision. Enforce 12-tab maximum, deterministic tab IDs, bounded snapshots, safe selector handling, navigation-scheme validation, explicit permission state, and profile-lock recovery from Section 12.
+
+Never put secrets in command-line flags. Do not attach to the user's normal Chrome profile. Browser restart must preserve the dedicated profile. Browser clear/reset actions must be explicit and locally confirmed when destructive.
+
+19. CLOUDFLARED MODEL
+
+Manage a pinned Cloudflared version. Download only over HTTPS, verify exact SHA-256 for architecture, write atomically, then chmod executable. When a PATH binary is used, print its canonical path and version. Do not silently accept an unknown version.
+
+Always run Cloudflared with `--no-autoupdate`. Disable or randomize metrics by binding metrics to loopback port 0. Start it through the child wrapper and owned process group.
+
+19.1 Quick Tunnel
+
+Quick Tunnel is temporary setup/testing only. Refuse Quick mode when `~/.cloudflared/config.yaml` or `.yml` would change its semantics unless the user resolves the conflict. Tunnel the exact loopback MCP origin. Parse only a valid `https://<label>.trycloudflare.com` URL from output within 15 seconds. Permit one recreation after a transient startup failure. A URL change invalidates endpoint-bound OAuth but preserves owner password. Status must say `Production: no`.
+
+Do not claim stale-subdomain takeover resistance or connector persistence from automated tests. Those remain real-world limitations of Quick Tunnel and are why it is never certified for production.
+
+19.2 Named Tunnel
+
+Named tunnel is the production path. Require configured tunnel name and stable public HTTPS hostname. Validate Cloudflare authentication/certificate and the matching tunnel credential JSON before launch. Use an explicit ephemeral origin mapping equivalent to:
+
+`cloudflared tunnel --no-autoupdate --metrics 127.0.0.1:0 run --url http://127.0.0.1:<mcp-port> <tunnel-name>`
+
+The public connector URL is `https://<hostname>/mcp`. Do not rely on a persistent ingress config that may target a stale ephemeral port. Never fall back to Quick Tunnel. Retry transient failures at most five times with exponential backoff capped at 60 seconds; stop immediately on auth or configuration failures.
+
+20. DASHBOARD
+
+Serve static `public/dashboard.html`, `.css`, and `.js` only on loopback. Generate a 256-bit random bootstrap nonce with 5-second TTL and single use. Exchange it for an HttpOnly, SameSite=Strict session cookie. Require the session cookie for every endpoint and a per-session CSRF value in `X-Loom-CSRF` for mutations.
+
+Validate exact Host and Origin, allow no permissive CORS, escape all rendered values, and send strict CSP, no-store, no-sniff, frame-deny, and `Referrer-Policy: no-referrer` headers.
+
+Dashboard actions: rescan catalog, restart browser, reveal audit folder locally, edit tunnel/extra-root configuration for the next launch, revoke all OAuth, and optionally stop Loom. Never show owner password, commands, browser typed values, environment values, OAuth tokens, authorization headers, or file content.
+
+21. TERMINAL DISPLAY
+
+Print the main status block exactly once after runtime is ready, then append one-line activity records. Do not redraw a live TUI.
+
+The status block includes MCP, browser, skills, memory, tunnel type, connector readiness, audit health, full local MCP URL, full public MCP URL ending `/mcp`, dashboard URL, production certification eligibility, and a bright warning:
+
+`FULL COMPUTER ACCESS ENABLED — sharing the owner password or authorizing an untrusted client is equivalent to giving away this macOS account.`
+
+Quick Tunnel must show `Production: no`. Pressing Ctrl+C must stop Loom.
+
+22. RUNTIME ORCHESTRATION
+
+Startup order:
+
+1. Parse CLI and require explicit --yolo.
+2. Validate macOS/Node support and config.
+3. Acquire runtime lock.
+4. Initialize state permissions and audit.
+5. Start watchdog.
+6. Start loopback MCP listener in NOT_READY state.
+7. Start loopback dashboard.
+8. Start bounded catalog.
+9. Start browser when installed and valid; otherwise mark unavailable.
+10. Start selected tunnel.
+11. Resolve and validate public HTTPS URL.
+12. Bind canonical `/mcp` resource and enable endpoint-bound OAuth.
+13. Mark MCP route ready.
+14. Write runtime state atomically.
+15. Print status once.
+16. Open dashboard locally.
+17. Remain foreground.
+
+Shutdown order:
+
+1. Mark stopping.
+2. Stop health checks and reject new mutations.
+3. Cancel terminal jobs.
+4. Close Playwright control and browser tree.
+5. Clean verified stale browser leftovers.
+6. Terminate Cloudflared group.
+7. Close MCP sessions/listener.
+8. Close dashboard.
+9. Flush audit within deadline.
+10. Remove runtime locks/state.
+11. Confirm watchdog cleanup and no owned descendants.
+12. Exit within absolute shutdown deadline.
+
+23. IMPLEMENTATION TASKS AND GATES
+
+G0 — Governance baseline
+
+Required: all seven Cavekit files exist; REPO_MAP matches `git ls-files`; no undocumented tracked file; HANDOFF contains exact startup command; repository clean after commit.
+
+T0 — Fresh repository and package bootstrap
+
+- Initialize `/Users/aashu/loom` on `planning/loom-v1-cavekit`.
+- Create governance files and this plan.
+- Pin exact dependencies and scripts.
+- Generate package-lock.json.
+- Add only the minimum CLI/package bootstrap needed for typecheck, test, and build.
+- Add a bootstrap test proving package metadata, macOS floor declaration, and explicit `launch --yolo` command surface.
+- Run map validation, typecheck, tests, build, and commit.
+
+G1 — Reproducible bootstrap
+
+A clean `npm ci`, typecheck, tests, and build pass on supported macOS with no browser download or network-required test.
+
+T1 — State, config, permissions, paths, atomic files
+
+Implement limits, path parsing, state-root creation, secure permissions, atomic JSON/text writes, config check/reset, symlink rejection, per-path mutex, expected SHA-256 conflicts, and runtime-lock identity. Tests cover hostile paths, permission repair/refusal, atomic cleanup, races, and PID reuse fields.
+
+T2 — Child wrapper, process manager, watchdog, bounded output
+
+Implement wrapper-owned process groups, heartbeat plus process-table fallback, identity validation, terminal output ring/cursors, cancellation, soft/hard shutdown deadlines, and no stdin/PTY. Tests use real local child processes and prove group cleanup without claiming sleep/wake behavior.
+
+G2 — Local process safety
+
+All deterministic process tests pass; no test leaves descendants; identity checks reject PID-only matches; terminal output cursor math is proven at truncation boundaries.
+
+T3 — Audit system
+
+Implement private JSONL, queue, deadline, mutation fail-closed behavior, rotation, retention, redaction, and start/finish records. Tests cover saturation, failed writes, serialized rotation, and redaction.
+
+T4 — OAuth and endpoint-bound state
+
+Implement persistent owner credential, auth reset, client/code/access/refresh-token state, metadata, discovery challenge, exact resource/audience validation, replay prevention, refresh rotation, revocation, endpoint-generation invalidation, and password persistence.
+
+T5 — MCP transport and seven-tool registration
+
+Implement fail-closed NOT_READY startup, Streamable HTTP session lifecycle, structured protocol errors, authentication middleware, exact seven-tool registration, Zod schemas, and limits.
+
+G3 — Authenticated local MCP
+
+A real local client completes OAuth and calls safe test paths through every tool schema. Unauthenticated, wrong-resource, stale-endpoint, revoked, replayed, and expired credentials fail correctly. The public tunnel has not yet been claimed.
+
+T6 — File tools
+
+Implement read/text/image behavior, write, edit, exact matching, conflict detection, symlink rejection, audit integration, byte limits, and atomic replacement. Use real temporary files and magic-byte image fixtures.
+
+T7 — Skills and memory catalogs
+
+Implement bounded async discovery, atomic catalog swaps, read-only external skills/memory, Loom-owned stable memory IDs, safe save/delete, search, and rescan.
+
+T8 — Dashboard
+
+Implement static dashboard, nonce/session/CSRF, exact Host/Origin checks, strict headers, redaction, and approved actions.
+
+T9 — Browser subsystem
+
+Implement explicit browser setup, pinned revision verification, guarded dynamic import, wrapper-owned Chromium, persistent profile, lock recovery, tabs/actions/navigation validation/downloads/screenshots/permissions/geolocation, and bounded output.
+
+G4 — Local complete runtime
+
+All seven tools, dashboard, browser-degraded mode, and browser-enabled mode pass locally. Browser persistence is proven across controlled restarts using the dedicated profile. No normal Chrome profile is touched.
+
+T10 — Cloudflared acquisition and validation
+
+Implement pinned architecture-aware download, SHA-256 verification, atomic install, permissions, known PATH-binary reporting, and `--no-autoupdate` wrapper launch.
+
+T11 — Tunnel-independent runtime readiness
+
+Implement loopback ephemeral ports, NOT_READY MCP state, public-URL binding, canonical resource generation, status output, and runtime-state writes.
+
+T12 — Quick Tunnel
+
+Implement conflict detection, strict 15-second URL parsing, one recreation, endpoint invalidation, owner-password persistence, visible non-production status, and deterministic mocked parser tests plus one optional real smoke test that is not a release gate.
+
+T13 — Named Tunnel
+
+Implement stable hostname config, credentials validation, explicit ephemeral origin mapping, no fallback, transient retry classification, capped backoff, and auth/config fail-fast behavior.
+
+T14 — Full runtime orchestration and signal cleanup
+
+Implement exact startup/shutdown order, signals, foreground lifetime, browser/tunnel/terminal cleanup, audit flush, locks, watchdog confirmation, and public-access termination.
+
+G5 — Real named-tunnel and ChatGPT prerequisite gate
+
+Record that an eligible ChatGPT workspace/account with custom MCP/developer-mode support is available. Establish a real named tunnel to the exact ephemeral origin. Verify public OAuth discovery and canonical `/mcp` routing before connector setup.
+
+G6 — Real end-to-end cleanup gate
+
+Through real ChatGPT, authorize using the persistent owner password and call representative terminal, read, write/edit, skills/memory, and browser operations. Verify refresh and reconnect behavior. Capture process tables before launch, while running, and after Ctrl+C, SIGTERM, terminal close, and forced parent death. Public access must stop and no owned descendant may remain.
+
+T15 — Packaging and documentation
+
+Finalize README, install/setup guide, security warning, Cloudflare named-tunnel guide, browser setup, config/auth reset behavior, troubleshooting, license/notices, npm file list, shebang/executable behavior, and clean packed install. Do not publish.
+
+T16 — Production certification on a clean supported Mac
+
+- Clean clone or clean temporary directory.
+- npm ci with no browser download.
+- typecheck, tests, build.
+- npm pack and install tarball in a clean prefix.
+- loom --version and --help.
+- loom setup browser and pinned-revision verification.
+- real named tunnel with stable HTTPS hostname.
+- real ChatGPT OAuth, access-token refresh, reconnect, and representative seven-tool calls.
+- owner password unchanged across restart and tunnel lifecycle, then changed only by `loom auth reset`.
+- browser profile persists across restart.
+- process tables prove cleanup for all required signal paths.
+- sleep/wake is manually exercised and recorded; automated tests alone may not claim it.
+- connector persistence is manually observed and recorded; tests may not claim it.
+- all evidence committed under docs/release-evidence/.
+- repository clean.
+
+G7 — Release-ready
+
+All prior gates pass with committed evidence, zero unresolved release blockers, a clean packed install, and clean repository. No push or npm publication without explicit user instruction.
+
+24. VALIDATION COMMANDS
+
+Standard:
+
+- npm run typecheck
+- npm test
+- npm run build
+- git status --short
+
+Map validation must compare `git ls-files | sort` with the path list extracted from REPO_MAP.md and report no difference.
+
+Package validation:
+
+- npm pack
+- install tarball into a clean temporary prefix
+- run the installed `loom --version` and `loom --help`
+
+Process evidence command:
+
+`ps -axo pid,ppid,pgid,sid,command | grep -E 'loom|cloudflared|browser-profile' | grep -v grep`
+
+Record it before launch, while running, and after every required shutdown path.
+
+25. HANDOFF FORMAT
+
+HANDOFF.md always records:
+
+- date and local time
+- checkout path
+- branch
+- HEAD SHA
+- clean or dirty state
+- current task
+- last completed gate
+- exact commands run
+- test results
+- known failures
+- real blockers
+- files changed
+- pushed/published status
+- exact next command
+- next expected result
+
+26. START INSTRUCTION
+
+Begin with T0. Do not begin feature coding until the governance files are tracked, REPO_MAP is exhaustive, and G0 passes. Continue in task order. Stop only for a real unresolved blocker or completed approved scope. Never substitute a mock, parser unit test, or local-only test for the real external evidence reserved for T16.

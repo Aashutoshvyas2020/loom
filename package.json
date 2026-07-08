@@ -1,0 +1,39 @@
+{
+  "name": "loom-mcp",
+  "version": "0.1.0",
+  "description": "Foreground-only single-owner remote MCP server for macOS",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "loom": "dist/src/cli.js"
+  },
+  "files": [
+    "dist",
+    "public",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test 'dist/test/**/*.test.js'",
+    "start": "node dist/src/cli.js launch",
+    "pack": "npm pack",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "express": "5.2.1",
+    "playwright-core": "1.61.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "26.1.0",
+    "typescript": "6.0.3"
+  }
+}
