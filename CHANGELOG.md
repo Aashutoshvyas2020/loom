@@ -340,3 +340,26 @@ PASS (64/64 after clean build)
 npm run build
 PASS
 ```
+
+### T6 — bounded file tools and approved final-symlink reads
+
+- Restored only the quarantined T6 implementation and tests after the clean T5 recovery commit.
+- Added stable text, image, and explicit binary reads; private audited atomic writes; exact audited edits; byte limits; expected-SHA conflicts; concurrency serialization; and composable dispatcher behavior.
+- Corrected the salvaged implementation’s plan violation: `loom_read` now permits a final symbolic link only after rejecting symlinked parents, resolving the canonical target, opening it with `O_NOFOLLOW`, verifying a regular file, and rechecking both the original pathname identity and canonical target identity after reading.
+- Writes and edits still reject final and parent symbolic links through the atomic mutation path.
+- Required RED: the file suite failed because the prior implementation rejected the final symbolic link.
+- Targeted GREEN: 11/11 file tests passed.
+- Full validation: typecheck passed, tracked tests passed 75/75, and build passed.
+
+Evidence:
+
+```text
+node --test dist/test/files.test.js
+PASS (11/11)
+npm run typecheck
+PASS
+npm test
+PASS (75/75)
+npm run build
+PASS
+```

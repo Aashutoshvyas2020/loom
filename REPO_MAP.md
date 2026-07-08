@@ -230,6 +230,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 limits RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T1.
 
+### `src/tools/files.ts`
+- **Purpose:** Concrete bounded text/image/binary read, audited atomic write, exact audited edit, and dispatcher composition for the three public file tools.
+- **Success check:** Reads safely follow only a stable final symlink to a regular-file target, reject symlinked parents, detect image MIME by magic bytes, bound output, and hash the complete stable snapshot; writes/edits retain strict symlink rejection, audit-before-mutation, conflict detection, and atomic replacement.
+- **Current assessment:** PASS
+- **Evidence:** `test/files.test.ts` passes 11/11 and the full tracked suite passes 75/75.
+- **Last meaningful change:** T6 file-tool implementation and final-symlink correction, 2026-07-08.
+- **Owning task or gate:** T6.
+
 ### `src/tools/register.ts`
 - **Purpose:** Registers exactly seven public Loom MCP tools with strict Zod v4 action/path/size/URL schemas and an injected dispatcher for later concrete implementations.
 - **Success check:** The public list contains only `loom_terminal`, `loom_read`, `loom_write`, `loom_edit`, `loom_skills`, `loom_memory`, and `loom_browser`; every safe schema path dispatches; dangerous browser URL schemes and malformed inputs fail before handlers.
@@ -245,6 +253,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/watchdog.test.ts` passes 3/3 against live macOS processes.
 - **Last meaningful change:** T2 watchdog identity completion, 2026-07-08.
 - **Owning task or gate:** T2 / G2; reused by runtime and browser lock recovery.
+
+### `test/files.test.ts`
+- **Purpose:** Real-filesystem proof for stable/ranged reads, image magic bytes, explicit binary base64, stable final-symlink reads, parent/mutation symlink rejection, audited writes/edits, conflicts, concurrency, and dispatcher composition.
+- **Success check:** Final-link reads return target content without weakening writes or edits; parent symlinks fail; content never enters audit records; one concurrent expected-hash writer wins; no temporary residue remains.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite passes 11/11; full tracked suite passes 75/75.
+- **Last meaningful change:** T6 RED/GREEN cycle for file tools and approved symlink policy, 2026-07-08.
+- **Owning task or gate:** T6.
 
 ### `test/mcp.test.ts`
 - **Purpose:** End-to-end loopback HTTP and pinned-SDK tests for readiness, metadata, bearer challenges, server-bound OAuth authorization, revocation, seven tools, session ownership/capacity/expiry, endpoint lifecycle, and clean shutdown.
