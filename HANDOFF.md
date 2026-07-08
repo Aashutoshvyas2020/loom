@@ -1,10 +1,10 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 00:05:47 PDT
+**Date and local time:** 2026-07-08 00:11:01 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA:** `1e0f56af567c44454bcf0d0795555cfdb0835bf4`
-**Repository state:** dirty; completed T1 atomic-file subtask is not yet committed
+**HEAD SHA:** `ae4b99624679d7655bf324fd3007fe13d208e023`
+**Repository state:** dirty; completed T1 state/config/runtime-lock changes are not yet committed
 **Current task:** T1 — State, config, permissions, paths, atomic files
 **Last completed gate:** G1
 **Pushed or published:** no
@@ -19,32 +19,33 @@ cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build
 
 ```bash
 npm run build
-npm run build && node --test dist/test/atomic-file.test.js
+npm run build && node --test dist/test/config.test.js
+npm run build && node --test dist/test/config.test.js dist/test/cli.test.js
+/usr/bin/script --help
+command -v expect
+npm run build && node --test dist/test/cli.test.js dist/test/config.test.js
 npm run typecheck && npm test && npm run build
 ```
 
 ## Results
 
-- The limits/path-policy subtask was committed cleanly at `1e0f56af567c44454bcf0d0795555cfdb0835bf4`.
-- Atomic-file behavior was implemented test-first.
-- Required RED: build failed because `src/atomic-file.ts` did not exist.
-- `atomicWriteFile` now:
-  - resolves only approved path forms and reuses symlink-component rejection;
-  - enforces the 8 MiB write limit;
-  - serializes mutations per canonical target path;
-  - creates exclusive same-directory temporary files;
-  - defaults new files to 0600 and preserves an existing regular file mode;
-  - supports optimistic expected-SHA-256 conflicts;
-  - rechecks target identity immediately before rename;
-  - syncs file data and the parent directory;
-  - removes temporary files when replacement does not complete.
-- Targeted validation: 5 passed, 0 failed.
-- Concurrency proof: two simultaneous writers with the same expected hash yielded exactly one success and one `AtomicFileConflictError`.
-- Full validation: typecheck passed, full tests passed 14/14, build passed.
+- The atomic-file subtask was committed cleanly at `ae4b99624679d7655bf324fd3007fe13d208e023`.
+- Required config RED: build failed because `src/config.ts` did not exist.
+- Added secure state initialization with exact 0700 directories and 0600 files, current-owner mode repair, ownership checks, and symbolic-link rejection.
+- Added strict versioned config validation for Quick and named tunnels, absolute/`~/` extra roots, duplicate rejection, and unknown-key rejection.
+- `checkConfig` is read-only; tests prove it does not change mtime or directory contents.
+- `resetConfig` preserves invalid original bytes in a timestamped 0600 backup and atomically writes defaults.
+- Added strict private runtime-lock persistence with PID, process start time, canonical executable path, launch ID, and canonical state path. Matching requires every field, not PID alone.
+- Wired `loom config check` and `loom config reset`. Reset requires typing `RESET` through `/dev/tty`; no flag, environment variable, or stdin pipe bypass exists.
+- The first automated PTY harness used macOS `script`, which could not operate on the tool's socket-backed stdin. macOS `/usr/bin/expect` was available and used instead.
+- Expect initially failed because macOS does not accept `spawn --`; debug tracing proved Node never launched. The corrected native syntax exercised the actual CLI and passed.
+- Targeted CLI/config validation: 13 passed, 0 failed.
+- Full validation: typecheck passed, full tests passed 23/23, build passed.
+- T1 acceptance is now implemented across commits `1e0f56a`, `ae4b996`, and this pending commit.
 
 ## Known failures
 
-None in the completed atomic-file subtask.
+None in T1 automated validation.
 
 ## Real blockers
 
@@ -55,15 +56,17 @@ None.
 - `CHANGELOG.md`
 - `HANDOFF.md`
 - `REPO_MAP.md`
-- `src/atomic-file.ts`
-- `test/atomic-file.test.ts`
+- `src/cli.ts`
+- `src/config.ts`
+- `test/cli.test.ts`
+- `test/config.test.ts`
 
 ## Exact next command
 
 ```bash
-git add CHANGELOG.md HANDOFF.md REPO_MAP.md src/atomic-file.ts test/atomic-file.test.ts && actual=$(mktemp) && mapped=$(mktemp) && git ls-files | sort > "$actual" && grep '^### `' REPO_MAP.md | sed -E 's/^### `([^`]*)`$/\1/' | sort > "$mapped" && comm -3 "$actual" "$mapped" && git diff --cached --check && rm -f "$actual" "$mapped"
+git add CHANGELOG.md HANDOFF.md REPO_MAP.md src/cli.ts src/config.ts test/cli.test.ts test/config.test.ts && actual=$(mktemp) && mapped=$(mktemp) && git ls-files | sort > "$actual" && grep '^### `' REPO_MAP.md | sed -E 's/^### `([^`]*)`$/\1/' | sort > "$mapped" && comm -3 "$actual" "$mapped" && git diff --cached --check && rm -f "$actual" "$mapped"
 ```
 
 ## Next expected result
 
-The staged index and repository map match exactly with no diff-check errors. Commit this coherent T1 subtask, verify a clean repository, then write failing tests for secure `~/.loom` state creation, config validation/reset, invalid-config preservation, and runtime-lock PID/start-time/executable identity.
+The staged index and repository map match exactly with no diff-check errors. Commit T1, verify a clean repository, then begin T2 test-first with bounded terminal output cursor/truncation behavior before process spawning.

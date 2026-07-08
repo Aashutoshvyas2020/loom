@@ -128,3 +128,32 @@ PASS (14/14)
 npm run build
 PASS
 ```
+
+### T1 — secure state, configuration, and runtime-lock identity
+
+- Added strict versioned configuration for Quick Tunnel and named-tunnel modes, with absolute/`~/` path validation, duplicate-root rejection, unknown-key rejection, and named-tunnel completeness checks.
+- Added exact Loom state initialization for `audit`, `browser-profile`, `cloudflared`, `downloads/screenshots`, `memory`, and `runtime`; directories are 0700 and state files are 0600.
+- Existing current-user permissions are repaired. Symbolic-link state roots, wrong file kinds, and wrong ownership fail closed.
+- `checkConfig` validates without writing or changing timestamps.
+- `resetConfig` preserves invalid original bytes to a timestamped private backup, then writes valid defaults atomically.
+- Added strict private `runtime/loom.lock` read/write with PID, process start time, canonical executable, launch ID, and state path; identity matching requires every field.
+- Wired `loom config check` and `loom config reset`; reset has no noninteractive bypass and requires typing `RESET` through `/dev/tty`.
+- Required RED: build failed because `src/config.ts` did not exist. A later RED showed runtime-lock exports were absent, then CLI routing remained the sole failing behavior.
+- A real PTY test initially failed because macOS Expect does not accept `spawn --`; debug output proved Node never launched. Removing the unsupported Expect flag made the unchanged Loom confirmation test pass.
+- Targeted validation: 13/13 CLI/config tests passed, including a real pseudo-terminal reset and invalid-config backup.
+- Full validation: typecheck, 23/23 tests, and build passed.
+
+Evidence:
+
+```text
+node --test dist/test/cli.test.js dist/test/config.test.js
+pass 13
+fail 0
+
+npm run typecheck
+PASS
+npm test
+PASS (23/23)
+npm run build
+PASS
+```

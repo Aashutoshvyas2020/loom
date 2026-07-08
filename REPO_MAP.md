@@ -114,9 +114,17 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Minimal executable bootstrap for version/help and explicit YOLO opt-in before runtime tasks begin.
 - **Success check:** `--version` prints package version, `--help` lists `loom launch --yolo` and macOS 14+, and plain `launch` exits nonzero without enabling access.
 - **Current assessment:** PASS
-- **Evidence:** Real subprocess tests pass 4/4 after the expected missing-module RED failure.
-- **Last meaningful change:** T0 CLI bootstrap, 2026-07-08.
-- **Owning task or gate:** T0 / G1; expanded by later CLI/runtime tasks.
+- **Evidence:** Real subprocess tests cover version/help/plain-launch refusal and config check; macOS Expect proves local `/dev/tty` confirmation for config reset.
+- **Last meaningful change:** T1 config command routing, 2026-07-08.
+- **Owning task or gate:** T0 / G1 and T1; expanded by later CLI/runtime tasks.
+
+### `src/config.ts`
+- **Purpose:** Secure Loom state initialization, strict versioned configuration, invalid-config reset/preservation, private runtime-lock persistence, and PID-reuse identity comparison.
+- **Success check:** Creates the exact 0700 state tree, writes 0600 files atomically, repairs current-owner permissions, rejects symlink/wrong-shape state, validates config without mutation, preserves invalid bytes on reset, and requires all runtime identity fields to match.
+- **Current assessment:** PASS
+- **Evidence:** `test/config.test.ts` passes 7/7 and the real PTY CLI reset test passes through macOS Expect.
+- **Last meaningful change:** T1 secure state/config completion, 2026-07-08.
+- **Owning task or gate:** T1; reused by T4, T9, T11, and T14.
 
 ### `src/limits.ts`
 - **Purpose:** Single source of truth for all fixed Loom v1 byte, time, count, and shutdown limits.
@@ -146,9 +154,17 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Real-process tests for package metadata and the minimum CLI security boundary.
 - **Success check:** Runs compiled CLI as a subprocess and proves version, help, macOS floor, exact pins, and refusal of plain launch.
 - **Current assessment:** PASS
-- **Evidence:** `node --test dist/test/cli.test.js` reports 4 passed, 0 failed.
-- **Last meaningful change:** T0 test-first bootstrap, 2026-07-08.
-- **Owning task or gate:** T0 / G1.
+- **Evidence:** Six CLI tests pass, including a real pseudo-terminal confirmation/reset flow using macOS `/usr/bin/expect`.
+- **Last meaningful change:** T1 config command tests, 2026-07-08.
+- **Owning task or gate:** T0 / G1 and T1.
+
+### `test/config.test.ts`
+- **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, and full identity matching.
+- **Success check:** Exercises 0700/0600 creation and repair, symlink rejection, schema failures, timestamped backup bytes, strict lock parsing, and every PID-reuse defense field.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite reports 7 passed, 0 failed; full suite reports 23 passed, 0 failed.
+- **Last meaningful change:** T1 secure state/config RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T1.
 
 ### `test/limits.test.ts`
 - **Purpose:** Locks every centralized Loom v1 limit to the approved specification.
@@ -178,7 +194,6 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T1 remaining:** `src/config.ts` and corresponding tests; runtime-lock identity and secure state-root behavior may remain in that module or the smallest existing T1 module that fits.
 - **T2:** `src/output.ts`, `src/child-wrapper.ts`, `src/process-manager.ts`, `src/watchdog.ts`, and corresponding tests.
 - **T3:** `src/audit.ts`, `test/audit.test.ts`.
 - **T4:** `src/oauth.ts`, `test/oauth.test.ts`.
