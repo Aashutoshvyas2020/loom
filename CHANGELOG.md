@@ -184,3 +184,36 @@ PASS (29/29)
 npm run build
 PASS
 ```
+
+### T2 / G2 — wrapper-owned process groups and watchdog cleanup
+
+- Added live macOS process observation using `ps` for PID/PPID/PGID/start time and `lsof` for the canonical executable path.
+- Identity checks require PID, start time, and executable path; PID-only matches are rejected.
+- Added a detached child wrapper that receives launch configuration over IPC, launches the target without a PTY or usable stdin, forwards stdout/stderr, receives heartbeats, and independently scans the parent process table.
+- Added a process manager with dedicated wrapper-led process groups, bounded output integration, timeout/cancellation, ownership validation, and exact TERM-to-KILL deadlines.
+- Natural target completion still terminates background descendants left in the owned group.
+- Cancellation kills targets and grandchildren. SIGTERM-resistant targets are escalated to SIGKILL after the soft grace period.
+- A separate helper process was SIGKILLed in testing; the independent wrapper detected the missing parent and removed wrapper, target, and grandchild in under half a second.
+- Initial natural-exit testing took 30 seconds because the child handle was not unreferenced; the test was corrected to genuinely detach the descendant and then completed in about 170 ms while proving cleanup.
+- Required RED: build failed because `src/process-manager.ts` was absent. Earlier watchdog RED failed because `src/watchdog.ts` was absent.
+- Targeted process/watchdog validation: 10/10 passed.
+- Full validation: typecheck, 39/39 tests, and build passed.
+- Post-suite process evidence found no `child-wrapper`, `loom-process`, or test `sleep` descendants.
+
+Evidence:
+
+```text
+node --test dist/test/process-manager.test.js dist/test/watchdog.test.js
+pass 10
+fail 0
+
+npm run typecheck
+PASS
+npm test
+PASS (39/39)
+npm run build
+PASS
+
+ps -axo pid,ppid,pgid,command | grep -E 'dist/src/child-wrapper|loom-process-|/bin/sleep 30' | grep -v grep
+<no output>
+```

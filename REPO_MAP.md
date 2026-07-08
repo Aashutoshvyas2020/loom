@@ -110,6 +110,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 atomic-file foundation, 2026-07-08.
 - **Owning task or gate:** T1; reused by config, OAuth, audit state, memory, and file tools.
 
+### `src/child-wrapper.ts`
+- **Purpose:** Detached process-group leader that receives launch data only over IPC, starts targets with ignored stdin, forwards separate output streams, and independently watches parent identity.
+- **Success check:** Wrapper and target share one dedicated PGID; missed heartbeat or process-table parent mismatch triggers whole-group TERM then KILL cleanup without relying on IPC closure.
+- **Current assessment:** PASS
+- **Evidence:** Forced-parent-SIGKILL test removes wrapper, target, and grandchild; full suite leaves no matching processes.
+- **Last meaningful change:** T2 wrapper/watchdog completion, 2026-07-08.
+- **Owning task or gate:** T2 / G2; reused for terminal, Cloudflared, and Chromium.
+
 ### `src/cli.ts`
 - **Purpose:** Minimal executable bootstrap for version/help and explicit YOLO opt-in before runtime tasks begin.
 - **Success check:** `--version` prints package version, `--help` lists `loom launch --yolo` and macOS 14+, and plain `launch` exits nonzero without enabling access.
@@ -133,6 +141,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/limits.test.ts` passes and verifies all nineteen approved constants.
 - **Last meaningful change:** T1 limits foundation, 2026-07-08.
 - **Owning task or gate:** T1 / G2 and later consumers.
+
+### `src/process-manager.ts`
+- **Purpose:** Launches wrapper-owned detached process groups, streams bounded output, sends heartbeats, validates ownership, manages timeout/cancellation, and enforces TERM-to-KILL shutdown deadlines.
+- **Success check:** Real processes have no PTY/stdin, natural exit and cancellation clean descendants, SIGTERM-resistant targets receive SIGKILL, forced manager death is recovered, and no test descendants remain.
+- **Current assessment:** PASS
+- **Evidence:** `test/process-manager.test.ts` passes 7/7; post-suite `ps` scan is empty.
+- **Last meaningful change:** T2 process manager completion, 2026-07-08.
+- **Owning task or gate:** T2 / G2; later used by terminal, Cloudflare, browser, and runtime orchestration.
 
 ### `src/output.ts`
 - **Purpose:** Ordered bounded terminal-output storage with sanitization, binary suppression, head/tail retention, cursor pagination, gap detection, and terminal state.
@@ -182,12 +198,28 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 limits RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T1.
 
+### `src/watchdog.ts`
+- **Purpose:** macOS process-table observation using `ps` plus canonical executable resolution using `lsof`, observable identity matching, and PGID membership scans.
+- **Success check:** Returns PID/PPID/PGID/start time/canonical executable, treats missing PIDs as absent, and rejects any PID/start/executable mismatch.
+- **Current assessment:** PASS
+- **Evidence:** `test/watchdog.test.ts` passes 3/3 against live macOS processes.
+- **Last meaningful change:** T2 watchdog identity completion, 2026-07-08.
+- **Owning task or gate:** T2 / G2; reused by runtime and browser lock recovery.
+
 ### `test/output.test.ts`
 - **Purpose:** Boundary tests for terminal stream ordering, sanitization, deterministic binary markers, exact truncation, cursor pagination, UTF-8 boundaries, and lifecycle states.
 - **Success check:** Stale cursors report gaps and pagination preserves source order without duplication or loss.
 - **Current assessment:** PASS
 - **Evidence:** Targeted suite reports 6 passed, 0 failed.
 - **Last meaningful change:** T2 output RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T2 / G2.
+
+### `test/process-manager.test.ts`
+- **Purpose:** Real-process proof for no PTY/stdin, dedicated groups, complete descendant cleanup, hard-kill escalation, parent-death watchdog recovery, natural exit, and timeouts.
+- **Success check:** Every test ends with an empty owned PGID and no leaked wrapper/target/grandchild process.
+- **Current assessment:** PASS
+- **Evidence:** Seven tests pass in about two seconds; external post-suite `ps` scan found no matching processes.
+- **Last meaningful change:** T2 real-process RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T2 / G2.
 
 ### `test/paths.test.ts`
@@ -197,6 +229,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** Targeted suite passes 4/4 after canonicalizing macOS temporary roots through `realpath`.
 - **Last meaningful change:** T1 path-policy RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T1.
+
+### `test/watchdog.test.ts`
+- **Purpose:** Live macOS tests for canonical executable identity, PID-reuse defenses, process-group scans, and absent PID handling.
+- **Success check:** Identity changes in PID, start time, or executable all fail matching.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite reports 3 passed, 0 failed.
+- **Last meaningful change:** T2 watchdog RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T2 / G2.
 
 ### `tsconfig.json`
 - **Purpose:** Strict NodeNext TypeScript compilation for source and tests.
@@ -210,7 +250,6 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T2 remaining:** `src/child-wrapper.ts`, `src/process-manager.ts`, `src/watchdog.ts`, and corresponding tests.
 - **T3:** `src/audit.ts`, `test/audit.test.ts`.
 - **T4:** `src/oauth.ts`, `test/oauth.test.ts`.
 - **T5:** `src/mcp.ts`, `src/tools/register.ts`, `test/mcp.test.ts`.
