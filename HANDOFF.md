@@ -1,12 +1,12 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 12:51:02 PDT
+**Date and local time:** 2026-07-08 16:18:39 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA before pending commit:** `064eff7`
-**Repository state:** dirty only with completed T9 browser implementation and same-commit governance
-**Current task:** T9 — browser subsystem
-**Last completed gate:** deterministic typecheck/full tests/build and real pinned-browser setup/profile-persistence proof are green
+**HEAD SHA before pending commit:** `894249e276000dcf6075bd35dccb363c07adcd03`
+**Repository state:** dirty only with completed T10 Cloudflared implementation and same-commit governance
+**Current task:** T10 — Cloudflared acquisition and validation
+**Last completed gate:** deterministic typecheck/full tests/build and real official arm64 HTTPS install are green
 **Pushed or published:** no
 
 ## Required startup command
@@ -17,14 +17,12 @@ cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build
 
 ## Completed work
 
-- Added explicit `loom setup browser` with private `~/.loom/browser/` state, CWD-independent local Playwright CLI resolution, official-CDN pinning, revision 1228 / Chrome 149.0.7827.55 architecture descriptors, exact executable SHA-256 verification, wrapper-owned CDP launch proof, private manifest, atomic promotion, and rollback.
-- Added a dependency-free browser contract and separated public validation/audit/result shaping from the dynamically loaded Playwright backend.
-- Added direct ProcessManager Chromium launch with explicit argv, dedicated persistent profile, twelve-tab bound, stable tab IDs, navigation/actions, permissions, geolocation, bounded snapshots/evaluation, downloads, screenshots, browser lock identity, and stale-profile-lock recovery.
-- Added private no-overwrite downloads and human-sortable collision-safe screenshots. Browser text, typed values, expressions, selectors, URL query values, and screenshot bytes are absent from audit records.
-- Added bounded recovery for both public evaluation and internal snapshot evaluation: close only the timed-out tab, verify surviving CDP health, and restart the whole browser only when page cleanup or CDP health fails.
-- Corrected real setup verification from hanging `--dump-dom about:blank` to wrapper-owned loopback CDP readiness.
-- Corrected shutdown so CDP `Browser.close` flushes the dedicated profile and the managed job exits naturally before cancellation fallback.
-- Corrected stale-profile process detection, package-bin symlink execution, and Playwright CLI resolution from unrelated working directories.
+- Pinned Cloudflared `2026.7.0` for macOS arm64 and x64 with exact official archive URLs, byte counts, archive SHA-256 values, and extracted executable SHA-256 values.
+- Added credential-free HTTPS download with manual redirects capped at five, a bounded 30-minute total transfer deadline, exact streamed size/hash verification, private exclusive staging, and complete failure cleanup.
+- Added strict single-file tar extraction, private executable permissions, exact executable hash/version verification, stable identity checks, atomic promotion, directory fsync, and preservation of a prior binary when verification fails before promotion.
+- Added normal PATH symlink canonicalization with current-user ownership, regular-file/executable mode, stable identity, exact hash/version, and fail-closed first-match semantics.
+- Added direct ProcessManager launch with fixed `tunnel --no-autoupdate --metrics 127.0.0.1:0` argv and reserved-option rejection. No shell or terminal-tool routing exists.
+- Kept Quick Tunnel parsing, named credentials, endpoint binding, retries, and orchestration out of T10; they remain T11–T14.
 
 ## Exact commands and results
 
@@ -32,55 +30,57 @@ cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build
 npm ci
 PASS — 106 packages, zero vulnerabilities
 
+node --test dist/test/cloudflare.test.js
+PASS — 9/9
+
 npm run typecheck
 PASS
 
-node --test dist/test/browser.test.js
-PASS — targeted browser suite
-
 npm test
-PASS — 120/120
+PASS — 129/129
 
 npm run build
 PASS
-
-REPO_MAP tracked-path comparison before T9 staging
-PASS — empty diff for the current tracked tree
-
-git diff --check
-PASS
 ```
 
-## Real browser evidence
+## Real Cloudflared evidence
 
 ```text
-Platform: macOS arm64
-Playwright: 1.61.1
-Chromium revision: 1228
-Chrome for Testing: 149.0.7827.55
-Official archive SHA-256: 311211b54c429245e2cec0314ee1e314085e9c00350215b95e1a879350786630
-Installed executable SHA-256: b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7
-Browser directory mode: 0700
-Manifest mode: 0600
-Setup staging residue: none
-Setup process residue: none
+Pinned version: 2026.7.0
 
-Controlled persistent-profile restart:
-first launch: set "v"
-second launch: restored "v"
-post-shutdown Chrome process residue: none
-post-shutdown runtime/browser.lock residue: none
+macOS arm64 archive
+bytes: 18957597
+sha256: 276f4ae3119c88d1708b0f884a35a1c87d9ae459b0dab6313f2daddbddab2bec
+executable bytes: 38388400
+executable sha256: cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04
+version probe: 2026.7.0
+
+macOS x64 archive
+bytes: 20841929
+sha256: dd1fb6a914a21dc52c64bad96987bbbc72d6c65553a2cfee1dd5bc886742ddfb
+executable bytes: 41181376
+executable sha256: c0c65579c6f11b1381cf5ffd1614f5094bf140e18938eae4ad16931da9f69499
+version probe under Rosetta: 2026.7.0
+
+Production official-HTTPS arm64 install
+result: success
+installed path: /private/tmp/loom-t10-network-single/cloudflared/cloudflared
+installed mode: 0700
+installed sha256: cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04
+installed version: 2026.7.0
+staging residue: none
+installer/Cloudflared process residue: none
 ```
 
-The extraction/launch debugging run used a loopback mirror containing the exact cached official archive above. Production setup now forces `https://cdn.playwright.dev`; deterministic tests prove caller download-host overrides cannot change it.
+The first real transfer proved a 60-second and then 10-minute whole-download deadline was insufficient on this connection while cleanup remained correct. The final bounded default is 30 minutes; the same production downloader then completed successfully.
 
 ## Known failures
 
-None in T0–T9 deterministic validation or the completed real T9 setup/restart proof.
+None in T0–T10 deterministic validation or completed real T10 acquisition/verification evidence.
 
 ## Real blockers
 
-None for T9. G4 remains pending because integrated runtime composition arrives in T14.
+None for T10. Quick Tunnel behavior is T12, named-tunnel behavior is T13, and integrated readiness/orchestration remains T11/T14.
 
 ## Files changed
 
@@ -89,21 +89,15 @@ None for T9. G4 remains pending because integrated runtime composition arrives i
 - `REPO_MAP.md`
 - `SPEC.md`
 - `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
-- `src/browser.ts`
-- `src/browser/setup.ts`
-- `src/browser/backend.ts`
-- `src/tools/browser.ts`
-- `src/cli.ts`
-- `src/config.ts`
-- `test/browser.test.ts`
-- `test/cli.test.ts`
+- `src/cloudflare.ts`
+- `test/cloudflare.test.ts`
 
 ## Exact next command
 
 ```bash
-git add CHANGELOG.md HANDOFF.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt src/browser.ts src/browser/setup.ts src/browser/backend.ts src/tools/browser.ts src/cli.ts src/config.ts test/browser.test.ts test/cli.test.ts && git diff --cached --check && git commit -m "feat: add managed browser subsystem"
+git add CHANGELOG.md HANDOFF.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt src/cloudflare.ts test/cloudflare.test.ts && git diff --cached --check && git commit -m "feat: add cloudflared acquisition"
 ```
 
 ## Next expected result
 
-Commit T9 with a clean working tree, record the resulting SHA, then begin T10 Cloudflared acquisition and validation without changing T9 scope.
+Commit T10 with a clean working tree, record the resulting SHA, then begin T11 tunnel-independent runtime readiness without importing Quick or Named tunnel scope early.

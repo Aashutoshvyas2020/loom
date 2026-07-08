@@ -363,9 +363,11 @@ Never put secrets in command-line flags. Do not attach to the user's normal Chro
 
 19. CLOUDFLARED MODEL
 
-Manage a pinned Cloudflared version. Download only over HTTPS, verify exact SHA-256 for architecture, write atomically, then chmod executable. When a PATH binary is used, print its canonical path and version. Do not silently accept an unknown version.
+Manage Cloudflared version `2026.7.0` with architecture-specific official release URLs, archive sizes, archive SHA-256 values, and extracted executable SHA-256 values for macOS arm64 and x64. Download only over credential-free HTTPS with manual redirects capped at five and a bounded 30-minute total transfer deadline. Stream into a private exclusive staging file, enforce the exact pinned byte count and SHA-256, validate a single-file `cloudflared` archive, verify the extracted executable's ownership, mode, stable identity, SHA-256, and exact version through ProcessManager, then atomically promote it. Every failure leaves the previous binary unchanged and removes staging residue.
 
-Always run Cloudflared with `--no-autoupdate`. Disable or randomize metrics by binding metrics to loopback port 0. Start it through the child wrapper and owned process group.
+When a PATH binary is used, inspect only the first `cloudflared` match, canonicalize normal symlinks, verify the resolved current-user regular executable by stable identity, hash, and exact version, and report the requested path, canonical path, and version. Do not skip an unknown first match or silently accept an unknown version.
+
+Always run Cloudflared with direct verified executable-plus-argument ProcessManager launch, `tunnel --no-autoupdate --metrics 127.0.0.1:0`, and caller tunnel arguments appended only after rejecting reserved flag overrides. Shell construction and public-terminal routing are forbidden.
 
 19.1 Quick Tunnel
 
@@ -506,7 +508,7 @@ All seven tools, dashboard, browser-degraded mode, and browser-enabled mode pass
 
 T10 — Cloudflared acquisition and validation
 
-Implement pinned architecture-aware download, SHA-256 verification, atomic install, permissions, safe canonicalization of normal PATH symlinks, known PATH-binary path/version reporting, and direct executable-plus-argument `--no-autoupdate` wrapper launch.
+Implement pinned architecture-aware official-HTTPS download with bounded redirects and a bounded 30-minute deadline, exact archive byte/hash verification, safe single-file extraction, exact executable hash/version verification, atomic install and cleanup, permissions, safe canonicalization of normal PATH symlinks, fail-closed first-match PATH reporting, and direct executable-plus-argument `tunnel --no-autoupdate --metrics 127.0.0.1:0` wrapper launch with reserved-option rejection.
 
 T11 — Tunnel-independent runtime readiness
 

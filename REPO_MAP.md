@@ -42,9 +42,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the completed T9 deterministic and real-browser evidence, unchanged parent HEAD, dirty scope, and exact T9 commit command.
-- **Last meaningful change:** T9 browser completion handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T9.
+- **Evidence:** Records completed T10 deterministic and real official-download evidence, unchanged parent HEAD, exact dirty scope, and the T10 commit command.
+- **Last meaningful change:** T10 Cloudflared completion handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T10.
 
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -74,16 +74,16 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
 - **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T9 records explicit pinned browser setup under `~/.loom/browser/`, official-CDN pinning, wrapper-owned CDP verification, bounded internal page evaluations, private no-overwrite artifacts, and graceful profile-flushing shutdown.
-- **Last meaningful change:** T9 browser contract, 2026-07-08.
+- **Evidence:** T10 adds Cloudflared 2026.7.0 architecture pins, exact archive/executable hashes, HTTPS redirect/timeout bounds, private atomic installation, canonical PATH verification, and direct fixed-flag ProcessManager launch.
+- **Last meaningful change:** T10 Cloudflared acquisition and launch contract, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T9 clarification adds private browser-install state, CWD-independent official-CDN setup, exact executable verification, wrapper-owned CDP readiness, bounded snapshot evaluation, and CDP graceful shutdown before cancellation fallback.
-- **Last meaningful change:** T9 browser implementation clarification, 2026-07-08.
+- **Evidence:** T10 clarification records Cloudflared 2026.7.0 arm64/x64 release metadata, exact archive/executable verification, five-redirect and 30-minute transfer bounds, fail-closed PATH behavior, and fixed direct argv launch.
+- **Last meaningful change:** T10 Cloudflared implementation clarification, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -157,6 +157,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** Ten CLI tests pass, including real subprocess/PTTY flows, package-bin symlink invocation, browser setup routing, live process-table lock matching, genuinely sessionless `/dev/tty` failure, config reset, and credential rotation.
 - **Last meaningful change:** T9 explicit browser setup and symlink-safe main guard, 2026-07-08.
 - **Owning task or gate:** T0 / G1, T1, T4, and T9; expanded by later runtime tasks.
+
+### `src/cloudflare.ts`
+- **Purpose:** Pinned Cloudflared release metadata, secure acquisition, stable executable verification, PATH discovery, private atomic installation, and direct wrapper-owned launch.
+- **Success check:** Pins official macOS arm64/x64 archive sizes and hashes plus executable hashes; allows only credential-free HTTPS and bounded manual redirects; enforces a 30-minute maximum transfer, exact bytes/hash, safe single-file extraction, current-user ownership, executable mode, stable identity, exact version, fail-closed first PATH match, and fixed `tunnel --no-autoupdate --metrics 127.0.0.1:0` argv.
+- **Current assessment:** PASS
+- **Evidence:** Nine targeted tests pass; real verification accepted both official arm64 and x64 binaries, real arm64 archive extraction/launch passed, and a real official HTTPS arm64 install produced SHA-256 `cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04`, mode 0700, no staging residue, and no process residue.
+- **Last meaningful change:** T10 Cloudflared acquisition and validation, 2026-07-08.
+- **Owning task or gate:** T10; consumed by T11–T14.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, invalid-config reset/preservation, private runtime-lock persistence, and PID-reuse identity comparison.
@@ -245,6 +253,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** Ten tests pass using real subprocesses, a package-bin symlink, macOS Expect, and Python `setsid()` for a genuinely terminal-less child.
 - **Last meaningful change:** T9 browser setup and symlink-entry regression, 2026-07-08.
 - **Owning task or gate:** T0 / G1, T1, T4, and T9.
+
+### `test/cloudflare.test.ts`
+- **Purpose:** Deterministic acquisition, verification, PATH, extraction, cleanup, timeout, and direct-launch tests for Cloudflared.
+- **Success check:** Locks exact arm64/x64 metadata; proves canonical symlink handling, hash/version failure, first-match PATH behavior, HTTPS-only bounded redirects, exact bytes/hash, pre-mutation symlink rejection, default tar extraction, timeout cleanup, previous-binary preservation, fixed direct argv, and reserved-option rejection.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite passes 9/9; full tracked suite passes 129/129. Real official-binary and official-network evidence is recorded in CHANGELOG.md and HANDOFF.md.
+- **Last meaningful change:** T10 Cloudflared RED/GREEN cycle and real-network verification, 2026-07-08.
+- **Owning task or gate:** T10.
 
 ### `test/config.test.ts`
 - **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, and full identity matching.
@@ -434,6 +450,5 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These remain intentionally untracked until their owning task begins.
 
-- **T10–T13:** `src/cloudflare.ts`, `test/cloudflare.test.ts`.
 - **T14:** `src/runtime.ts`, `test/runtime.test.ts`.
 - **T15:** release documentation/notices and `docs/release-evidence/` index as required.

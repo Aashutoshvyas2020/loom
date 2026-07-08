@@ -428,3 +428,39 @@ first launch: set "v"
 second launch: restored "v"
 post-shutdown process/browser-lock residue: none
 ```
+
+### T10 — pinned Cloudflared acquisition and validation
+
+- Added exact Cloudflared `2026.7.0` release descriptors for macOS arm64 and x64, including official GitHub HTTPS URLs, archive byte counts, archive SHA-256 values, and extracted executable SHA-256 values.
+- Added stable executable inspection using canonical resolution, current-user ownership, regular-file and executable-mode checks, `O_NOFOLLOW`, before/after file identity, full SHA-256, and exact wrapper-owned `cloudflared --version` parsing.
+- PATH discovery accepts a normal symlink only after canonical verification and reports requested path, canonical path, hash, bytes, and version. The first PATH match fails closed on unknown bytes/version rather than silently searching later entries.
+- Added credential-free HTTPS acquisition with manual redirects capped at five, a bounded 30-minute total transfer deadline, optional Content-Length validation, exact streamed byte/hash enforcement, private exclusive staging, and cleanup of partial downloads.
+- Added the default macOS `/usr/bin/tar` boundary with an exact single-file `cloudflared` archive layout, private chmod, executable hash/version verification, stable inode promotion, directory fsync, and preservation of any existing binary on pre-promotion failure.
+- Added direct ProcessManager launch that re-verifies the binary and injects `tunnel --no-autoupdate --metrics 127.0.0.1:0` as an explicit argv vector. Caller attempts to override `tunnel`, autoupdate, or metrics flags fail before launch; shell command construction and terminal-tool routing are absent.
+- Added pre-mutation parent-symlink rejection so installation cannot create state through a symlinked ancestor.
+- Required RED evidence covered the absent production module, absent verification/PATH/installer/launch APIs, pre-rejection symlink side effects, and an empirically insufficient 60-second then 10-minute official download deadline. The real official transfer required about fourteen minutes on this connection, so the production deadline is bounded at 30 minutes.
+- Targeted validation passes 9/9; full typecheck, 129/129 tests, and build pass.
+- Real evidence: official arm64 archive `276f4ae3119c88d1708b0f884a35a1c87d9ae459b0dab6313f2daddbddab2bec` and executable `cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04`; official x64 archive `dd1fb6a914a21dc52c64bad96987bbbc72d6c65553a2cfee1dd5bc886742ddfb` and executable `c0c65579c6f11b1381cf5ffd1614f5094bf140e18938eae4ad16931da9f69499`. Both binaries reported version `2026.7.0` through ProcessManager.
+- A real official HTTPS arm64 install used the production downloader and default extractor, produced a private 0700 `cloudflared` executable of 38,388,400 bytes with the pinned hash/version, removed its staging directory, and left no installer or Cloudflared process residue.
+
+Evidence:
+
+```text
+node --test dist/test/cloudflare.test.js
+PASS (9/9)
+
+npm run typecheck
+PASS
+npm test
+PASS (129/129)
+npm run build
+PASS
+
+real official HTTPS install
+version: 2026.7.0
+sha256: cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04
+bytes: 38388400
+mode: 0700
+staging residue: none
+process residue: none
+```
