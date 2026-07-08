@@ -464,3 +464,34 @@ mode: 0700
 staging residue: none
 process residue: none
 ```
+
+### T11 — tunnel-independent runtime readiness
+
+- Explicitly amended path ownership before coding: T11 introduces only the readiness subset of `src/runtime.ts` and `test/runtime.test.ts`; T14 retains full startup/shutdown orchestration in the same files.
+- Added strict local endpoint validation requiring a bare HTTP loopback origin with explicit port and an exact `<origin>/mcp` URL.
+- Added strict public endpoint canonicalization requiring a bare HTTPS origin with no credentials, explicit port, path, query, or fragment, deriving exactly `<origin>/mcp` as the OAuth protected resource.
+- Added `RuntimeReadiness` that persists an immutable NOT_READY snapshot, delegates exact endpoint binding to the existing MCP server, and publishes immutable ready/status state only after successful validation, binding, and private atomic state replacement.
+- Added strict secret-free `runtime/current.json` schema with local/public MCP URLs, resource, tunnel mode, connector readiness, production eligibility, and timestamp. Writes require a current-user 0700 runtime directory, reject a symlinked `current.json` before binding, and produce a 0600 atomic file.
+- Added status-block formatting with full local/public MCP URLs, tunnel/connector/production fields, and the exact full-computer-access warning. T11 does not print, redraw, start, or stop any runtime component.
+- Added real local integration using `LoomMcpHttpServer`: before readiness binding, `/mcp` returns structured 503 NOT_READY with no challenge; after canonical binding, it returns the endpoint-bound 401 OAuth challenge and exact protected-resource metadata.
+- Required RED evidence included the absent runtime module, unsafe runtime-directory validation after binding, and current.json symlink rejection after binding. Both state-target cases now fail before the MCP endpoint changes and preserve prior state.
+- Targeted validation passes 6/6; full typecheck, 135/135 tests, and build pass.
+
+Evidence:
+
+```text
+node --test dist/test/runtime.test.js
+PASS (6/6)
+
+npm run typecheck
+PASS
+npm test
+PASS (135/135)
+npm run build
+PASS
+
+real local MCP readiness transition
+before binding: HTTP 503, NOT_READY, no WWW-Authenticate
+after binding: HTTP 401, exact endpoint-bound resource metadata challenge
+runtime/current.json: 0600
+```

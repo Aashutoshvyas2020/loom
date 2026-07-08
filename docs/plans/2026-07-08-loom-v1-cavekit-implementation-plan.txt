@@ -512,7 +512,7 @@ Implement pinned architecture-aware official-HTTPS download with bounded redirec
 
 T11 — Tunnel-independent runtime readiness
 
-Implement loopback ephemeral ports, NOT_READY MCP state, public-URL binding, canonical resource generation, status output, and runtime-state writes.
+Introduce the initial readiness-only subset of `src/runtime.ts` and `test/runtime.test.ts`: validate loopback ephemeral local endpoints, preserve deterministic NOT_READY behavior until public binding, canonicalize an exact HTTPS public origin plus `/mcp` resource, generate the one-time ready status block data, and write private atomic `runtime/current.json`. This task must not start tunnels, browsers, catalogs, signal handlers, or cleanup orchestration. T14 expands the same module and test file into the full startup/shutdown lifecycle.
 
 T12 — Quick Tunnel
 

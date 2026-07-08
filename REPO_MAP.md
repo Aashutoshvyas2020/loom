@@ -42,9 +42,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records completed T10 deterministic and real official-download evidence, unchanged parent HEAD, exact dirty scope, and the T10 commit command.
-- **Last meaningful change:** T10 Cloudflared completion handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T10.
+- **Evidence:** Records completed T11 deterministic and real local-MCP readiness evidence, explicit runtime-path ownership amendment, parent HEAD, exact dirty scope, and the T11 commit command.
+- **Last meaningful change:** T11 readiness completion handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T11.
 
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -66,24 +66,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** T9 adds the five browser source/test paths and updates the existing CLI/config ledgers; staged-index validation must remain empty before commit.
-- **Last meaningful change:** T9 browser map update, 2026-07-08.
-- **Owning task or gate:** All tasks; current T9.
+- **Evidence:** T11 adds the readiness-only runtime source/test paths, removes their planned-only entry, and requires staged-index validation to remain empty before commit.
+- **Last meaningful change:** T11 runtime readiness map update, 2026-07-08.
+- **Owning task or gate:** All tasks; current T11.
 
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
 - **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T10 adds Cloudflared 2026.7.0 architecture pins, exact archive/executable hashes, HTTPS redirect/timeout bounds, private atomic installation, canonical PATH verification, and direct fixed-flag ProcessManager launch.
-- **Last meaningful change:** T10 Cloudflared acquisition and launch contract, 2026-07-08.
+- **Evidence:** T11 records deterministic NOT_READY-to-bound MCP readiness, strict local/public endpoint canonicalization, private atomic runtime/current.json, pre-bind target validation, immutable status data, and the full-access warning.
+- **Last meaningful change:** T11 readiness contract, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T10 clarification records Cloudflared 2026.7.0 arm64/x64 release metadata, exact archive/executable verification, five-redirect and 30-minute transfer bounds, fail-closed PATH behavior, and fixed direct argv launch.
-- **Last meaningful change:** T10 Cloudflared implementation clarification, 2026-07-08.
+- **Evidence:** T11 explicitly reassigns the initial readiness-only subset of runtime.ts/runtime.test.ts from T14, while preserving full startup/shutdown orchestration for T14.
+- **Last meaningful change:** T11 runtime-path ownership amendment, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -189,6 +189,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/process-manager.test.ts` passes 7/7; post-suite `ps` scan is empty.
 - **Last meaningful change:** T2 process manager completion, 2026-07-08.
 - **Owning task or gate:** T2 / G2; later used by terminal, Cloudflare, browser, and runtime orchestration.
+
+### `src/runtime.ts`
+- **Purpose:** T11 readiness-only runtime boundary for endpoint canonicalization, MCP binding delegation, immutable readiness/status data, and private atomic runtime-state persistence.
+- **Success check:** Validates an exact HTTP loopback origin plus `/mcp`, accepts only a bare HTTPS public origin, keeps MCP NOT_READY until exact resource binding, validates runtime directory/current.json before binding, writes strict secret-free 0600 state atomically, and performs no tunnel/browser/catalog/signal/shutdown orchestration.
+- **Current assessment:** PASS
+- **Evidence:** Six targeted tests pass, including a real LoomMcpHttpServer transition from 503 NOT_READY to endpoint-bound 401 OAuth challenge and fail-closed 0700/current.json symlink checks before binding.
+- **Last meaningful change:** T11 tunnel-independent runtime readiness, 2026-07-08.
+- **Owning task or gate:** T11 readiness subset; expanded by T14 full orchestration.
 
 ### `src/mcp.ts`
 - **Purpose:** Loopback-only Streamable HTTP MCP and OAuth HTTP server with deterministic readiness, endpoint-bound bearer authentication, server-bound authorization transactions, token routes, and bounded client-bound sessions.
@@ -382,6 +390,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T7 memory RED/GREEN and aggregate-limit repair, 2026-07-08.
 - **Owning task or gate:** T7.
 
+### `test/runtime.test.ts`
+- **Purpose:** T11 tests for strict local/public endpoint validation, NOT_READY persistence, canonical public binding, private runtime state, status output, real MCP readiness transition, and pre-bind fail-closed target checks.
+- **Success check:** Invalid endpoints, insecure runtime modes, and current.json symlinks fail before MCP binding or state replacement; real MCP changes from structured 503 NOT_READY to exact endpoint-bound OAuth challenge; state is 0600 and status includes full URLs, Quick non-production status, and the full-access warning.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite passes 6/6; full tracked suite passes 135/135.
+- **Last meaningful change:** T11 readiness RED/GREEN and real local MCP integration, 2026-07-08.
+- **Owning task or gate:** T11 readiness subset; expanded by T14 full orchestration.
+
 ### `test/skills.test.ts`
 - **Purpose:** Tests deterministic discovery/ranking, stable IDs, duplicate names, symlink/depth/size/entry/total/time limits, missing roots, malformed frontmatter, and dispatcher composition.
 - **Success check:** Unterminated frontmatter never becomes a skill and emits exactly one deterministic diagnostic while valid peers remain indexed.
@@ -450,5 +466,4 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These remain intentionally untracked until their owning task begins.
 
-- **T14:** `src/runtime.ts`, `test/runtime.test.ts`.
 - **T15:** release documentation/notices and `docs/release-evidence/` index as required.

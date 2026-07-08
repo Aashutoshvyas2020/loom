@@ -1,12 +1,12 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 16:18:39 PDT
+**Date and local time:** 2026-07-08 16:25:00 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA before pending commit:** `894249e276000dcf6075bd35dccb363c07adcd03`
-**Repository state:** dirty only with completed T10 Cloudflared implementation and same-commit governance
-**Current task:** T10 — Cloudflared acquisition and validation
-**Last completed gate:** deterministic typecheck/full tests/build and real official arm64 HTTPS install are green
+**HEAD SHA before pending commit:** `604e3a8742e0e8708f4bebaefb2fddd9ef7ae59e`
+**Repository state:** dirty only with completed T11 readiness implementation and same-commit governance
+**Current task:** T11 — tunnel-independent runtime readiness
+**Last completed gate:** targeted readiness tests and full typecheck/135-test/build suite are green
 **Pushed or published:** no
 
 ## Required startup command
@@ -15,72 +15,43 @@
 cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build && git status --short
 ```
 
+## Explicit path-ownership amendment
+
+T11 owns the initial readiness-only subset of `src/runtime.ts` and `test/runtime.test.ts`. T14 expands the same files into full startup/shutdown orchestration. T11 contains no tunnel launch, browser/catalog startup, signal handlers, runtime lock acquisition, foreground lifetime, or cleanup sequencing.
+
 ## Completed work
 
-- Pinned Cloudflared `2026.7.0` for macOS arm64 and x64 with exact official archive URLs, byte counts, archive SHA-256 values, and extracted executable SHA-256 values.
-- Added credential-free HTTPS download with manual redirects capped at five, a bounded 30-minute total transfer deadline, exact streamed size/hash verification, private exclusive staging, and complete failure cleanup.
-- Added strict single-file tar extraction, private executable permissions, exact executable hash/version verification, stable identity checks, atomic promotion, directory fsync, and preservation of a prior binary when verification fails before promotion.
-- Added normal PATH symlink canonicalization with current-user ownership, regular-file/executable mode, stable identity, exact hash/version, and fail-closed first-match semantics.
-- Added direct ProcessManager launch with fixed `tunnel --no-autoupdate --metrics 127.0.0.1:0` argv and reserved-option rejection. No shell or terminal-tool routing exists.
-- Kept Quick Tunnel parsing, named credentials, endpoint binding, retries, and orchestration out of T10; they remain T11–T14.
+- Added exact local HTTP loopback origin plus `/mcp` validation.
+- Added canonical bare HTTPS public origin validation and exact `/mcp` resource derivation.
+- Added immutable NOT_READY and ready snapshots plus status-block formatting with full endpoints and the full-access warning.
+- Added strict secret-free private atomic `runtime/current.json` state.
+- Added pre-bind validation of the private 0700 runtime directory and non-symlink current.json target.
+- Delegated resource binding to the existing MCP server rather than duplicating transport or OAuth logic.
+- Proved a real local MCP transition from structured 503 NOT_READY to exact endpoint-bound 401 OAuth challenge and protected-resource metadata.
 
 ## Exact commands and results
 
 ```text
-npm ci
-PASS — 106 packages, zero vulnerabilities
-
-node --test dist/test/cloudflare.test.js
-PASS — 9/9
+node --test dist/test/runtime.test.js
+PASS — 6/6
 
 npm run typecheck
 PASS
 
 npm test
-PASS — 129/129
+PASS — 135/135
 
 npm run build
 PASS
 ```
 
-## Real Cloudflared evidence
-
-```text
-Pinned version: 2026.7.0
-
-macOS arm64 archive
-bytes: 18957597
-sha256: 276f4ae3119c88d1708b0f884a35a1c87d9ae459b0dab6313f2daddbddab2bec
-executable bytes: 38388400
-executable sha256: cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04
-version probe: 2026.7.0
-
-macOS x64 archive
-bytes: 20841929
-sha256: dd1fb6a914a21dc52c64bad96987bbbc72d6c65553a2cfee1dd5bc886742ddfb
-executable bytes: 41181376
-executable sha256: c0c65579c6f11b1381cf5ffd1614f5094bf140e18938eae4ad16931da9f69499
-version probe under Rosetta: 2026.7.0
-
-Production official-HTTPS arm64 install
-result: success
-installed path: /private/tmp/loom-t10-network-single/cloudflared/cloudflared
-installed mode: 0700
-installed sha256: cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04
-installed version: 2026.7.0
-staging residue: none
-installer/Cloudflared process residue: none
-```
-
-The first real transfer proved a 60-second and then 10-minute whole-download deadline was insufficient on this connection while cleanup remained correct. The final bounded default is 30 minutes; the same production downloader then completed successfully.
-
 ## Known failures
 
-None in T0–T10 deterministic validation or completed real T10 acquisition/verification evidence.
+None in T0–T11 deterministic validation or the real local MCP readiness transition.
 
 ## Real blockers
 
-None for T10. Quick Tunnel behavior is T12, named-tunnel behavior is T13, and integrated readiness/orchestration remains T11/T14.
+None for T11. Quick Tunnel startup/parsing is T12, named-tunnel credentials/retries are T13, and full runtime lifecycle/signal cleanup remains T14.
 
 ## Files changed
 
@@ -89,15 +60,15 @@ None for T10. Quick Tunnel behavior is T12, named-tunnel behavior is T13, and in
 - `REPO_MAP.md`
 - `SPEC.md`
 - `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
-- `src/cloudflare.ts`
-- `test/cloudflare.test.ts`
+- `src/runtime.ts`
+- `test/runtime.test.ts`
 
 ## Exact next command
 
 ```bash
-git add CHANGELOG.md HANDOFF.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt src/cloudflare.ts test/cloudflare.test.ts && git diff --cached --check && git commit -m "feat: add cloudflared acquisition"
+git add CHANGELOG.md HANDOFF.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt src/runtime.ts test/runtime.test.ts && git diff --cached --check && git commit -m "feat: add runtime readiness"
 ```
 
 ## Next expected result
 
-Commit T10 with a clean working tree, record the resulting SHA, then begin T11 tunnel-independent runtime readiness without importing Quick or Named tunnel scope early.
+Commit T11 with a clean tree, then begin T12 Quick Tunnel conflict detection, strict 15-second URL parsing, one recreation, endpoint invalidation, and visible non-production status without importing named-tunnel behavior.
