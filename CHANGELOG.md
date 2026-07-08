@@ -157,3 +157,30 @@ PASS (23/23)
 npm run build
 PASS
 ```
+
+### T2 — bounded terminal output
+
+- Added one ordered stream model for separately piped stdout and stderr.
+- ANSI escape sequences and unsafe controls are stripped; invalid UTF-8 or NUL-containing chunks become deterministic binary-suppression markers.
+- Output retains an exact UTF-8-safe head and tail within the configured byte budget.
+- Cursor reads report requested cursor, first available cursor, next cursor, and an explicit gap when truncation makes a poll stale.
+- Pagination preserves source ordering and makes progress without splitting a UTF-8 code point.
+- Added running, completed, cancelled, and timed-out state with exit code and signal tracking.
+- Required RED: build failed because `src/output.ts` did not exist.
+- Targeted GREEN: 6/6 boundary tests passed.
+- Full validation: typecheck, 29/29 tests, and build passed.
+
+Evidence:
+
+```text
+node --test dist/test/output.test.js
+pass 6
+fail 0
+
+npm run typecheck
+PASS
+npm test
+PASS (29/29)
+npm run build
+PASS
+```

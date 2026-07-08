@@ -134,6 +134,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 limits foundation, 2026-07-08.
 - **Owning task or gate:** T1 / G2 and later consumers.
 
+### `src/output.ts`
+- **Purpose:** Ordered bounded terminal-output storage with sanitization, binary suppression, head/tail retention, cursor pagination, gap detection, and terminal state.
+- **Success check:** Preserves stdout/stderr append order, strips ANSI/unsafe controls, never splits UTF-8, reports exact truncation cursors, and records completed/cancelled/timed-out outcomes.
+- **Current assessment:** PASS
+- **Evidence:** `test/output.test.ts` passes 6/6; full suite passes 29/29.
+- **Last meaningful change:** T2 output foundation, 2026-07-08.
+- **Owning task or gate:** T2 / G2; reused by terminal and Cloudflared process management.
+
 ### `src/paths.ts`
 - **Purpose:** Parse absolute or `~/` user paths, reject malformed input, and prevent writes through existing symbolic-link components.
 - **Success check:** Rejects empty, relative, alternate-home, NUL, malformed-Unicode, symlink-parent, symlink-final, and non-directory-intermediate paths while allowing a missing tail under real directories.
@@ -174,6 +182,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 limits RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T1.
 
+### `test/output.test.ts`
+- **Purpose:** Boundary tests for terminal stream ordering, sanitization, deterministic binary markers, exact truncation, cursor pagination, UTF-8 boundaries, and lifecycle states.
+- **Success check:** Stale cursors report gaps and pagination preserves source order without duplication or loss.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite reports 6 passed, 0 failed.
+- **Last meaningful change:** T2 output RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T2 / G2.
+
 ### `test/paths.test.ts`
 - **Purpose:** Real-filesystem tests for user-path parsing and symbolic-link rejection.
 - **Success check:** Covers accepted absolute/home paths, hostile path strings, malformed surrogate pairs, missing tails, and real directory/file symlinks.
@@ -194,7 +210,7 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T2:** `src/output.ts`, `src/child-wrapper.ts`, `src/process-manager.ts`, `src/watchdog.ts`, and corresponding tests.
+- **T2 remaining:** `src/child-wrapper.ts`, `src/process-manager.ts`, `src/watchdog.ts`, and corresponding tests.
 - **T3:** `src/audit.ts`, `test/audit.test.ts`.
 - **T4:** `src/oauth.ts`, `test/oauth.test.ts`.
 - **T5:** `src/mcp.ts`, `src/tools/register.ts`, `test/mcp.test.ts`.
