@@ -245,3 +245,35 @@ PASS (47/47)
 npm run build
 PASS
 ```
+
+### T4 — persistent endpoint-bound OAuth and owner reset
+
+- Added one private atomic `auth.json` state file with strict schema validation and optimistic cross-process conflict detection.
+- Owner credentials use a fresh random password, salt, and Node `crypto.scrypt`; reopening the installation never rotates or reprints the password.
+- OAuth clients, authorization codes, access tokens, and refresh tokens are stored only by SHA-256 hashes. Plain owner/client/code/token secrets are absent from persisted bytes.
+- Added exact HTTPS resource binding to the canonical public URL ending `/mcp`. A changed endpoint increments the generation and invalidates clients, codes, access tokens, refresh tokens, and pending transactions while preserving the owner password.
+- Added dynamic client registration, exact registered redirect matching, fixed supported scopes, owner-password-gated authorization, mandatory S256 PKCE, five-minute single-use codes, fifteen-minute access tokens, and thirty-day refresh tokens.
+- Refresh rotates both access and refresh tokens, prevents replay, cannot change resource/client or expand scopes, and persists atomically.
+- Added access validation, expiry, revocation, protected-resource metadata, authorization-server metadata, and owner reset that revokes OAuth state while preserving endpoint/config/memory/browser state.
+- Wired `loom auth reset` with live runtime-lock verification against PID/start-time/canonical-executable identity. It checks before and after confirmation and refuses while Loom is running.
+- Reset confirmation and the new password use direct bounded `/dev/tty` descriptor I/O. There is no stdin/environment/flag bypass, and the password is not written to process stdout or stderr.
+- Required RED: OAuth build failed because `src/oauth.ts` did not exist. CLI RED then failed only because `auth reset` was unknown.
+- During PTY testing, the first reusable readline abstraction deadlocked after successful input because long-lived `fs` streams over `/dev/tty` did not close reliably. Expect traces and isolated reproductions identified the boundary; direct FileHandle reads/writes exited cleanly and replaced the stream abstraction.
+- Non-terminal tests use Python `setsid()` so `/dev/tty` genuinely does not exist instead of inheriting the test runner's controlling terminal.
+- Targeted validation: OAuth 8/8, CLI 8/8, combined T4 16/16.
+- Full validation: typecheck, 57/57 tests, and build passed.
+
+Evidence:
+
+```text
+node --test dist/test/oauth.test.js dist/test/cli.test.js
+pass 16
+fail 0
+
+npm run typecheck
+PASS
+npm test
+PASS (57/57)
+npm run build
+PASS
+```

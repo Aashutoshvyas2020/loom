@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { initializeState } from '../src/config.js';
+import { initializeState, writeRuntimeLock } from '../src/config.js';
+import { AuthStore } from '../src/oauth.js';
+import { inspectProcess } from '../src/watchdog.js';
 
 const cliPath = new URL('../src/cli.js', import.meta.url);
 const packagePath = new URL('../../package.json', import.meta.url);
@@ -21,6 +23,23 @@ function runCliWithHome(home: string, ...args: string[]) {
     encoding: 'utf8',
     env: { ...process.env, HOME: home },
   });
+}
+
+function runCliWithHomeWithoutTerminal(home: string, ...args: string[]) {
+  const detachScript = `
+import os
+import sys
+os.setsid()
+os.execve(sys.argv[1], sys.argv[1:], os.environ)
+`;
+  return spawnSync(
+    '/usr/bin/python3',
+    ['-c', detachScript, process.execPath, cliPath.pathname, ...args],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, HOME: home },
+    },
+  );
 }
 
 test('package metadata pins the supported runtime and dependencies', async () => {
@@ -120,4 +139,100 @@ exit [lindex $result 3]
     (await readdir(stateRoot)).some((name) => name.startsWith('config.invalid.')),
     true,
   );
+});
+
+test('auth reset refuses while a live Loom runtime lock matches the process table', async () => {
+  const home = await realpath(await mkdtemp(path.join(tmpdir(), 'loom-cli-home-')));
+  const stateRoot = path.join(home, '.loom');
+  const opened = await AuthStore.open(stateRoot);
+  assert.ok(opened.ownerPassword);
+  const observed = await inspectProcess(process.pid);
+  assert.ok(observed);
+  await writeRuntimeLock(stateRoot, {
+    pid: observed.pid,
+    startTime: observed.startTime,
+    executablePath: observed.executablePath,
+    launchId: 'test-live-launch',
+    statePath: stateRoot,
+  });
+
+  const result = runCliWithHomeWithoutTerminal(home, 'auth', 'reset');
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Loom is currently running/);
+  const reopened = await AuthStore.open(stateRoot);
+  assert.equal(await reopened.store.verifyOwnerPassword(opened.ownerPassword), true);
+});
+
+test('auth reset uses local terminal confirmation, prints the new password there, and preserves non-auth state', async () => {
+  const home = await realpath(await mkdtemp(path.join(tmpdir(), 'loom-cli-home-')));
+  const stateRoot = path.join(home, '.loom');
+  const opened = await AuthStore.open(stateRoot);
+  assert.ok(opened.ownerPassword);
+  await opened.store.bindEndpoint('https://loom.example.com/mcp');
+  const client = await opened.store.registerClient({
+    clientName: 'ChatGPT',
+    redirectUris: ['https://chatgpt.com/connector/oauth/callback'],
+    scopes: ['loom:tools'],
+  });
+  const configBefore = await readFile(path.join(stateRoot, 'config.json'));
+  const memoryMarker = path.join(stateRoot, 'memory', 'keep.txt');
+  const browserMarker = path.join(stateRoot, 'browser-profile', 'keep.txt');
+  await mkdir(path.dirname(memoryMarker), { recursive: true });
+  await mkdir(path.dirname(browserMarker), { recursive: true });
+  await writeFile(memoryMarker, 'memory survives');
+  await writeFile(browserMarker, 'browser survives');
+
+  const noTerminal = runCliWithHomeWithoutTerminal(home, 'auth', 'reset');
+  assert.notEqual(noTerminal.status, 0);
+  assert.match(noTerminal.stderr, /Local terminal confirmation is required/);
+  assert.equal(await opened.store.verifyOwnerPassword(opened.ownerPassword), true);
+
+  const expectScript = `
+set timeout 15
+spawn $env(LOOM_TEST_NODE) $env(LOOM_TEST_CLI) auth reset
+expect {
+  "Type RESET to rotate the Loom owner password: " { send "RESET\\r" }
+  timeout { exit 124 }
+  eof { exit 125 }
+}
+expect {
+  -re {New Loom owner password: ([A-Za-z0-9_-]+)} {}
+  timeout { exit 126 }
+  eof { exit 127 }
+}
+expect eof
+set result [wait]
+exit [lindex $result 3]
+`;
+  const result = spawnSync('/usr/bin/expect', ['-c', expectScript], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: home,
+      LOOM_TEST_NODE: process.execPath,
+      LOOM_TEST_CLI: cliPath.pathname,
+    },
+  });
+
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  const passwordMatch = result.stdout.match(/New Loom owner password: ([A-Za-z0-9_-]{43})/);
+  assert.ok(passwordMatch, result.stdout);
+  const newPassword = passwordMatch[1]!;
+  const reopened = await AuthStore.open(stateRoot);
+  assert.equal(await reopened.store.verifyOwnerPassword(opened.ownerPassword), false);
+  assert.equal(await reopened.store.verifyOwnerPassword(newPassword), true);
+  assert.equal(reopened.store.resourceUri, 'https://loom.example.com/mcp');
+  assert.deepEqual(await readFile(path.join(stateRoot, 'config.json')), configBefore);
+  assert.equal(await readFile(memoryMarker, 'utf8'), 'memory survives');
+  assert.equal(await readFile(browserMarker, 'utf8'), 'browser survives');
+  await assert.rejects(reopened.store.issueAuthorizationCode({
+    clientId: client.clientId,
+    redirectUri: client.redirectUris[0]!,
+    scopes: ['loom:tools'],
+    resource: 'https://loom.example.com/mcp',
+    ownerPassword: newPassword,
+    codeChallenge: AuthStore.pkceChallenge('z'.repeat(64)),
+    codeChallengeMethod: 'S256',
+  }));
 });

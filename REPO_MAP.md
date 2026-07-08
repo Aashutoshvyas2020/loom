@@ -127,12 +127,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T2 / G2; reused for terminal, Cloudflared, and Chromium.
 
 ### `src/cli.ts`
-- **Purpose:** Minimal executable bootstrap for version/help and explicit YOLO opt-in before runtime tasks begin.
-- **Success check:** `--version` prints package version, `--help` lists `loom launch --yolo` and macOS 14+, and plain `launch` exits nonzero without enabling access.
+- **Purpose:** Executable command boundary for version/help, explicit YOLO opt-in, configuration management, and owner-credential rotation.
+- **Success check:** Plain launch refuses access; reset commands require bounded direct `/dev/tty` confirmation; auth reset refuses a live runtime lock and emits the new owner password only to the local terminal.
 - **Current assessment:** PASS
-- **Evidence:** Real subprocess tests cover version/help/plain-launch refusal and config check; macOS Expect proves local `/dev/tty` confirmation for config reset.
-- **Last meaningful change:** T1 config command routing, 2026-07-08.
-- **Owning task or gate:** T0 / G1 and T1; expanded by later CLI/runtime tasks.
+- **Evidence:** Eight real subprocess/PTTY tests pass, including live process-table lock matching, genuinely sessionless `/dev/tty` failure, config reset, and credential rotation.
+- **Last meaningful change:** T4 owner reset command, 2026-07-08.
+- **Owning task or gate:** T0 / G1, T1, and T4; expanded by later CLI/runtime tasks.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, invalid-config reset/preservation, private runtime-lock persistence, and PID-reuse identity comparison.
@@ -157,6 +157,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/process-manager.test.ts` passes 7/7; post-suite `ps` scan is empty.
 - **Last meaningful change:** T2 process manager completion, 2026-07-08.
 - **Owning task or gate:** T2 / G2; later used by terminal, Cloudflare, browser, and runtime orchestration.
+
+### `src/oauth.ts`
+- **Purpose:** Persistent single-owner credentials and endpoint-bound OAuth client, authorization-code, access-token, refresh-token, revocation, metadata, and endpoint-generation state.
+- **Success check:** Owner password is scrypt-hashed and persistent; all opaque secrets are hashed at rest; codes are single-use; refresh rotates; exact `/mcp` resource/audience, scope, client, redirect, PKCE, expiry, revocation, and endpoint generation are enforced atomically.
+- **Current assessment:** PASS
+- **Evidence:** `test/oauth.test.ts` passes 8/8; combined T4 suite passes 16/16; full suite passes 57/57.
+- **Last meaningful change:** T4 endpoint-bound OAuth completion, 2026-07-08.
+- **Owning task or gate:** T4; served by T5 MCP transport and runtime endpoint binding.
 
 ### `src/output.ts`
 - **Purpose:** Ordered bounded terminal-output storage with sanitization, binary suppression, head/tail retention, cursor pagination, gap detection, and terminal state.
@@ -191,12 +199,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T1.
 
 ### `test/cli.test.ts`
-- **Purpose:** Real-process tests for package metadata and the minimum CLI security boundary.
-- **Success check:** Runs compiled CLI as a subprocess and proves version, help, macOS floor, exact pins, and refusal of plain launch.
+- **Purpose:** Real-process and real-PTY tests for package metadata, launch refusal, config commands, live-lock safety, and owner-password reset.
+- **Success check:** Proves exact pins/support floor, no plain launch, `/dev/tty` confirmation, refusal while a matching runtime is live, no sessionless bypass, non-auth-state preservation, new-password verification, and OAuth revocation.
 - **Current assessment:** PASS
-- **Evidence:** Six CLI tests pass, including a real pseudo-terminal confirmation/reset flow using macOS `/usr/bin/expect`.
-- **Last meaningful change:** T1 config command tests, 2026-07-08.
-- **Owning task or gate:** T0 / G1 and T1.
+- **Evidence:** Eight tests pass using macOS Expect and Python `setsid()` for a genuinely terminal-less child.
+- **Last meaningful change:** T4 auth reset RED/GREEN and terminal-cleanup debugging, 2026-07-08.
+- **Owning task or gate:** T0 / G1, T1, and T4.
 
 ### `test/config.test.ts`
 - **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, and full identity matching.
@@ -221,6 +229,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/watchdog.test.ts` passes 3/3 against live macOS processes.
 - **Last meaningful change:** T2 watchdog identity completion, 2026-07-08.
 - **Owning task or gate:** T2 / G2; reused by runtime and browser lock recovery.
+
+### `test/oauth.test.ts`
+- **Purpose:** State-level security tests for owner credentials, registration, PKCE code exchange, exact endpoint binding, token validation, rotation, replay prevention, expiry, revocation, reset, metadata, and at-rest secrecy.
+- **Success check:** Every invalid binding fails; same endpoint preserves state; endpoint change and owner reset revoke OAuth state without unintended owner/config rotation; plaintext secrets never appear in `auth.json`.
+- **Current assessment:** PASS
+- **Evidence:** Eight targeted tests pass in about one second.
+- **Last meaningful change:** T4 OAuth RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T4.
 
 ### `test/output.test.ts`
 - **Purpose:** Boundary tests for terminal stream ordering, sanitization, deterministic binary markers, exact truncation, cursor pagination, UTF-8 boundaries, and lifecycle states.
@@ -266,7 +282,6 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T4:** `src/oauth.ts`, `test/oauth.test.ts`.
 - **T5:** `src/mcp.ts`, `src/tools/register.ts`, `test/mcp.test.ts`.
 - **T6:** `src/tools/files.ts`, `test/files.test.ts`.
 - **T7:** `src/catalog.ts`, `src/tools/knowledge.ts`, `test/catalog.test.ts`.
