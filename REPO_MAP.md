@@ -238,6 +238,22 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T6 file-tool implementation and final-symlink correction, 2026-07-08.
 - **Owning task or gate:** T6.
 
+### `src/tools/memory.ts`
+- **Purpose:** Loom-owned stable-ID memory store with deterministic search, audited save/delete, crash-recovered tombstones, bounded rescans, and dispatcher composition.
+- **Success check:** Save/delete are serialized and audited; stale valid tombstones are durably removed under audit; unsafe tombstones remain with diagnostics; malformed/oversized entries do not corrupt published snapshots; aggregate limits fail atomically.
+- **Current assessment:** PASS
+- **Evidence:** `test/memory.test.ts` passes 12/12; full tracked suite passes 97/97.
+- **Last meaningful change:** T7 memory store and tombstone recovery, 2026-07-08.
+- **Owning task or gate:** T7.
+
+### `src/tools/skills.ts`
+- **Purpose:** Bounded deterministic multi-root SKILL.md discovery, metadata extraction, search/read, diagnostics, and dispatcher composition.
+- **Success check:** Symlinks are skipped, limits preserve prior snapshots, unterminated frontmatter is skipped with `malformed_frontmatter_skipped`, and skipped malformed bytes do not count as indexed bytes.
+- **Current assessment:** PASS
+- **Evidence:** `test/skills.test.ts` passes 10/10; full tracked suite passes 97/97.
+- **Last meaningful change:** T7 skills catalog and malformed-frontmatter handling, 2026-07-08.
+- **Owning task or gate:** T7.
+
 ### `src/tools/register.ts`
 - **Purpose:** Registers exactly seven public Loom MCP tools with strict Zod v4 action/path/size/URL schemas and an injected dispatcher for later concrete implementations.
 - **Success check:** The public list contains only `loom_terminal`, `loom_read`, `loom_write`, `loom_edit`, `loom_skills`, `loom_memory`, and `loom_browser`; every safe schema path dispatches; dangerous browser URL schemes and malformed inputs fail before handlers.
@@ -261,6 +277,22 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** Targeted suite passes 11/11; full tracked suite passes 75/75.
 - **Last meaningful change:** T6 RED/GREEN cycle for file tools and approved symlink policy, 2026-07-08.
 - **Owning task or gate:** T6.
+
+### `test/memory.test.ts`
+- **Purpose:** Real-filesystem tests for persistent stable IDs, ranking, audit fail-closed behavior, delete conflicts, concurrency, limits, symlink safety, tombstone recovery, diagnostics, and dispatcher composition.
+- **Success check:** Valid stale tombstones are removed, unsafe tombstones remain diagnosed, aggregate limits are tested with individually valid files, and failed rescans preserve the prior immutable snapshot.
+- **Current assessment:** PASS
+- **Evidence:** Twelve targeted tests pass; full tracked suite passes 97/97.
+- **Last meaningful change:** T7 memory RED/GREEN and aggregate-limit repair, 2026-07-08.
+- **Owning task or gate:** T7.
+
+### `test/skills.test.ts`
+- **Purpose:** Tests deterministic discovery/ranking, stable IDs, duplicate names, symlink/depth/size/entry/total/time limits, missing roots, malformed frontmatter, and dispatcher composition.
+- **Success check:** Unterminated frontmatter never becomes a skill and emits exactly one deterministic diagnostic while valid peers remain indexed.
+- **Current assessment:** PASS
+- **Evidence:** Ten targeted tests pass; full tracked suite passes 97/97.
+- **Last meaningful change:** T7 malformed-frontmatter RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T7.
 
 ### `test/mcp.test.ts`
 - **Purpose:** End-to-end loopback HTTP and pinned-SDK tests for readiness, metadata, bearer challenges, server-bound OAuth authorization, revocation, seven tools, session ownership/capacity/expiry, endpoint lifecycle, and clean shutdown.

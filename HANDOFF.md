@@ -1,12 +1,12 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 06:56:30 PDT
+**Date and local time:** 2026-07-08 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA before pending commit:** `c9ed695fc2c2c8725a78fb777d77b0c9cf49e377`
-**Repository state:** dirty only with completed T6 file-tool work and same-commit governance updates
-**Current task:** T6 — bounded file tools
-**Last completed gate:** T6 targeted and full automated gates are green; commit pending
+**HEAD SHA before pending commit:** `3819ba1`
+**Repository state:** dirty only with completed T7 skills/memory work and governance
+**Current task:** T7 — skills and memory catalogs
+**Last completed gate:** T7 targeted 22/22 and full 97/97 are green; commit pending
 **Pushed or published:** no
 
 ## Required startup command
@@ -17,53 +17,34 @@ cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build
 
 ## Completed work
 
-- Restored only `src/tools/files.ts` and `test/files.test.ts` from the quarantined later-task snapshot.
-- Implemented bounded UTF-8, image, and explicit binary reads; audited atomic writes; exact audited edits; conflict detection; byte limits; concurrency serialization; and dispatcher composition.
-- Corrected final-symlink behavior to match the amended canonical contract: reads may follow a final link only after parent-path symlink rejection, canonical target resolution, `O_NOFOLLOW` open, regular-file verification, and post-read identity checks of both the original pathname and canonical target.
-- Writes and edits still reject every existing symlink component.
+- Implemented deterministic bounded skills and Loom-owned memory services.
+- Unterminated skill frontmatter is skipped with a deterministic diagnostic and contributes no indexed bytes.
+- Valid stale memory delete tombstones are verified, audited, removed, and directory-synced; unsafe/failing cleanup stays visible in diagnostics.
+- Fixed TypeScript summary shaping and the aggregate-byte test.
 
-## Required RED and GREEN evidence
+## Evidence
 
 ```text
-Required RED:
-file reads follow a stable final symlink while mutations and parent symlinks remain rejected
-failed because the salvaged implementation rejected the final symlink.
-
-Targeted GREEN:
-node --test dist/test/files.test.js
-11 passed, 0 failed
-
-Full GREEN:
+node --test dist/test/skills.test.js dist/test/memory.test.js
+22 passed, 0 failed
 npm run typecheck
 PASS
 npm test
-75 passed, 0 failed
+97 passed, 0 failed
 npm run build
 PASS
 ```
 
 ## Known failures
 
-None in tracked T0–T6 automated validation.
-
-## Real blockers
-
-None for committing T6.
-
-## Files changed since HEAD
-
-- `CHANGELOG.md`
-- `HANDOFF.md`
-- `REPO_MAP.md`
-- `src/tools/files.ts`
-- `test/files.test.ts`
+None in tracked T0–T7 automated validation.
 
 ## Exact next command
 
 ```bash
-npm run typecheck && npm test && npm run build && git add CHANGELOG.md HANDOFF.md REPO_MAP.md src/tools/files.ts test/files.test.ts && actual=$(mktemp) && mapped=$(mktemp) && git ls-files --cached | sort > "$actual" && grep '^### `' REPO_MAP.md | sed -E 's/^### `([^`]*)`$/\1/' | sort > "$mapped" && test -z "$(comm -3 "$actual" "$mapped")" && git diff --cached --check && git commit -m "feat: add bounded file tools"
+git add CHANGELOG.md HANDOFF.md REPO_MAP.md src/tools/skills.ts src/tools/memory.ts test/skills.test.ts test/memory.test.ts && git diff --cached --check && git commit -m "feat: add skills and memory catalogs"
 ```
 
 ## Next expected result
 
-T6 commits cleanly. Then restore only the T7 skills and memory implementation/tests from `/private/tmp/loom-salvage-working`, add malformed-frontmatter diagnostics and verified stale tombstone cleanup, repair the aggregate-byte test, and complete T7 before restoring terminal, browser, tunnel, or runtime work.
+Commit T7 cleanly, then implement T8 dashboard from the canonical contract before restoring browser, terminal, tunnel, or runtime work.

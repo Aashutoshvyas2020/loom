@@ -363,3 +363,15 @@ PASS (75/75)
 npm run build
 PASS
 ```
+
+### T7 — skills and memory catalogs
+
+- Restored only the quarantined T7 skills/memory implementation and tests after T6 committed cleanly.
+- Added deterministic multi-root skill discovery, stable IDs, ranking, limits, symlink diagnostics, and atomic catalog publication.
+- Unterminated SKILL.md frontmatter is now skipped with `malformed_frontmatter_skipped`; it cannot be partially interpreted as metadata/body and does not count toward indexed bytes.
+- Added Loom-owned stable-ID memory save/read/search/delete, audit fail-closed behavior, conflict detection, concurrency serialization, and bounded rescans.
+- Valid current-user 0600 regular-file delete tombstones are durably removed under an audit start during rescan. Unsafe tombstones remain with `unsafe_tombstone_skipped`; cleanup failures remain visible.
+- Repaired the aggregate-byte test so both files are individually valid and only their sum violates the cap.
+- Required RED: malformed frontmatter was indexed, recoverable tombstones remained, and the aggregate test accidentally exercised oversized-file skipping.
+- Targeted GREEN: skills and memory passed 22/22.
+- Full validation: typecheck passed, tracked tests passed 97/97, and build passed.
