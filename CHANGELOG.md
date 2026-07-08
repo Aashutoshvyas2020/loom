@@ -217,3 +217,31 @@ PASS
 ps -axo pid,ppid,pgid,command | grep -E 'dist/src/child-wrapper|loom-process-|/bin/sleep 30' | grep -v grep
 <no output>
 ```
+
+### T3 — durable private audit system
+
+- Added private JSONL audit logging under the configured audit directory, with 0700 directory repair and 0600 file enforcement.
+- Mutation-start records resolve only after the record and directory entry are synced. The fixed deadline defaults to two seconds.
+- Added a bounded serial queue with no silent drops. Saturation, deadline expiry, or write failure marks audit degraded and rejects later mutation starts.
+- Read audit remains explicitly non-throwing after degradation so read-only functionality can stay available.
+- Added start/finish receipts with operation ID, timestamp, status, and measured duration.
+- Added serialized size rotation and fixed-window startup retention without touching unrelated files.
+- Added recursive bounded metadata sanitization. Commands, content, environment, authorization, cookies, tokens, output, typed values, screenshots, page text, token-shaped values, circular data, and excessive depth are not persisted.
+- Required RED: build failed because `src/audit.ts` did not exist.
+- Targeted GREEN: 8/8 tests passed, including queue saturation, a one-millisecond durable-start deadline, removed-directory write failure, concurrent rotation, retention, and forbidden-literal checks.
+- Full validation: typecheck, 47/47 tests, and build passed.
+
+Evidence:
+
+```text
+node --test dist/test/audit.test.js
+pass 8
+fail 0
+
+npm run typecheck
+PASS
+npm test
+PASS (47/47)
+npm run build
+PASS
+```

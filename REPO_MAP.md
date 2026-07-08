@@ -102,6 +102,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T0 bootstrap validation, 2026-07-08.
 - **Owning task or gate:** T0 / G1; later T15 packaging.
 
+### `src/audit.ts`
+- **Purpose:** Private durable JSONL audit logging with bounded serialization, mutation fail-closed deadlines, rotation, retention, degradation state, and metadata redaction.
+- **Success check:** Mutation start resolves only after fsync, saturation/deadline/write failure disables later mutations, reads remain non-throwing, files remain 0600 in a 0700 directory, rotation is parseable, and forbidden values never appear.
+- **Current assessment:** PASS
+- **Evidence:** `test/audit.test.ts` passes 8/8; full suite passes 47/47.
+- **Last meaningful change:** T3 audit completion, 2026-07-08.
+- **Owning task or gate:** T3; integrated by terminal, files, memory, browser, and runtime tasks.
+
 ### `src/atomic-file.ts`
 - **Purpose:** Durable same-directory atomic replacement with per-canonical-path serialization and optimistic conflict detection.
 - **Success check:** Enforces the write-size limit, rejects symlink paths, preserves existing mode, creates new files as 0600, fsyncs file and parent directory, cleans temporary files, and allows only one concurrent writer sharing an expected hash to succeed.
@@ -165,6 +173,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/paths.test.ts` passes 4/4 against real temporary files and symlinks on macOS.
 - **Last meaningful change:** T1 path-policy foundation, 2026-07-08.
 - **Owning task or gate:** T1; reused by T6, T7, T9, and runtime state.
+
+### `test/audit.test.ts`
+- **Purpose:** Real-filesystem proof for durable starts, 0700/0600 permissions, queue saturation, deadline failure, disk failure, serialized rotation, retention, read availability, finish duration, and redaction.
+- **Success check:** All failure paths are explicit, no JSONL line is corrupted, and secret/content literals are absent from persisted bytes.
+- **Current assessment:** PASS
+- **Evidence:** Eight targeted tests pass, including fixed-time rotation/retention and a one-millisecond durable-start deadline.
+- **Last meaningful change:** T3 audit RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T3.
 
 ### `test/atomic-file.test.ts`
 - **Purpose:** Real-filesystem proof for atomic replacement, permissions, expected-hash conflicts, same-path serialization, cleanup, size limits, and symlink rejection.
@@ -250,7 +266,6 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T3:** `src/audit.ts`, `test/audit.test.ts`.
 - **T4:** `src/oauth.ts`, `test/oauth.test.ts`.
 - **T5:** `src/mcp.ts`, `src/tools/register.ts`, `test/mcp.test.ts`.
 - **T6:** `src/tools/files.ts`, `test/files.test.ts`.
