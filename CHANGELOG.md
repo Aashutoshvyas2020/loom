@@ -102,3 +102,29 @@ PASS (9/9)
 npm run build
 PASS
 ```
+
+### T1 — atomic-file primitive
+
+- Added a same-directory atomic writer with per-canonical-path serialization.
+- New files default to mode 0600; existing regular-file mode is preserved.
+- Content is capped by `MAX_WRITE_BYTES`, temporary files use exclusive creation, file data and the parent directory are synced, and uncommitted temporary files are removed on failure.
+- Existing symbolic-link components and non-regular targets are rejected through the shared path policy.
+- Optional expected SHA-256 detects stale callers. Target identity is rechecked immediately before rename so external replacement or mutation fails closed.
+- Required RED: build failed because `src/atomic-file.ts` did not exist.
+- Targeted GREEN: 5/5 real-filesystem tests passed, including a concurrency proof where two writers share the same expected hash and exactly one succeeds.
+- Full validation: typecheck, 14/14 tests, and build passed.
+
+Evidence:
+
+```text
+node --test dist/test/atomic-file.test.js
+pass 5
+fail 0
+
+npm run typecheck
+PASS
+npm test
+PASS (14/14)
+npm run build
+PASS
+```

@@ -102,6 +102,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T0 bootstrap validation, 2026-07-08.
 - **Owning task or gate:** T0 / G1; later T15 packaging.
 
+### `src/atomic-file.ts`
+- **Purpose:** Durable same-directory atomic replacement with per-canonical-path serialization and optimistic conflict detection.
+- **Success check:** Enforces the write-size limit, rejects symlink paths, preserves existing mode, creates new files as 0600, fsyncs file and parent directory, cleans temporary files, and allows only one concurrent writer sharing an expected hash to succeed.
+- **Current assessment:** PASS
+- **Evidence:** `test/atomic-file.test.ts` passes 5/5; full suite passes 14/14.
+- **Last meaningful change:** T1 atomic-file foundation, 2026-07-08.
+- **Owning task or gate:** T1; reused by config, OAuth, audit state, memory, and file tools.
+
 ### `src/cli.ts`
 - **Purpose:** Minimal executable bootstrap for version/help and explicit YOLO opt-in before runtime tasks begin.
 - **Success check:** `--version` prints package version, `--help` lists `loom launch --yolo` and macOS 14+, and plain `launch` exits nonzero without enabling access.
@@ -125,6 +133,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/paths.test.ts` passes 4/4 against real temporary files and symlinks on macOS.
 - **Last meaningful change:** T1 path-policy foundation, 2026-07-08.
 - **Owning task or gate:** T1; reused by T6, T7, T9, and runtime state.
+
+### `test/atomic-file.test.ts`
+- **Purpose:** Real-filesystem proof for atomic replacement, permissions, expected-hash conflicts, same-path serialization, cleanup, size limits, and symlink rejection.
+- **Success check:** Exactly one of two concurrent expected-hash writers succeeds and no `.tmp` residue remains after success or rejection.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite reports 5 passed, 0 failed.
+- **Last meaningful change:** T1 atomic-file RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T1.
 
 ### `test/cli.test.ts`
 - **Purpose:** Real-process tests for package metadata and the minimum CLI security boundary.
@@ -162,7 +178,7 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T1 remaining:** `src/atomic-file.ts`, `src/config.ts`, and corresponding tests; runtime-lock identity and secure state-root behavior may remain in these modules or the smallest existing T1 module that fits.
+- **T1 remaining:** `src/config.ts` and corresponding tests; runtime-lock identity and secure state-root behavior may remain in that module or the smallest existing T1 module that fits.
 - **T2:** `src/output.ts`, `src/child-wrapper.ts`, `src/process-manager.ts`, `src/watchdog.ts`, and corresponding tests.
 - **T3:** `src/audit.ts`, `test/audit.test.ts`.
 - **T4:** `src/oauth.ts`, `test/oauth.test.ts`.
