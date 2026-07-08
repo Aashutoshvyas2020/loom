@@ -371,7 +371,7 @@ Always run Cloudflared with direct verified executable-plus-argument ProcessMana
 
 19.1 Quick Tunnel
 
-Quick Tunnel is temporary setup/testing only. Refuse Quick mode when `~/.cloudflared/config.yaml` or `.yml` would change its semantics unless the user resolves the conflict. Tunnel the exact loopback MCP origin. Parse only a valid `https://<label>.trycloudflare.com` URL from output within 15 seconds. Permit one recreation after a transient startup failure. A URL change invalidates endpoint-bound OAuth but preserves owner password. Status must say `Production: no`.
+Quick Tunnel is temporary setup/testing only. Refuse Quick mode before audit/process launch when `~/.cloudflared/config.yaml` or `.yml` exists or the config path is unsafe. Tunnel only the exact bare HTTP loopback MCP origin through the verified direct Cloudflared launch boundary. Accumulate at most 256 KiB of sanitized bounded output, parse only a whitespace/end-delimited `https://<valid-single-label>.trycloudflare.com` origin, and require a registered tunnel connection within the fixed 15-second deadline. A malformed/unsafe candidate fails closed without retry. A process-start failure, early transient exit, or readiness timeout permits exactly one fully cleaned recreation and no more. Quick results/status always expose exact `<origin>/mcp` with `Production: no`. A URL change passes through runtime/OAuth endpoint binding, invalidates endpoint-bound OAuth state, and preserves the owner password. Audit records start/finish only and never contain Cloudflared output or the public URL.
 
 Do not claim stale-subdomain takeover resistance or connector persistence from automated tests. Those remain real-world limitations of Quick Tunnel and are why it is never certified for production.
 
@@ -516,7 +516,7 @@ Introduce the initial readiness-only subset of `src/runtime.ts` and `test/runtim
 
 T12 — Quick Tunnel
 
-Implement conflict detection, strict 15-second URL parsing, one recreation, endpoint invalidation, owner-password persistence, visible non-production status, and deterministic mocked parser tests plus one optional real smoke test that is not a release gate.
+Implement pre-launch config conflict detection, strict bounded split-output parsing and registration within 15 seconds, unsafe-URL fail-closed behavior, exactly one cleaned transient recreation, endpoint invalidation through runtime/OAuth binding, owner-password persistence, audit secrecy/fail-closed behavior, and visible non-production status. Deterministic tests are the gate; one real Quick smoke test remains optional and cannot certify production behavior.
 
 T13 — Named Tunnel
 

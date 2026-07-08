@@ -10,10 +10,14 @@ import {
   rename,
   rm,
 } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { assertNoSymlinkComponents, resolveUserPath } from './paths.js';
+import { AuditLogger } from './audit.js';
+import { QUICK_TUNNEL_URL_DEADLINE_MS } from './limits.js';
+import type { OutputRead } from './output.js';
 import { ProcessManager } from './process-manager.js';
 
 const execFileAsync = promisify(execFile);
@@ -43,6 +47,34 @@ export class CloudflaredLaunchError extends CloudflaredError {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = 'CloudflaredLaunchError';
+  }
+}
+
+export class QuickTunnelConfigError extends CloudflaredError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'QuickTunnelConfigError';
+  }
+}
+
+export class QuickTunnelStartupError extends CloudflaredError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'QuickTunnelStartupError';
+  }
+}
+
+export class QuickTunnelUnsafeUrlError extends QuickTunnelStartupError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'QuickTunnelUnsafeUrlError';
+  }
+}
+
+class QuickTunnelTransientError extends QuickTunnelStartupError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'QuickTunnelTransientError';
   }
 }
 
@@ -95,6 +127,42 @@ export interface InstallCloudflaredReleaseOptions {
 export interface StartCloudflaredOptions extends VerifyCloudflaredExecutableInput {
   cwd: string;
   args: string[];
+}
+
+
+export interface QuickTunnelProcess {
+  poll(cursor: number, maximumBytes?: number): OutputRead;
+  cancel(): Promise<unknown>;
+}
+
+export interface QuickTunnelReadyResult {
+  mode: 'quick';
+  publicOrigin: string;
+  publicEndpoint: string;
+  production: false;
+  recreationCount: number;
+}
+
+export interface QuickTunnelStatus {
+  mode: 'quick';
+  ready: boolean;
+  starting: boolean;
+  stopping: boolean;
+  publicOrigin: string | null;
+  publicEndpoint: string | null;
+  production: false;
+  recreationCount: number;
+}
+
+export interface QuickTunnelManagerOptions extends VerifyCloudflaredExecutableInput {
+  audit: AuditLogger;
+  localOrigin: string;
+  cwd: string;
+  configDirectory?: string;
+  now?: () => number;
+  sleep?: (milliseconds: number) => Promise<void>;
+  pollIntervalMs?: number;
+  startProcess?: (args: string[]) => Promise<QuickTunnelProcess>;
 }
 
 interface FileIdentity {
@@ -259,6 +327,56 @@ async function readCloudflaredVersion(
     throw new CloudflaredExecutableError('Cloudflared returned an unrecognized version string.');
   }
   return match[1]!;
+}
+
+
+const QUICK_TUNNEL_ORIGIN_PATTERN = /(?:^|\s)(https:\/\/([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)\.trycloudflare\.com)(?=\s|$)/i;
+
+export function quickTunnelOriginFromOutput(output: string): string | null {
+  const match = QUICK_TUNNEL_ORIGIN_PATTERN.exec(output);
+  return match === null ? null : match[1]!.toLowerCase();
+}
+
+export async function assertQuickTunnelConfigCompatible(
+  inputDirectory = path.join(homedir(), '.cloudflared'),
+): Promise<void> {
+  const configDirectory = resolveUserPath(inputDirectory);
+  try {
+    await assertNoSymlinkComponents(path.dirname(configDirectory));
+    let directoryStats;
+    try {
+      directoryStats = await lstat(configDirectory);
+    } catch (error) {
+      if (nestedErrorCode(error) === 'ENOENT') return;
+      throw error;
+    }
+    if (directoryStats.isSymbolicLink()
+      || !directoryStats.isDirectory()
+      || directoryStats.uid !== currentUserId()) {
+      throw new QuickTunnelConfigError(
+        `Unsafe Cloudflared config directory: ${configDirectory}`,
+      );
+    }
+    await assertNoSymlinkComponents(configDirectory);
+
+    for (const filename of ['config.yaml', 'config.yml']) {
+      const candidate = path.join(configDirectory, filename);
+      try {
+        await lstat(candidate);
+      } catch (error) {
+        if (nestedErrorCode(error) === 'ENOENT') continue;
+        throw error;
+      }
+      throw new QuickTunnelConfigError(
+        `Quick Tunnel is disabled while Cloudflared config exists: ${candidate}`,
+      );
+    }
+  } catch (error) {
+    if (error instanceof QuickTunnelConfigError) throw error;
+    throw new QuickTunnelConfigError(`Unable to validate Quick Tunnel config: ${String(error)}`, {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
 }
 
 export async function hashCloudflaredExecutable(executablePath: string): Promise<string> {
@@ -483,6 +601,218 @@ export async function installCloudflaredRelease(
     });
   } finally {
     await rm(stagingDirectory, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+
+const QUICK_TUNNEL_REGISTERED_PATTERN = /(?:registered tunnel connection|tunnel connection[^\n]*registered)/i;
+const QUICK_TUNNEL_POLL_BYTES = 64 * 1024;
+const QUICK_TUNNEL_MAX_LOG_BYTES = 256 * 1024;
+const QUICK_TUNNEL_DEFAULT_POLL_MS = 25;
+
+function appendBoundedQuickLog(current: string, next: string): string {
+  const combined = `${current}${next}`;
+  const bytes = Buffer.from(combined);
+  if (bytes.byteLength <= QUICK_TUNNEL_MAX_LOG_BYTES) return combined;
+  return bytes.subarray(bytes.byteLength - QUICK_TUNNEL_MAX_LOG_BYTES).toString('utf8');
+}
+
+function validateQuickLocalOrigin(value: string): string {
+  let origin: URL;
+  try {
+    origin = new URL(value);
+  } catch (error) {
+    throw new QuickTunnelStartupError('Quick Tunnel local origin is invalid.', {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+  const loopback = origin.hostname === '127.0.0.1'
+    || origin.hostname === 'localhost'
+    || origin.hostname === '[::1]';
+  if (origin.protocol !== 'http:'
+    || !loopback
+    || origin.port === ''
+    || origin.pathname !== '/'
+    || origin.search !== ''
+    || origin.hash !== ''
+    || origin.username !== ''
+    || origin.password !== ''
+    || value !== origin.origin) {
+    throw new QuickTunnelStartupError(
+      'Quick Tunnel local origin must be a bare HTTP loopback origin with an explicit port.',
+    );
+  }
+  return origin.origin;
+}
+
+export class QuickTunnelManager {
+  private readonly audit: AuditLogger;
+  private readonly localOrigin: string;
+  private readonly configDirectory: string;
+  private readonly now: () => number;
+  private readonly sleep: (milliseconds: number) => Promise<void>;
+  private readonly pollIntervalMs: number;
+  private readonly startProcess: (args: string[]) => Promise<QuickTunnelProcess>;
+  private activeProcess: QuickTunnelProcess | undefined;
+  private readyResult: QuickTunnelReadyResult | undefined;
+  private startPromise: Promise<QuickTunnelReadyResult> | undefined;
+  private stopPromise: Promise<void> | undefined;
+
+  constructor(options: QuickTunnelManagerOptions) {
+    this.audit = options.audit;
+    this.localOrigin = validateQuickLocalOrigin(options.localOrigin);
+    this.configDirectory = options.configDirectory ?? path.join(homedir(), '.cloudflared');
+    this.now = options.now ?? Date.now;
+    this.sleep = options.sleep ?? ((milliseconds) => new Promise((resolve) => {
+      const timer = setTimeout(resolve, milliseconds);
+      timer.unref?.();
+    }));
+    this.pollIntervalMs = options.pollIntervalMs ?? QUICK_TUNNEL_DEFAULT_POLL_MS;
+    if (!Number.isSafeInteger(this.pollIntervalMs)
+      || this.pollIntervalMs <= 0
+      || this.pollIntervalMs > 1_000) {
+      throw new QuickTunnelStartupError('pollIntervalMs must be an integer from 1 to 1000.');
+    }
+    this.startProcess = options.startProcess ?? ((args) => startCloudflared({
+      processManager: options.processManager,
+      executablePath: options.executablePath,
+      expectedSha256: options.expectedSha256,
+      expectedVersion: options.expectedVersion,
+      cwd: options.cwd,
+      args,
+    }));
+  }
+
+  get status(): QuickTunnelStatus {
+    return {
+      mode: 'quick',
+      ready: this.readyResult !== undefined,
+      starting: this.startPromise !== undefined,
+      stopping: this.stopPromise !== undefined,
+      publicOrigin: this.readyResult?.publicOrigin ?? null,
+      publicEndpoint: this.readyResult?.publicEndpoint ?? null,
+      production: false,
+      recreationCount: this.readyResult?.recreationCount ?? 0,
+    };
+  }
+
+  start(): Promise<QuickTunnelReadyResult> {
+    if (this.readyResult !== undefined) return Promise.resolve({ ...this.readyResult });
+    if (this.startPromise !== undefined) return this.startPromise;
+    if (this.stopPromise !== undefined) {
+      return Promise.reject(new QuickTunnelStartupError('Quick Tunnel is stopping.'));
+    }
+    this.startPromise = this.startInternal().finally(() => {
+      this.startPromise = undefined;
+    });
+    return this.startPromise;
+  }
+
+  stop(): Promise<void> {
+    if (this.stopPromise !== undefined) return this.stopPromise;
+    this.stopPromise = (async () => {
+      const process = this.activeProcess;
+      this.activeProcess = undefined;
+      this.readyResult = undefined;
+      await process?.cancel();
+    })().finally(() => {
+      this.stopPromise = undefined;
+    });
+    return this.stopPromise;
+  }
+
+  private async startInternal(): Promise<QuickTunnelReadyResult> {
+    await assertQuickTunnelConfigCompatible(this.configDirectory);
+    const receipt = await this.audit.recordMutationStart('tunnel.quick.start', {
+      mode: 'quick',
+      recreationLimit: 1,
+    });
+    let finishStatus: 'ok' | 'error' | 'timed-out' = 'error';
+    try {
+      for (let recreationCount = 0; recreationCount <= 1; recreationCount += 1) {
+        let process: QuickTunnelProcess;
+        try {
+          process = await this.startProcess(['--url', this.localOrigin]);
+        } catch (error) {
+          const transient = new QuickTunnelTransientError(
+            `Cloudflared process failed to start: ${String(error)}`,
+            { cause: error instanceof Error ? error : undefined },
+          );
+          if (recreationCount === 0) continue;
+          throw transient;
+        }
+        this.activeProcess = process;
+        try {
+          const ready = await this.waitForReady(process, recreationCount);
+          this.readyResult = ready;
+          finishStatus = 'ok';
+          return { ...ready };
+        } catch (error) {
+          await process.cancel().catch(() => undefined);
+          if (this.activeProcess === process) this.activeProcess = undefined;
+          if (error instanceof QuickTunnelUnsafeUrlError) throw error;
+          if (!(error instanceof QuickTunnelTransientError) || recreationCount === 1) throw error;
+        }
+      }
+      throw new QuickTunnelStartupError('Quick Tunnel exhausted its recreation limit.');
+    } catch (error) {
+      if (error instanceof QuickTunnelTransientError
+        && error.message.includes(String(QUICK_TUNNEL_URL_DEADLINE_MS))) {
+        finishStatus = 'timed-out';
+      }
+      throw error;
+    } finally {
+      await this.audit.recordFinish(receipt, finishStatus);
+    }
+  }
+
+  private async waitForReady(
+    process: QuickTunnelProcess,
+    recreationCount: number,
+  ): Promise<QuickTunnelReadyResult> {
+    const deadline = this.now() + QUICK_TUNNEL_URL_DEADLINE_MS;
+    let cursor = 0;
+    let startupLog = '';
+    let origin: string | null = null;
+    let registered = false;
+
+    while (this.now() < deadline) {
+      const polled = process.poll(cursor, QUICK_TUNNEL_POLL_BYTES);
+      if (polled.requestedCursor !== cursor || polled.gap) {
+        throw new QuickTunnelStartupError('Quick Tunnel output cursor became inconsistent.');
+      }
+      cursor = polled.nextCursor;
+      const chunk = polled.segments.map((segment) => segment.text).join('');
+      startupLog = appendBoundedQuickLog(startupLog, chunk);
+      origin ??= quickTunnelOriginFromOutput(startupLog);
+      registered ||= QUICK_TUNNEL_REGISTERED_PATTERN.test(startupLog);
+
+      if (origin === null
+        && /trycloudflare\.com/i.test(startupLog)
+        && /https:\/\//i.test(startupLog)) {
+        throw new QuickTunnelUnsafeUrlError('Cloudflared emitted an unsafe Quick Tunnel URL.');
+      }
+      if (origin !== null && registered) {
+        return {
+          mode: 'quick',
+          publicOrigin: origin,
+          publicEndpoint: `${origin}/mcp`,
+          production: false,
+          recreationCount,
+        };
+      }
+      if (polled.state !== 'running') {
+        throw new QuickTunnelTransientError(
+          `Cloudflared exited before Quick Tunnel readiness with state ${polled.state}.`,
+        );
+      }
+      const remaining = deadline - this.now();
+      if (remaining <= 0) break;
+      await this.sleep(Math.min(this.pollIntervalMs, remaining));
+    }
+    throw new QuickTunnelTransientError(
+      `Quick Tunnel did not become ready within ${QUICK_TUNNEL_URL_DEADLINE_MS} ms.`,
+    );
   }
 }
 

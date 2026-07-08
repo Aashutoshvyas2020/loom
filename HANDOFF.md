@@ -1,12 +1,12 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 16:25:00 PDT
+**Date and local time:** 2026-07-08 16:35:04 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA before pending commit:** `604e3a8742e0e8708f4bebaefb2fddd9ef7ae59e`
-**Repository state:** dirty only with completed T11 readiness implementation and same-commit governance
-**Current task:** T11 — tunnel-independent runtime readiness
-**Last completed gate:** targeted readiness tests and full typecheck/135-test/build suite are green
+**HEAD SHA before pending commit:** `bbaad30a97432f97a5b05134b4c0d354b32fa094`
+**Repository state:** dirty only with completed T12 Quick Tunnel implementation and same-commit governance
+**Current task:** T12 — Quick Tunnel
+**Last completed gate:** Cloudflared 17-test target and full typecheck/143-test/build suite are green
 **Pushed or published:** no
 
 ## Required startup command
@@ -15,43 +15,44 @@
 cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build && git status --short
 ```
 
-## Explicit path-ownership amendment
-
-T11 owns the initial readiness-only subset of `src/runtime.ts` and `test/runtime.test.ts`. T14 expands the same files into full startup/shutdown orchestration. T11 contains no tunnel launch, browser/catalog startup, signal handlers, runtime lock acquisition, foreground lifetime, or cleanup sequencing.
-
 ## Completed work
 
-- Added exact local HTTP loopback origin plus `/mcp` validation.
-- Added canonical bare HTTPS public origin validation and exact `/mcp` resource derivation.
-- Added immutable NOT_READY and ready snapshots plus status-block formatting with full endpoints and the full-access warning.
-- Added strict secret-free private atomic `runtime/current.json` state.
-- Added pre-bind validation of the private 0700 runtime directory and non-symlink current.json target.
-- Delegated resource binding to the existing MCP server rather than duplicating transport or OAuth logic.
-- Proved a real local MCP transition from structured 503 NOT_READY to exact endpoint-bound 401 OAuth challenge and protected-resource metadata.
+- Added strict pre-launch `~/.cloudflared/config.yaml`/`.yml` conflict and unsafe-path rejection.
+- Added bare HTTP loopback origin validation and strict single-label trycloudflare origin parsing across split output chunks.
+- Added registration-gated readiness with bounded 256 KiB startup output and the exact 15-second deadline.
+- Added exactly one cleaned recreation for transient process-start failure, early exit, or timeout; unsafe URLs fail without retry.
+- Added direct use of T10 `startCloudflared`, exact `--url` argument shaping, idempotent status/start/stop, cleanup, and explicit `production: false`.
+- Added audit fail-closed behavior and proved output/public URL secrecy.
+- Added T11/AuthStore integration proving Quick URL changes invalidate endpoint-bound OAuth generations while preserving the owner password across reopen.
+- Kept named credentials, hostname behavior, retry backoff, and named/Quick fallback out of T12.
 
 ## Exact commands and results
 
 ```text
-node --test dist/test/runtime.test.js
-PASS — 6/6
+node --test dist/test/cloudflare.test.js
+PASS — 17/17
 
 npm run typecheck
 PASS
 
 npm test
-PASS — 135/135
+PASS — 143/143
 
 npm run build
 PASS
 ```
 
+## Diagnostic note
+
+The first full-suite run produced one `kill EPERM` in the existing ProcessManager SIGKILL-escalation test. The isolated test immediately passed, no Loom child-wrapper/target residue was present, and the complete suite then passed 143/143. It is not currently reproducible; no unrelated process-manager change was made.
+
 ## Known failures
 
-None in T0–T11 deterministic validation or the real local MCP readiness transition.
+None currently reproducible in T0–T12 deterministic validation.
 
 ## Real blockers
 
-None for T11. Quick Tunnel startup/parsing is T12, named-tunnel credentials/retries are T13, and full runtime lifecycle/signal cleanup remains T14.
+None for T12. A real Quick smoke is optional and cannot certify production. Named tunnel credentials, stable hostnames, retry classification/backoff, and no-fallback production behavior remain T13.
 
 ## Files changed
 
@@ -60,15 +61,15 @@ None for T11. Quick Tunnel startup/parsing is T12, named-tunnel credentials/retr
 - `REPO_MAP.md`
 - `SPEC.md`
 - `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
-- `src/runtime.ts`
-- `test/runtime.test.ts`
+- `src/cloudflare.ts`
+- `test/cloudflare.test.ts`
 
 ## Exact next command
 
 ```bash
-git add CHANGELOG.md HANDOFF.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt src/runtime.ts test/runtime.test.ts && git diff --cached --check && git commit -m "feat: add runtime readiness"
+git add CHANGELOG.md HANDOFF.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt src/cloudflare.ts test/cloudflare.test.ts && git diff --cached --check && git commit -m "feat: add quick tunnel"
 ```
 
 ## Next expected result
 
-Commit T11 with a clean tree, then begin T12 Quick Tunnel conflict detection, strict 15-second URL parsing, one recreation, endpoint invalidation, and visible non-production status without importing named-tunnel behavior.
+Commit T12 with a clean tree, then begin T13 named-tunnel credential/hostname validation, explicit ephemeral origin mapping, no Quick fallback, transient retry classification, capped backoff, and auth/config fail-fast behavior.

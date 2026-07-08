@@ -495,3 +495,38 @@ before binding: HTTP 503, NOT_READY, no WWW-Authenticate
 after binding: HTTP 401, exact endpoint-bound resource metadata challenge
 runtime/current.json: 0600
 ```
+
+### T12 — Quick Tunnel
+
+- Added fail-closed Quick Tunnel configuration checks. Quick mode returns without side effects when the config directory is absent, but refuses an unsafe config path or any existing `config.yaml`/`config.yml` before audit or process launch.
+- Added strict Quick origin parsing for a single valid DNS label under `trycloudflare.com`, bounded by whitespace or end-of-buffer. Paths, ports, multi-label prefixes, invalid label edges, and concatenated prefixes are rejected.
+- Added `QuickTunnelManager` around the verified T10 direct ProcessManager boundary. It passes only `--url <bare-loopback-origin>`; T10 injects `tunnel --no-autoupdate --metrics 127.0.0.1:0` and re-verifies the binary.
+- Added bounded 256 KiB output accumulation, cursor consistency checks, split-chunk/end-boundary URL handling, and readiness requiring both a strict public origin and a registered tunnel connection.
+- Enforced the central 15-second readiness deadline separately for each attempt. A process-start failure, early transient exit, or timeout permits exactly one fully cleaned recreation. A malformed/unsafe candidate URL fails immediately without recreation.
+- Added idempotent status/start/stop state with exact public `<origin>/mcp`, `production: false`, recreation count, and process cancellation on failure/stop.
+- Added audit fail-closed behavior and start/finish-only records. Tests prove Cloudflared output, registration text, and trycloudflare URL bytes never enter the audit log.
+- Added integration through `RuntimeReadiness` and `AuthStore`: two changed Quick URLs increment endpoint generation and invalidate endpoint-bound OAuth state while the installation owner password remains valid across reopen. Quick runtime status remains ineligible for production.
+- Required RED evidence covered missing parser/config/manager APIs, transient process-start recreation bypass, and unsafe endpoint behaviors. An additional end-of-buffer chunk-boundary review case was already handled correctly by the strict parser and required no production change.
+- Cloudflared targeted validation passes 17/17; full typecheck, 143/143 tests, and build pass.
+- One first full-suite run observed a nonreproducing `kill EPERM` in the pre-existing ProcessManager SIGKILL-escalation test. The isolated test passed immediately, no owned process residue existed, and the complete suite then passed 143/143. No unrelated process-manager code was changed.
+- No real Quick Tunnel smoke claim is made. The plan explicitly marks it optional and non-certifying; production certification still requires a real named tunnel.
+
+Evidence:
+
+```text
+node --test dist/test/cloudflare.test.js
+PASS (17/17)
+
+npm run typecheck
+PASS
+npm test
+PASS (143/143)
+npm run build
+PASS
+
+Quick endpoint lifecycle
+first URL generation: 1
+second URL generation: 2
+owner password after both changes/reopen: valid
+production eligible: false
+```

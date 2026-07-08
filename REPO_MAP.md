@@ -42,9 +42,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records completed T11 deterministic and real local-MCP readiness evidence, explicit runtime-path ownership amendment, parent HEAD, exact dirty scope, and the T11 commit command.
-- **Last meaningful change:** T11 readiness completion handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T11.
+- **Evidence:** Records completed T12 Quick Tunnel parser/manager/OAuth evidence, parent HEAD, exact dirty scope, one nonreproducing unrelated process-test incident, and the T12 commit command.
+- **Last meaningful change:** T12 Quick Tunnel completion handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T12.
 
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -74,16 +74,16 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
 - **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T11 records deterministic NOT_READY-to-bound MCP readiness, strict local/public endpoint canonicalization, private atomic runtime/current.json, pre-bind target validation, immutable status data, and the full-access warning.
-- **Last meaningful change:** T11 readiness contract, 2026-07-08.
+- **Evidence:** T12 records pre-launch config conflict rejection, strict bounded Quick URL/registration parsing, fixed 15-second attempts, exactly one transient recreation, unsafe-URL no-retry behavior, audit secrecy, explicit non-production status, and endpoint invalidation without password rotation.
+- **Last meaningful change:** T12 Quick Tunnel contract, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T11 explicitly reassigns the initial readiness-only subset of runtime.ts/runtime.test.ts from T14, while preserving full startup/shutdown orchestration for T14.
-- **Last meaningful change:** T11 runtime-path ownership amendment, 2026-07-08.
+- **Evidence:** T12 clarifies strict split-output parsing, pre-launch conflict checks, one cleaned recreation, OAuth endpoint invalidation, audit secrecy, and the optional/non-certifying status of real Quick smoke tests.
+- **Last meaningful change:** T12 Quick Tunnel implementation clarification, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -159,12 +159,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T0 / G1, T1, T4, and T9; expanded by later runtime tasks.
 
 ### `src/cloudflare.ts`
-- **Purpose:** Pinned Cloudflared release metadata, secure acquisition, stable executable verification, PATH discovery, private atomic installation, and direct wrapper-owned launch.
-- **Success check:** Pins official macOS arm64/x64 archive sizes and hashes plus executable hashes; allows only credential-free HTTPS and bounded manual redirects; enforces a 30-minute maximum transfer, exact bytes/hash, safe single-file extraction, current-user ownership, executable mode, stable identity, exact version, fail-closed first PATH match, and fixed `tunnel --no-autoupdate --metrics 127.0.0.1:0` argv.
+- **Purpose:** Pinned Cloudflared release acquisition/verification plus Quick Tunnel conflict checks, bounded readiness parsing, recreation, audit, status, and cleanup.
+- **Success check:** Retains all T10 acquisition/direct-launch guarantees; Quick mode rejects conflicting config before launch, validates a bare loopback origin, parses only a strict single-label trycloudflare origin plus registration within 15 seconds, retries only one transient attempt, rejects unsafe URLs without retry, cleans every failed/stopped process, never audits output/URL, and reports production false.
 - **Current assessment:** PASS
-- **Evidence:** Nine targeted tests pass; real verification accepted both official arm64 and x64 binaries, real arm64 archive extraction/launch passed, and a real official HTTPS arm64 install produced SHA-256 `cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04`, mode 0700, no staging residue, and no process residue.
-- **Last meaningful change:** T10 Cloudflared acquisition and validation, 2026-07-08.
-- **Owning task or gate:** T10; consumed by T11–T14.
+- **Evidence:** Cloudflared target passes 17/17. T12 tests prove split-chunk/end-boundary parsing, exact direct args, registration, one recreation for spawn/exit/timeout, unsafe URL no-retry, audit fail-closed/secrecy, endpoint-generation invalidation, and owner-password persistence. T10 real official binary/network evidence remains valid.
+- **Last meaningful change:** T12 Quick Tunnel manager, 2026-07-08.
+- **Owning task or gate:** T10 acquisition and T12 Quick Tunnel; consumed by T13–T14.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, invalid-config reset/preservation, private runtime-lock persistence, and PID-reuse identity comparison.
@@ -263,12 +263,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T0 / G1, T1, T4, and T9.
 
 ### `test/cloudflare.test.ts`
-- **Purpose:** Deterministic acquisition, verification, PATH, extraction, cleanup, timeout, and direct-launch tests for Cloudflared.
-- **Success check:** Locks exact arm64/x64 metadata; proves canonical symlink handling, hash/version failure, first-match PATH behavior, HTTPS-only bounded redirects, exact bytes/hash, pre-mutation symlink rejection, default tar extraction, timeout cleanup, previous-binary preservation, fixed direct argv, and reserved-option rejection.
+- **Purpose:** Deterministic acquisition/verification tests plus Quick Tunnel parser, conflict, lifecycle, retry, audit, OAuth, and status tests.
+- **Success check:** Retains all T10 checks and additionally proves strict config conflict rejection, split/end-boundary URL parsing, registration gating, exact 15-second attempts, at most one recreation, cleanup, malformed URL no-retry, audit secrecy/fail-closed behavior, production false, endpoint invalidation, and owner-password persistence.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite passes 9/9; full tracked suite passes 129/129. Real official-binary and official-network evidence is recorded in CHANGELOG.md and HANDOFF.md.
-- **Last meaningful change:** T10 Cloudflared RED/GREEN cycle and real-network verification, 2026-07-08.
-- **Owning task or gate:** T10.
+- **Evidence:** Targeted suite passes 17/17; full tracked suite passes 143/143 after an isolated nonreproducing process-manager EPERM rerun passed with no residue.
+- **Last meaningful change:** T12 Quick Tunnel RED/GREEN and endpoint-persistence proof, 2026-07-08.
+- **Owning task or gate:** T10 and T12.
 
 ### `test/config.test.ts`
 - **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, and full identity matching.
