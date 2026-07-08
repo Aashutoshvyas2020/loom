@@ -1,11 +1,11 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 00:46:43 PDT
+**Date and local time:** 2026-07-08 01:26:39 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA:** `2d212c20c8bac3efb012943922a4fe1e308cfd5e`
-**Repository state:** dirty; completed T4 OAuth/auth-reset changes are not yet committed
-**Current task:** T4 — OAuth and endpoint-bound state
+**HEAD SHA:** `e11ee08d0172447d90adbcc93f8a706b9ba95877`
+**Repository state:** dirty; completed T5 MCP transport/tool-registry changes are not yet committed
+**Current task:** T5 — MCP transport and seven-tool registration
 **Last completed gate:** G2
 **Pushed or published:** no
 
@@ -15,43 +15,40 @@
 cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build && git status --short
 ```
 
-## Commands run for T4
+## Commands run for T5
 
 ```bash
+find node_modules/@modelcontextprotocol/sdk/dist ...
+grep/read pinned Streamable HTTP, Express, bearer, metadata, server, and client examples/types
 npm run build
-npm run build && node --test dist/test/oauth.test.js
-npm run build && node --test dist/test/cli.test.js
-ps -axo pid,ppid,pgid,command | grep -E 'dist/test/cli.test.js|dist/src/cli.js auth reset|/usr/bin/expect' | grep -v grep
-kill -TERM -68593; kill -KILL -68593
-/usr/bin/expect -d -c '<config reset trace>'
-node /private/tmp/loom-old-confirm.mjs
-node /private/tmp/loom-fixed-confirm.mjs
-node /private/tmp/loom-direct-confirm.mjs
-npm run build && node --test dist/test/cli.test.js
-node --test dist/test/oauth.test.js dist/test/cli.test.js
+node --test dist/test/mcp.test.js
+node --input-type=module '<stale-token HTTP reproduction>'
 npm run typecheck && npm test && npm run build
+ps -axo pid,ppid,pgid,command | grep -E 'dist/test/mcp.test.js|loom-mcp-|dist/src/mcp.js' | grep -v grep
 ```
 
 ## Results
 
-- T3 was committed cleanly at `2d212c20c8bac3efb012943922a4fe1e308cfd5e`.
-- T4 began test-first. Required OAuth RED: build failed because `src/oauth.ts` did not exist.
-- Added persistent private OAuth state with a scrypt owner credential and hashed client/code/access/refresh secrets.
-- Owner password is created once, returned only on first installation creation, and remains unchanged across reopen and endpoint lifecycle.
-- Endpoint binding requires the exact public HTTPS URL ending `/mcp`. A changed endpoint increments generation and atomically revokes clients, codes, access tokens, refresh tokens, and pending transactions without rotating the owner password.
-- Added dynamic registration, registered redirect validation, fixed scopes, owner-password authorization, mandatory S256 PKCE, single-use expiring codes, access-token validation, rotating refresh tokens, replay prevention, expiry, revocation, and exact metadata.
-- Added `loom auth reset`. It refuses a live matching runtime lock before local confirmation, rechecks afterward, rotates only the owner credential, revokes OAuth state, and preserves endpoint/config/memory/browser state.
-- Confirmation and password output use bounded direct `/dev/tty` FileHandle I/O. A detached `setsid()` child proves there is no non-terminal fallback.
-- The first shared readline/stream terminal helper deadlocked after receiving confirmation. Expect debug traces showed the prompt matched and input arrived, but stream/descriptor shutdown never completed. Isolated tests confirmed the issue. Replacing streams with direct bounded descriptor reads/writes fixed it.
-- One connector-interrupted CLI run left an isolated test PGID. It was identified with `ps`, terminated, and subsequent tests left no known test processes.
-- Targeted OAuth validation: 8 passed, 0 failed.
-- Targeted CLI validation: 8 passed, 0 failed.
-- Combined T4 validation: 16 passed, 0 failed.
-- Full validation: typecheck passed, full tests passed 57/57, build passed.
+- T4 was committed cleanly at `e11ee08d0172447d90adbcc93f8a706b9ba95877`.
+- T5 began test-first. Required RED: build failed because `src/mcp.ts` and `src/tools/register.ts` did not exist.
+- Added a loopback-only HTTP server using the pinned MCP SDK’s stateful Streamable HTTP transport.
+- `/mcp` returns deterministic structured `NOT_READY` before a public resource is bound.
+- After binding, the server publishes path-correct protected-resource metadata, authorization-server metadata, and bearer challenges containing the public metadata URL.
+- Added HTTP OAuth registration, authorization form/POST, code exchange, refresh, replay prevention, authenticated revocation, and no-store responses over the T4 AuthStore.
+- Added exactly seven tools with strict Zod schemas and an injected dispatcher: terminal, read, write, edit, skills, memory, browser.
+- Browser schemas reject dangerous `javascript:` and `file:` URL schemes; permission/geolocation inputs require bare HTTP(S) origins.
+- Sessions validate ID format, bind to the initiating OAuth client, enforce capacity including concurrent pending initializations, track active requests, reap only inactive sessions, and close on shutdown or endpoint change.
+- Rebinding the same endpoint preserves sessions. Changing endpoint closes sessions, updates metadata/challenges, and invalidates old tokens.
+- A real SDK client listed exactly seven tools and called every schema safely.
+- The endpoint-change test found a real pinned SDK middleware bug: stale-token verification yielded a 500 because its catch path dereferenced an undefined error. A standalone HTTP reproduction confirmed the failure was inside that middleware, not AuthStore. Loom replaced only the bearer boundary with a defensive equivalent that preserves the standard challenge and `req.auth`; stale/revoked tokens now return 401.
+- The pinned SDK also has a TypeScript 6 exact-optional transport incompatibility; a narrow cast to its own `Transport` interface is documented in production and tests.
+- Targeted MCP validation: 9 passed, 0 failed.
+- Full validation: typecheck passed, full tests passed 66/66, build passed.
+- Post-suite process scan produced no output for MCP test processes/listeners.
 
 ## Known failures
 
-None in T4 automated validation.
+None in T5 automated validation.
 
 ## Real blockers
 
@@ -62,17 +59,17 @@ None.
 - `CHANGELOG.md`
 - `HANDOFF.md`
 - `REPO_MAP.md`
-- `src/cli.ts`
+- `src/mcp.ts`
 - `src/oauth.ts`
-- `test/cli.test.ts`
-- `test/oauth.test.ts`
+- `src/tools/register.ts`
+- `test/mcp.test.ts`
 
 ## Exact next command
 
 ```bash
-git add CHANGELOG.md HANDOFF.md REPO_MAP.md src/cli.ts src/oauth.ts test/cli.test.ts test/oauth.test.ts && actual=$(mktemp) && mapped=$(mktemp) && git ls-files | sort > "$actual" && grep '^### `' REPO_MAP.md | sed -E 's/^### `([^`]*)`$/\1/' | sort > "$mapped" && comm -3 "$actual" "$mapped" && git diff --cached --check && rm -f "$actual" "$mapped"
+git add CHANGELOG.md HANDOFF.md REPO_MAP.md src/mcp.ts src/oauth.ts src/tools/register.ts test/mcp.test.ts && actual=$(mktemp) && mapped=$(mktemp) && git ls-files | sort > "$actual" && grep '^### `' REPO_MAP.md | sed -E 's/^### `([^`]*)`$/\1/' | sort > "$mapped" && comm -3 "$actual" "$mapped" && git diff --cached --check && rm -f "$actual" "$mapped"
 ```
 
 ## Next expected result
 
-The staged index and repository map match exactly with no diff-check errors. Commit T4, verify a clean repository, then begin T5 test-first with a loopback Streamable HTTP MCP listener that remains deterministically NOT_READY until endpoint-bound OAuth is configured, publishes path-correct metadata/challenges, manages bounded sessions, and registers exactly seven tools.
+The staged index and repository map match exactly with no diff-check errors. Commit T5, verify a clean repository, then begin T6 test-first with bounded file/image reads, stable hashes and MIME metadata, atomic writes, exact edit conflicts, path/symlink defenses, and audit-before-mutation integration.

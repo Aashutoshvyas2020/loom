@@ -277,3 +277,40 @@ PASS (57/57)
 npm run build
 PASS
 ```
+
+### T5 — authenticated Streamable HTTP MCP and seven-tool registry
+
+- Added a loopback-only Express server using the pinned MCP SDK’s stateful Streamable HTTP transport and per-session `McpServer` instances.
+- `/mcp` is deterministically unavailable before endpoint binding and returns a structured `NOT_READY` error without advertising incomplete OAuth metadata.
+- After binding, the server publishes exact path-aware protected-resource metadata at `/.well-known/oauth-protected-resource/mcp`, authorization-server metadata, and an RFC bearer challenge pointing to the public metadata URL rather than the loopback listener.
+- Added HTTP dynamic client registration, owner-password authorization form/POST, S256 code exchange, refresh rotation, replay rejection, authenticated token revocation, and no-store responses over the T4 atomic OAuth state engine.
+- Added exactly seven public tools: `loom_terminal`, `loom_read`, `loom_write`, `loom_edit`, `loom_skills`, `loom_memory`, and `loom_browser`.
+- Tool input uses strict Zod v4 schemas with action-specific fields, absolute/`~/` paths, central size limits, and browser URL restrictions that reject `javascript:` and `file:` navigation.
+- Sessions are validated by format and bound to the OAuth client that initialized them. Unknown, malformed, cross-client, over-capacity, and missing-session requests return structured errors.
+- Concurrent initialization reservations are counted before transport creation, so simultaneous requests cannot race past the session cap.
+- Active request counts prevent the inactivity reaper from closing long-running calls. Inactive sessions are closed within the configured bound, and all sessions close on server shutdown or endpoint generation change.
+- Rebinding the same public URL preserves sessions. Changing the public `/mcp` URL closes every session, updates metadata/challenges, and rejects all old tokens immediately.
+- A real pinned-SDK client listed exactly seven tools and called every schema through the transport.
+- The first endpoint-change test exposed a pinned SDK bearer-middleware bug: stale-token validation produced a 500 because its catch path dereferenced an undefined error. Loom replaced only that brittle boundary with a defensive equivalent middleware that preserves the SDK challenge format and `req.auth` shape; stale/revoked tokens now return 401.
+- Required RED: build failed because `src/mcp.ts` and `src/tools/register.ts` did not exist. The initial compile also exposed the pinned SDK’s TypeScript 6 exact-optional transport mismatch, handled with a narrow `Transport` cast.
+- Targeted validation: 9/9 MCP tests passed.
+- Full validation: typecheck, 66/66 tests, and build passed.
+- Post-suite process scan found no MCP test listener/process residue.
+
+Evidence:
+
+```text
+node --test dist/test/mcp.test.js
+pass 9
+fail 0
+
+npm run typecheck
+PASS
+npm test
+PASS (66/66)
+npm run build
+PASS
+
+ps -axo pid,ppid,pgid,command | grep -E 'dist/test/mcp.test.js|loom-mcp-|dist/src/mcp.js' | grep -v grep
+<no output>
+```

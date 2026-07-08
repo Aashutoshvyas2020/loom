@@ -158,13 +158,21 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T2 process manager completion, 2026-07-08.
 - **Owning task or gate:** T2 / G2; later used by terminal, Cloudflare, browser, and runtime orchestration.
 
+### `src/mcp.ts`
+- **Purpose:** Loopback-only Streamable HTTP MCP and OAuth HTTP server with deterministic readiness, endpoint-bound bearer authentication, dynamic registration/authorization/token/revocation routes, and bounded client-bound sessions.
+- **Success check:** Returns NOT_READY before binding, publishes path-correct metadata/challenges after binding, serves real authorization-code and refresh flows, validates every session ID/client, prevents concurrent capacity overflow, protects active requests from idle reaping, closes changed-endpoint sessions, and leaves no listeners on shutdown.
+- **Current assessment:** PASS
+- **Evidence:** `test/mcp.test.ts` passes 9/9 with a real pinned-SDK client; full suite passes 66/66; post-suite process scan is empty.
+- **Last meaningful change:** T5 MCP/OAuth HTTP transport completion, 2026-07-08.
+- **Owning task or gate:** T5; consumed by runtime/tunnel integration and later concrete tool handlers.
+
 ### `src/oauth.ts`
 - **Purpose:** Persistent single-owner credentials and endpoint-bound OAuth client, authorization-code, access-token, refresh-token, revocation, metadata, and endpoint-generation state.
 - **Success check:** Owner password is scrypt-hashed and persistent; all opaque secrets are hashed at rest; codes are single-use; refresh rotates; exact `/mcp` resource/audience, scope, client, redirect, PKCE, expiry, revocation, and endpoint generation are enforced atomically.
 - **Current assessment:** PASS
-- **Evidence:** `test/oauth.test.ts` passes 8/8; combined T4 suite passes 16/16; full suite passes 57/57.
-- **Last meaningful change:** T4 endpoint-bound OAuth completion, 2026-07-08.
-- **Owning task or gate:** T4; served by T5 MCP transport and runtime endpoint binding.
+- **Evidence:** `test/oauth.test.ts` passes 8/8; T5 HTTP flow proves registration, exchange, refresh replay prevention, authenticated revocation, and endpoint invalidation; full suite passes 66/66.
+- **Last meaningful change:** T5 client-authenticated revocation support, 2026-07-08.
+- **Owning task or gate:** T4 and T5; served by MCP transport and runtime endpoint binding.
 
 ### `src/output.ts`
 - **Purpose:** Ordered bounded terminal-output storage with sanitization, binary suppression, head/tail retention, cursor pagination, gap detection, and terminal state.
@@ -222,6 +230,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T1 limits RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T1.
 
+### `src/tools/register.ts`
+- **Purpose:** Registers exactly seven public Loom MCP tools with strict Zod v4 action/path/size/URL schemas and an injected dispatcher for later concrete implementations.
+- **Success check:** The public list contains only `loom_terminal`, `loom_read`, `loom_write`, `loom_edit`, `loom_skills`, `loom_memory`, and `loom_browser`; every safe schema path dispatches; dangerous browser URL schemes and malformed inputs fail before handlers.
+- **Current assessment:** PASS
+- **Evidence:** A real SDK client lists exactly seven tools, calls all seven schema branches safely, and observes rejection of `javascript:` navigation.
+- **Last meaningful change:** T5 seven-tool registration, 2026-07-08.
+- **Owning task or gate:** T5; dispatch implementations arrive in T6, T7, T9, and T10.
+
 ### `src/watchdog.ts`
 - **Purpose:** macOS process-table observation using `ps` plus canonical executable resolution using `lsof`, observable identity matching, and PGID membership scans.
 - **Success check:** Returns PID/PPID/PGID/start time/canonical executable, treats missing PIDs as absent, and rejects any PID/start/executable mismatch.
@@ -229,6 +245,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** `test/watchdog.test.ts` passes 3/3 against live macOS processes.
 - **Last meaningful change:** T2 watchdog identity completion, 2026-07-08.
 - **Owning task or gate:** T2 / G2; reused by runtime and browser lock recovery.
+
+### `test/mcp.test.ts`
+- **Purpose:** End-to-end loopback HTTP and pinned-SDK tests for readiness, metadata, bearer challenges, OAuth routes, revocation, seven tools, session ownership/capacity/expiry, endpoint lifecycle, and clean shutdown.
+- **Success check:** Uses real fetch and `StreamableHTTPClientTransport`; stale/revoked tokens return 401, same endpoint preserves sessions, changed endpoint closes sessions, concurrent initialization cannot exceed capacity, and active calls survive idle reaping.
+- **Current assessment:** PASS
+- **Evidence:** Nine tests pass; all seven schemas are called through the real client; no MCP test processes remain after the suite.
+- **Last meaningful change:** T5 transport RED/GREEN cycle and stale-token middleware debugging, 2026-07-08.
+- **Owning task or gate:** T5.
 
 ### `test/oauth.test.ts`
 - **Purpose:** State-level security tests for owner credentials, registration, PKCE code exchange, exact endpoint binding, token validation, rotation, replay prevention, expiry, revocation, reset, metadata, and at-rest secrecy.
@@ -282,7 +306,6 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 These are intentionally untracked until their task begins and therefore must not appear in `git ls-files` at G0.
 
-- **T5:** `src/mcp.ts`, `src/tools/register.ts`, `test/mcp.test.ts`.
 - **T6:** `src/tools/files.ts`, `test/files.test.ts`.
 - **T7:** `src/catalog.ts`, `src/tools/knowledge.ts`, `test/catalog.test.ts`.
 - **T8:** `src/dashboard.ts`, `public/dashboard.html`, `public/dashboard.css`, `public/dashboard.js`, `test/dashboard.test.ts`.

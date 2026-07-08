@@ -110,6 +110,12 @@ export interface ResetOwnerCredentialResult {
   generation: number;
 }
 
+export interface RevokeClientTokenInput {
+  token: string;
+  clientId: string;
+  clientSecret: string;
+}
+
 const ownerSchema = z.object({
   algorithm: z.literal('scrypt'),
   salt: z.string().min(1),
@@ -572,6 +578,24 @@ export class AuthStore {
       const tokenHash = sha256(token);
       if (this.state.accessTokens[tokenHash] === undefined
         && this.state.refreshTokens[tokenHash] === undefined) {
+        return false;
+      }
+      return this.mutate(async (state) => {
+        delete state.accessTokens[tokenHash];
+        delete state.refreshTokens[tokenHash];
+        return true;
+      });
+    });
+  }
+
+  revokeClientToken(input: RevokeClientTokenInput): Promise<boolean> {
+    return this.exclusive(async () => {
+      this.requireClientSecret(this.state, input.clientId, input.clientSecret);
+      const tokenHash = sha256(input.token);
+      const access = this.state.accessTokens[tokenHash];
+      const refresh = this.state.refreshTokens[tokenHash];
+      const record = access ?? refresh;
+      if (record === undefined || record.clientId !== input.clientId) {
         return false;
       }
       return this.mutate(async (state) => {
