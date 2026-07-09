@@ -581,6 +581,10 @@ export class ProcessManager {
     return managed;
   }
 
+  get activeCount(): number {
+    return this.jobs.size;
+  }
+
   async shutdownAll(): Promise<void> {
     await Promise.all([...this.jobs].map((job) => job.cancel()));
   }

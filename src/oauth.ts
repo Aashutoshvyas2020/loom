@@ -743,6 +743,18 @@ export class AuthStore {
     });
   }
 
+
+  revokeAllOAuth(): Promise<{ generation: number; resource: string | null }> {
+    return this.exclusive(() => this.mutate(async (state) => {
+      state.endpoint.generation += 1;
+      clearOAuthState(state);
+      return {
+        generation: state.endpoint.generation,
+        resource: state.endpoint.resourceUri,
+      };
+    }));
+  }
+
   protectedResourceMetadata(): Record<string, unknown> {
     const resource = this.requireBoundResource(this.state);
     const issuer = new URL(resource).origin;

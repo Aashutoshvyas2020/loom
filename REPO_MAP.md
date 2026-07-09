@@ -42,9 +42,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records completed T13.1 static terminal adapter evidence, 19-test combined target, 40/40 terminal stress executions, full 167-test gate, empty Loom-owned residue scan, parent HEAD, exact dirty scope, and the commit command before T14.
-- **Last meaningful change:** T13.1 terminal recovery handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T13.1.
+- **Evidence:** Records completed T14 foreground runtime/default assembly/CLI evidence, exact 49-test target, 90/90 runtime stress executions, full 185-test gate, empty Loom-owned process/listener scans, parent HEAD, exact dirty scope, real remaining blockers, and the T14 commit command.
+- **Last meaningful change:** T14 runtime orchestration completion handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T14.
 
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -66,24 +66,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** T13.1 adds the terminal source/test paths, central terminal limits, schema/dispatcher evidence, and governance while preserving an empty staged tracked-path diff against `git ls-files`.
-- **Last meaningful change:** T13.1 terminal recovery map update, 2026-07-08.
-- **Owning task or gate:** All tasks; current T13.1.
+- **Evidence:** T14 updates runtime, CLI, config, OAuth, ProcessManager visibility, four test ledgers, specification, plan, changelog, and handoff while preserving an empty staged tracked-path diff against `git ls-files`.
+- **Last meaningful change:** T14 runtime orchestration map update, 2026-07-08.
+- **Owning task or gate:** All tasks; current T14.
 
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
 - **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T13.1 locks the sole static `/bin/sh -lc` ProcessManager adapter, noninteractive lifecycle, stable job IDs, centralized bounds, cursor/output separation, audit secrecy/fail-closed behavior, completed-only eviction, shutdown cancellation, and ready-before-exit wrapper IPC ordering.
-- **Last meaningful change:** T13.1 terminal security and lifecycle contract, 2026-07-08.
+- **Evidence:** T14 locks the real YOLO foreground lifecycle, exclusive identity-bound lock, exact startup/publication/shutdown order, all-seven-handler production assembly, browser degradation, pinned tunnel selection/no fallback, secret-free status/TTY credential display, dashboard mutations, signal handling, absolute deadline, and fail-closed ownership preservation.
+- **Last meaningful change:** T14 foreground runtime and CLI security contract, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T13.1 explicitly recovers the missing terminal handler before T14, records twelve centralized terminal limits plus the exact static adapter/audit/polling/retention/cleanup contract, and hardens fast-target wrapper readiness ordering.
-- **Last meaningful change:** T13.1 terminal recovery amendment and limits, 2026-07-08.
+- **Evidence:** T14 now records the concrete production assembly, CLI/TTY boundary, strict dashboard mutations, lock/deadline ownership rules, browser-degraded mode, controlled integration contract, and 80-run zero-residue stress evidence; G5/G6/T15/T16 remain separate.
+- **Last meaningful change:** T14 runtime orchestration implementation clarification, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -151,12 +151,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T2 / G2 and T13.1; reused for terminal, Cloudflared, and Chromium.
 
 ### `src/cli.ts`
-- **Purpose:** Executable command boundary for version/help, explicit YOLO opt-in, browser setup, configuration management, and owner-credential rotation.
-- **Success check:** Plain launch refuses access; `setup browser` initializes private state and invokes the pinned installer; package-bin symlinks execute; reset commands require bounded direct `/dev/tty` confirmation; auth reset refuses a live runtime lock.
+- **Purpose:** Executable command boundary for version/help, explicit foreground YOLO launch, browser setup, configuration management, and owner-credential rotation.
+- **Success check:** Plain launch refuses access; exact `launch --yolo` requires macOS 14+/Node 22+ and direct `/dev/tty`, prints the warning/new owner password only locally, invokes the production foreground runtime, and cleans a factory-created lock on launch failure; existing setup/reset safety remains intact.
 - **Current assessment:** PASS
-- **Evidence:** Ten CLI tests pass, including real subprocess/PTTY flows, package-bin symlink invocation, browser setup routing, live process-table lock matching, genuinely sessionless `/dev/tty` failure, config reset, and credential rotation.
-- **Last meaningful change:** T9 explicit browser setup and symlink-safe main guard, 2026-07-08.
-- **Owning task or gate:** T0 / G1, T1, T4, and T9; expanded by later runtime tasks.
+- **Evidence:** Thirteen CLI tests pass, including injected exact YOLO routing and a genuinely terminal-less YOLO attempt that creates no `~/.loom`, plus package-bin/PTTY/setup/reset/live-lock coverage.
+- **Last meaningful change:** T14 real foreground YOLO launch and support/TTY boundary, 2026-07-08.
+- **Owning task or gate:** T0 / G1, T1, T4, T9, and T14.
 
 ### `src/cloudflare.ts`
 - **Purpose:** Pinned Cloudflared acquisition/verification plus Quick and Named Tunnel validation, direct launch, bounded readiness, retry, audit, status, and cleanup.
@@ -167,12 +167,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, and T13 Named Tunnel; consumed by T14.
 
 ### `src/config.ts`
-- **Purpose:** Secure Loom state initialization, strict versioned configuration, invalid-config reset/preservation, private runtime-lock persistence, and PID-reuse identity comparison.
-- **Success check:** Creates the exact private state tree, writes atomically, rejects unsafe state, validates without mutation, preserves invalid bytes, requires exact lock identity, and canonicalizes named hostnames while rejecting `trycloudflare.com`, surrounding/control characters, option-like names, and names over 128 characters.
+- **Purpose:** Secure Loom state initialization, strict versioned configuration, private atomic next-launch replacement, invalid-config preservation, runtime-lock persistence, and PID-reuse identity comparison.
+- **Success check:** Creates/repairs private state, validates without mutation, atomically writes strict 0600 config without symlink traversal, canonicalizes named values, preserves invalid bytes on reset, and requires exact runtime identity.
 - **Current assessment:** PASS
-- **Evidence:** `test/config.test.ts` passes 7/7 with named hostname canonicalization and invalid-name/Quick-host rejection; T9 CLI setup still proves private browser directories.
-- **Last meaningful change:** T13 named-tunnel configuration boundary, 2026-07-08.
-- **Owning task or gate:** T1 and T13; reused by T4, T9, T11, and T14.
+- **Evidence:** Eight config tests pass, including T14 `writeConfig` canonical/private replacement and unknown-key rejection; the 45-test T14 target and 181-test full suite are green.
+- **Last meaningful change:** T14 audited dashboard next-launch config writer, 2026-07-08.
+- **Owning task or gate:** T1, T13, and T14.
 
 ### `src/limits.ts`
 - **Purpose:** Single source of truth for all fixed Loom v1 byte, time, count, retry, and shutdown limits.
@@ -186,17 +186,17 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Launches wrapper-owned detached process groups, streams bounded output, sends heartbeats, validates ownership, manages startup/exit races, timeout/cancellation, and TERM-to-KILL shutdown deadlines.
 - **Success check:** Real processes have no PTY/stdin; wrapper exit before readiness rejects immediately; exit events between readiness and managed construction are preserved; natural exit/cancellation clean descendants; transient `EPERM` is revalidated; persistent `EPERM` fails closed; forced manager death is recovered; and no test descendants remain.
 - **Current assessment:** PASS
-- **Evidence:** Process-manager/watchdog target passes 13/13, including twenty rapid natural exits and deterministic transient/persistent `EPERM`; terminal stress passes 40/40 executions; full suite passes 167/167; delayed `ps` scan is empty.
-- **Last meaningful change:** T13.1 startup-exit handshake hardening, 2026-07-08.
-- **Owning task or gate:** T2 / G2, T12.1, and T13.1; used by terminal, Cloudflare, browser, and runtime orchestration.
+- **Evidence:** T14 exposes read-only `activeCount` for deterministic runtime cleanup/deadline ownership checks; prior 13/13 process/watchdog and 40/40 terminal stress evidence remains green, and the full suite now passes 185/185.
+- **Last meaningful change:** T14 runtime cleanup visibility, 2026-07-08.
+- **Owning task or gate:** T2 / G2, T12.1, T13.1, and T14.
 
 ### `src/runtime.ts`
-- **Purpose:** T11 readiness-only runtime boundary for endpoint canonicalization, MCP binding delegation, immutable readiness/status data, and private atomic runtime-state persistence.
-- **Success check:** Validates an exact HTTP loopback origin plus `/mcp`, accepts only a bare HTTPS public origin, keeps MCP NOT_READY until exact resource binding, validates runtime directory/current.json before binding, writes strict secret-free 0600 state atomically, and performs no tunnel/browser/catalog/signal/shutdown orchestration.
+- **Purpose:** T11 readiness plus T14 exclusive foreground lifecycle, production component assembly, lock/state ownership, status, signals, dashboard actions, and reverse cleanup.
+- **Success check:** Builds all seven handlers; acquires an identity-bound exclusive lock before audit; starts MCP NOT_READY/dashboard/catalogs/browser/tunnel in order; publishes exact `/mcp` once; supports verified browser or missing/corrupt-manifest degraded mode and pinned Quick/Named tunnel without fallback; opens the authenticated local dashboard by default; handles explicit/dashboard/signal stops; enforces a real 15-second per-step deadline; terminates public listeners/process groups; and removes exact readiness state plus lock only after content/identity ownership and cleanup certainty.
 - **Current assessment:** PASS
-- **Evidence:** Six targeted tests pass, including a real LoomMcpHttpServer transition from 503 NOT_READY to endpoint-bound 401 OAuth challenge and fail-closed 0700/current.json symlink checks before binding.
-- **Last meaningful change:** T11 tunnel-independent runtime readiness, 2026-07-08.
-- **Owning task or gate:** T11 readiness subset; expanded by T14 full orchestration.
+- **Evidence:** Runtime target passes 18/18, combined T14 target passes 49/49, five runtime runs pass 90/90, full suite passes 185/185, and post-stress Loom-owned process/listener scans are empty.
+- **Last meaningful change:** T14 full foreground runtime and default production assembly, 2026-07-08.
+- **Owning task or gate:** T11 and T14; consumed by T15/T16 and real G5/G6 certification.
 
 ### `src/mcp.ts`
 - **Purpose:** Loopback-only Streamable HTTP MCP and OAuth HTTP server with deterministic readiness, endpoint-bound bearer authentication, server-bound authorization transactions, token routes, and bounded client-bound sessions.
@@ -208,11 +208,11 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `src/oauth.ts`
 - **Purpose:** Persistent single-owner credentials and endpoint-bound OAuth clients, authorization transactions/codes, access/refresh tokens, revocation, metadata, and endpoint-generation state.
-- **Success check:** Transactions bind client/redirect/scope/resource/state/generation/PKCE, expire and consume once; owner password remains scrypt-hashed and persistent; tokens and codes retain exact atomic binding and rotation rules.
+- **Success check:** Exact endpoint/generation bindings remain atomic; `revokeAllOAuth` increments generation and clears clients/codes/tokens while preserving the canonical endpoint and owner credential; owner reset remains the only password rotation path.
 - **Current assessment:** PASS
-- **Evidence:** HTTP flow proves parameter substitution is ignored, transaction replay fails, and the existing eight OAuth state tests remain green; full tracked suite passes 64/64.
-- **Last meaningful change:** T5 authorization-transaction state, 2026-07-08.
-- **Owning task or gate:** T4 and T5; served by MCP transport and runtime endpoint binding.
+- **Evidence:** Nine OAuth tests pass, including T14 dashboard revocation that invalidates an issued token, preserves endpoint/password, and permits fresh registration; the 45-test T14 target is green.
+- **Last meaningful change:** T14 owner-preserving revoke-all dashboard action, 2026-07-08.
+- **Owning task or gate:** T4, T5, and T14.
 
 ### `src/output.ts`
 - **Purpose:** Ordered bounded terminal-output storage with sanitization, binary suppression, head/tail retention, cursor pagination, gap detection, and terminal state.
@@ -255,12 +255,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T9 / G4.
 
 ### `test/cli.test.ts`
-- **Purpose:** Real-process and real-PTY tests for package metadata, package-bin execution, browser setup, launch refusal, config commands, live-lock safety, and owner-password reset.
-- **Success check:** Proves exact pins/support floor, symlink invocation, private browser setup routing, no plain launch, `/dev/tty` confirmation, live-lock refusal, no sessionless bypass, non-auth-state preservation, new-password verification, and OAuth revocation.
+- **Purpose:** Real-process/PTY and injected-routing tests for package/bootstrap, setup/reset, plain-launch refusal, and explicit foreground YOLO launch.
+- **Success check:** Proves exact `launch --yolo` routes once, a sessionless launch fails before state creation, plain launch remains refused, and all prior symlink/setup/config/auth reset protections remain.
 - **Current assessment:** PASS
-- **Evidence:** Ten tests pass using real subprocesses, a package-bin symlink, macOS Expect, and Python `setsid()` for a genuinely terminal-less child.
-- **Last meaningful change:** T9 browser setup and symlink-entry regression, 2026-07-08.
-- **Owning task or gate:** T0 / G1, T1, T4, and T9.
+- **Evidence:** Target passes 14/14 and participates in the 49/49 T14 target and 185/185 full suite.
+- **Last meaningful change:** T14 YOLO launch routing and local-terminal refusal, 2026-07-08.
+- **Owning task or gate:** T0 / G1, T1, T4, T9, and T14.
 
 ### `test/cloudflare.test.ts`
 - **Purpose:** Deterministic acquisition/verification plus Quick and Named Tunnel parser, trust, lifecycle, retry, audit, OAuth, status, and cleanup tests.
@@ -274,9 +274,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, full identity matching, and named-tunnel config canonicalization.
 - **Success check:** Exercises private creation/repair, symlink rejection, schema failures, named stable-hostname/name boundaries, timestamped backup bytes, strict lock parsing, and every PID-reuse defense field.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite passes 7/7, including lowercase hostname output and rejection of Quick hostnames, option-like/trimmed/oversized names, relative roots, unknown keys, and incomplete named config.
-- **Last meaningful change:** T13 named configuration RED/GREEN extension, 2026-07-08.
-- **Owning task or gate:** T1 and T13.
+- **Evidence:** Targeted suite passes 8/8, adding strict private atomic `writeConfig`; combined T14 target passes 49/49 and full suite passes 185/185.
+- **Last meaningful change:** T14 next-launch config replacement test, 2026-07-08.
+- **Owning task or gate:** T1, T13, and T14.
 
 ### `test/limits.test.ts`
 - **Purpose:** Locks every centralized Loom v1 limit to the approved specification.
@@ -399,12 +399,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T7.
 
 ### `test/runtime.test.ts`
-- **Purpose:** T11 tests for strict local/public endpoint validation, NOT_READY persistence, canonical public binding, private runtime state, status output, real MCP readiness transition, and pre-bind fail-closed target checks.
-- **Success check:** Invalid endpoints, insecure runtime modes, and current.json symlinks fail before MCP binding or state replacement; real MCP changes from structured 503 NOT_READY to exact endpoint-bound OAuth challenge; state is 0600 and status includes full URLs, Quick non-production status, and the full-access warning.
+- **Purpose:** T11 readiness plus T14 integrated real-local runtime, lock, signal, deadline, factory, degraded-browser, listener, process-group, and cleanup tests.
+- **Success check:** Uses real audit, ProcessManager/terminal, MCP, dashboard, catalogs, dispatcher chain and runtime files; proves one readiness publication, public 401 transition, normal/startup-failure/signal/direct-stop cleanup, stop during tunnel startup without recreation, listener termination, deadline-preserved ownership, live/replaced lock refusal, exact current-state replacement refusal, default assembly/password persistence, browser degradation, and factory lock cleanup.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite passes 6/6; full tracked suite passes 135/135.
-- **Last meaningful change:** T11 readiness RED/GREEN and real local MCP integration, 2026-07-08.
-- **Owning task or gate:** T11 readiness subset; expanded by T14 full orchestration.
+- **Evidence:** Target passes 18/18; five consecutive runs pass 90/90 with no Loom-owned process or listener residue; combined T14 target passes 49/49 and full suite passes 185/185.
+- **Last meaningful change:** T14 full runtime integration and stress cycle, 2026-07-08.
+- **Owning task or gate:** T11 and T14.
 
 ### `test/skills.test.ts`
 - **Purpose:** Tests deterministic discovery/ranking, stable IDs, duplicate names, symlink/depth/size/entry/total/time limits, missing roots, malformed frontmatter, and dispatcher composition.
@@ -423,12 +423,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T5.
 
 ### `test/oauth.test.ts`
-- **Purpose:** State-level security tests for owner credentials, registration, PKCE code exchange, exact endpoint binding, token validation, rotation, replay prevention, expiry, revocation, reset, metadata, and at-rest secrecy.
-- **Success check:** Every invalid binding fails; same endpoint preserves state; endpoint change and owner reset revoke OAuth state without unintended owner/config rotation; plaintext secrets never appear in `auth.json`.
+- **Purpose:** State-level security tests for owner credentials, endpoint-bound OAuth, rotation/replay/expiry, reset, metadata, and owner-preserving revoke-all behavior.
+- **Success check:** Existing tokens fail after revoke-all, endpoint/password remain unchanged, fresh registration succeeds, and all prior exact binding/secret-at-rest checks remain.
 - **Current assessment:** PASS
-- **Evidence:** Eight targeted tests pass in about one second.
-- **Last meaningful change:** T4 OAuth RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T4.
+- **Evidence:** Target passes 9/9 and participates in the 49/49 T14 target and 185/185 full suite.
+- **Last meaningful change:** T14 revoke-all OAuth lifecycle test, 2026-07-08.
+- **Owning task or gate:** T4 and T14.
 
 ### `test/output.test.ts`
 - **Purpose:** Boundary tests for terminal stream ordering, sanitization, deterministic binary markers, exact truncation, cursor pagination, UTF-8 boundaries, and lifecycle states.

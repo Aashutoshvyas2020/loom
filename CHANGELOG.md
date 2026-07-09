@@ -649,3 +649,41 @@ PASS
 Loom-owned delayed process scan
 <no output>
 ```
+
+### T14 — full runtime orchestration and signal cleanup
+
+- Expanded `src/runtime.ts` from readiness-only state into an exclusive foreground lifecycle with identity-bound `runtime/loom.lock`, strict private `runtime/current.json`, startup state, one readiness publication, foreground waiting, idempotent stop, and fail-closed ownership removal.
+- Added the exact local startup sequence: initialize/validate state and config, acquire lock, create audit and ProcessManager, compose all seven concrete tool handlers, start MCP NOT_READY, dashboard, skill and memory catalogs, verified managed browser or explicit unavailable mode, selected verified Cloudflare tunnel, canonical public `/mcp` binding, private ready state, one secret-free status block, optional local dashboard open, then foreground wait.
+- Added the production runtime factory. It uses the pinned browser manifest and managed persistent profile when valid; a missing manifest degrades browser tools only. A present invalid manifest remains fatal before public readiness. It resolves or installs only the pinned architecture-specific Cloudflared release and constructs exactly the configured Quick or Named manager with no fallback.
+- Added strict concrete dashboard actions: catalog rescan, audited browser restart, audited local audit-folder reveal through direct `/usr/bin/open`, audited strict atomic next-launch config replacement, audited owner-preserving OAuth revoke-all, and runtime stop.
+- Added `writeConfig` for strict 0600 atomic config replacement and `AuthStore.revokeAllOAuth` for endpoint/password-preserving OAuth invalidation.
+- Added the exact shutdown sequence: mark stopping, reject new terminal jobs, cancel terminal groups, close browser, stop tunnel, close MCP then dashboard, drain ProcessManager, close audit, and remove state/lock only after cleanup certainty. Every step races the real absolute shutdown deadline; timeout/error preserves ownership files fail-closed.
+- Hardened runtime-state deletion separately from lock deletion: shutdown opens `runtime/current.json` without following symlinks, verifies current-user 0600 mode, stable file identity, and byte-for-byte equality with the last immutable readiness snapshot before removing it. Replaced or missing owned state rejects cleanup and preserves the lock for manual recovery.
+- Added stop-during-startup lifecycle versioning so SIGINT/SIGTERM/direct stop during tunnel readiness prevents public binding, status output, process recreation, or stale state. Repeated stop remains idempotent.
+- Added runtime lock acquisition/release with exclusive create, live exact-identity refusal, stale-lock replacement, current-process revalidation, and refusal to remove a replaced lock.
+- Added foreground status with browser, catalogs, tunnel, connector, audit, complete local/public MCP and dashboard URLs, production eligibility, and the full-access warning. Owner password and secrets never enter status.
+- Wired the real `loom launch --yolo` command. It enforces macOS 14+/Node 22+, requires direct `/dev/tty`, prints the bright full-access warning and newly generated owner password only there, invokes the production factory and signal runner, and cleans a partially created runtime on launch failure. Plain launch remains refused.
+- Hardened the launch boundary with an explicit minimal factory-result type and a dual input/output terminal-handle test fixture, avoiding unsafe inference while preserving the exact local-terminal behavior.
+- Default production launch now opens the single-use authenticated dashboard bootstrap URL through direct `/usr/bin/open`; tests explicitly capture or suppress that local side effect. Missing and corrupt browser manifests both produce browser-unavailable mode while preserving the other six tools.
+- Required RED first failed on missing orchestration exports. Subsequent adversarial tests proved stop during tunnel startup, true deadline behavior, lock replacement refusal, browser-degraded mode, default production graph construction, owner-password persistence, factory lock cleanup, exact CLI routing, and sessionless TTY refusal before state creation.
+- Runtime target passes 18/18; exact T14 runtime/CLI/config/OAuth target passes 49/49; five runtime stress runs pass 90/90. Full typecheck, 185/185 tests, and build pass. Post-stress Loom-owned process and listener scans are empty.
+- This completes deterministic local T14 only. Real named-tunnel DNS/credentials and real ChatGPT OAuth/tool calls remain G5/G6 blockers; packaging/docs and clean-machine certification remain T15/T16.
+
+Evidence:
+
+```text
+node --test dist/test/runtime.test.js dist/test/cli.test.js dist/test/config.test.js dist/test/oauth.test.js
+PASS (49/49)
+
+five consecutive runtime-suite runs
+PASS (90/90 test executions)
+active test processes: none
+Loom-owned listeners: none
+
+npm run typecheck
+PASS
+npm test
+PASS (185/185)
+npm run build
+PASS
+```

@@ -2,6 +2,7 @@
 
 import { readFileSync, realpathSync } from 'node:fs';
 import { open, type FileHandle } from 'node:fs/promises';
+import { release as osRelease } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,6 +14,12 @@ import {
 import { checkConfig, initializeState, readRuntimeLock, resetConfig } from './config.js';
 import { AuthStore } from './oauth.js';
 import { resolveUserPath } from './paths.js';
+import {
+  FULL_ACCESS_WARNING,
+  createDefaultForegroundRuntime,
+  runRuntimeForeground,
+  type ForegroundLoomRuntime,
+} from './runtime.js';
 import { inspectProcess, observableIdentityMatches } from './watchdog.js';
 
 const packageJson = JSON.parse(
@@ -167,6 +174,90 @@ export async function setupBrowser(
   });
 }
 
+function validateLaunchSupport(): void {
+  if (process.platform !== 'darwin') {
+    fail('Loom v1 supports macOS 14 or newer only.');
+  }
+  const darwinMajor = Number(osRelease().split('.')[0]);
+  if (!Number.isSafeInteger(darwinMajor) || darwinMajor < 23) {
+    fail('Loom v1 requires macOS 14 or newer.');
+  }
+  const nodeMajor = Number(process.versions.node.split('.')[0]);
+  if (!Number.isSafeInteger(nodeMajor) || nodeMajor < 22) {
+    fail('Loom requires Node.js 22 or newer.');
+  }
+}
+
+export interface LaunchYoloDependencies {
+  validateSupport?: () => void;
+  openTerminal?: typeof openLocalTerminal;
+  writeToTerminal?: typeof writeTerminal;
+  closeTerminal?: typeof closeLocalTerminal;
+  createRuntime?: (options: {
+    statusWriter: (text: string) => void;
+  }) => Promise<{
+    runtime: ForegroundLoomRuntime;
+    ownerPassword: string | null;
+  }>;
+  runForeground?: typeof runRuntimeForeground;
+  statusWriter?: (text: string) => void;
+}
+
+export async function launchYolo(
+  dependencies: LaunchYoloDependencies = {},
+): Promise<void> {
+  (dependencies.validateSupport ?? validateLaunchSupport)();
+  const openTerminal = dependencies.openTerminal ?? openLocalTerminal;
+  const writeToTerminal = dependencies.writeToTerminal ?? writeTerminal;
+  const closeTerminal = dependencies.closeTerminal ?? closeLocalTerminal;
+  const createRuntime = dependencies.createRuntime ?? createDefaultForegroundRuntime;
+  const runForeground = dependencies.runForeground ?? runRuntimeForeground;
+  const statusWriter = dependencies.statusWriter
+    ?? ((text: string) => { process.stdout.write(`${text}\n`); });
+  const terminal = await openTerminal();
+  let created: {
+    runtime: ForegroundLoomRuntime;
+    ownerPassword: string | null;
+  } | undefined;
+  try {
+    await writeToTerminal(
+      terminal,
+      `\n\u001b[1;31m${FULL_ACCESS_WARNING}\u001b[0m\n`,
+    );
+    created = await createRuntime({ statusWriter });
+    if (created.ownerPassword !== null) {
+      await writeToTerminal(
+        terminal,
+        `\u001b[1;31mLoom owner password: ${created.ownerPassword}\u001b[0m\n`
+        + '\u001b[1;31mNever share this password. It grants full access to this macOS account.\u001b[0m\n',
+      );
+    }
+  } catch (error) {
+    await created?.runtime.stop('launch-failure').catch(() => undefined);
+    throw error;
+  } finally {
+    try {
+      await closeTerminal(terminal);
+    } catch (error) {
+      await created?.runtime.stop('local-terminal-close-failure').catch(() => undefined);
+      throw error;
+    }
+  }
+  if (created === undefined) {
+    throw new CliError('Loom runtime construction failed before foreground launch.');
+  }
+  try {
+    await runForeground(created.runtime);
+  } catch (error) {
+    await created.runtime.stop('foreground-failure').catch(() => undefined);
+    throw error;
+  }
+}
+
+export interface CliCommandDependencies {
+  launchYolo?: () => Promise<void>;
+}
+
 async function resetOwnerPassword(): Promise<void> {
   if (await runtimeIsLive()) {
     fail('Loom is currently running. Stop Loom before rotating the owner password.');
@@ -189,7 +280,10 @@ async function resetOwnerPassword(): Promise<void> {
   );
 }
 
-async function main(args: string[]): Promise<void> {
+export async function runCliCommand(
+  args: string[],
+  dependencies: CliCommandDependencies = {},
+): Promise<void> {
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     process.stdout.write(HELP);
     return;
@@ -202,7 +296,8 @@ async function main(args: string[]): Promise<void> {
 
   if (args[0] === 'launch') {
     if (args.length === 2 && args[1] === '--yolo') {
-      fail('Loom runtime is not implemented yet.');
+      await (dependencies.launchYolo ?? launchYolo)();
+      return;
     }
 
     fail('Unrestricted access is disabled. Start it explicitly with: loom launch --yolo');
@@ -252,7 +347,7 @@ try {
   invokedPath = undefined;
 }
 if (invokedPath !== undefined && realpathSync(fileURLToPath(import.meta.url)) === invokedPath) {
-  main(process.argv.slice(2)).catch((error: unknown) => {
+  runCliCommand(process.argv.slice(2)).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${message}\n`);
     process.exitCode = 2;

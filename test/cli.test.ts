@@ -1,13 +1,24 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, readdir, realpath, stat, symlink, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  stat,
+  symlink,
+  writeFile,
+  type FileHandle,
+} from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { setupBrowser } from '../src/cli.js';
+import { launchYolo, runCliCommand, setupBrowser } from '../src/cli.js';
 import { initializeState, writeRuntimeLock } from '../src/config.js';
 import { AuthStore } from '../src/oauth.js';
+import type { ForegroundLoomRuntime } from '../src/runtime.js';
 import { inspectProcess } from '../src/watchdog.js';
 
 const cliPath = new URL('../src/cli.js', import.meta.url);
@@ -113,6 +124,100 @@ test('browser setup initializes the dedicated install directory and invokes the 
   assert.equal(manifest.chromiumRevision, '1228');
   assert.equal((await stat(path.join(stateRoot, 'browser'))).mode & 0o777, 0o700);
   assert.equal((await stat(path.join(stateRoot, 'browser-profile'))).mode & 0o777, 0o700);
+});
+
+
+test('launchYolo writes the local warning and first owner password before foreground execution', async () => {
+  const events: string[] = [];
+  const terminalWrites: string[] = [];
+  const statuses: string[] = [];
+  const runtime = {} as ForegroundLoomRuntime;
+  const terminalHandle = {} as FileHandle;
+  const terminal = {
+    inputHandle: terminalHandle,
+    outputHandle: terminalHandle,
+  };
+
+  await launchYolo({
+    validateSupport: () => { events.push('validate'); },
+    openTerminal: async () => { events.push('terminal.open'); return terminal; },
+    writeToTerminal: async (handle, text) => {
+      assert.equal(handle, terminal);
+      events.push('terminal.write');
+      terminalWrites.push(text);
+    },
+    closeTerminal: async (handle) => {
+      assert.equal(handle, terminal);
+      events.push('terminal.close');
+    },
+    createRuntime: async ({ statusWriter }) => {
+      events.push('runtime.create');
+      statusWriter('READY STATUS');
+      return { runtime, ownerPassword: 'owner-secret-test' };
+    },
+    runForeground: async (received) => {
+      assert.equal(received, runtime);
+      events.push('runtime.foreground');
+    },
+    statusWriter: (text) => { statuses.push(text); },
+  });
+
+  assert.deepEqual(events, [
+    'validate',
+    'terminal.open',
+    'terminal.write',
+    'runtime.create',
+    'terminal.write',
+    'terminal.close',
+    'runtime.foreground',
+  ]);
+  assert.match(terminalWrites[0]!, /FULL COMPUTER ACCESS ENABLED/);
+  assert.match(terminalWrites[1]!, /Loom owner password: owner-secret-test/);
+  assert.match(terminalWrites[1]!, /full access to this macOS account/i);
+  assert.deepEqual(statuses, ['READY STATUS']);
+});
+
+test('launchYolo stops an acquired runtime when the local terminal cannot close', async () => {
+  const stopReasons: string[] = [];
+  let foregroundCalls = 0;
+  const terminalHandle = {} as FileHandle;
+  const runtime = {
+    async stop(reason: string) { stopReasons.push(reason); },
+  } as unknown as ForegroundLoomRuntime;
+
+  await assert.rejects(
+    launchYolo({
+      validateSupport: () => undefined,
+      openTerminal: async () => ({
+        inputHandle: terminalHandle,
+        outputHandle: terminalHandle,
+      }),
+      writeToTerminal: async () => undefined,
+      closeTerminal: async () => { throw new Error('tty close failed'); },
+      createRuntime: async () => ({ runtime, ownerPassword: null }),
+      runForeground: async () => { foregroundCalls += 1; },
+      statusWriter: () => undefined,
+    }),
+    /tty close failed/,
+  );
+  assert.deepEqual(stopReasons, ['local-terminal-close-failure']);
+  assert.equal(foregroundCalls, 0);
+});
+
+test('explicit YOLO launch routes to the injected foreground launcher exactly once', async () => {
+  let launches = 0;
+  await runCliCommand(['launch', '--yolo'], {
+    launchYolo: async () => { launches += 1; },
+  });
+  assert.equal(launches, 1);
+});
+
+test('YOLO launch refuses to create runtime state without a local terminal', async () => {
+  const home = await realpath(await mkdtemp(path.join(tmpdir(), 'loom-cli-home-')));
+  const result = runCliWithHomeWithoutTerminal(home, 'launch', '--yolo');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Local terminal confirmation is required/);
+  await assert.rejects(stat(path.join(home, '.loom')), /ENOENT/);
 });
 
 test('plain launch refuses to start unrestricted access', () => {

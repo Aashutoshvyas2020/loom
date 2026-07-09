@@ -265,6 +265,27 @@ export async function checkConfig(inputStateRoot = '~/.loom'): Promise<LoomConfi
   return parseConfigBytes(await readConfigBytes(stateRoot, true), configPath);
 }
 
+export async function writeConfig(
+  inputStateRoot: string,
+  input: unknown,
+): Promise<LoomConfig> {
+  const stateRoot = resolveUserPath(inputStateRoot);
+  const configPath = path.join(stateRoot, 'config.json');
+  const parsed = configSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new ConfigError(`Invalid configuration: ${z.prettifyError(parsed.error)}`);
+  }
+  await assertNoSymlinkComponents(configPath).catch((error) => {
+    throw new ConfigError(error instanceof Error ? error.message : String(error), {
+      cause: error instanceof Error ? error : undefined,
+    });
+  });
+  await ensurePrivateFile(configPath);
+  await atomicWriteFile(configPath, serializeConfig(parsed.data));
+  await ensurePrivateFile(configPath);
+  return parsed.data;
+}
+
 export async function resetConfig(
   inputStateRoot = '~/.loom',
   now = new Date(),

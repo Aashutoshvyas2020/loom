@@ -21,6 +21,7 @@ import {
   initializeState,
   readRuntimeLock,
   resetConfig,
+  writeConfig,
   runtimeIdentityMatches,
   writeRuntimeLock,
 } from '../src/config.js';
@@ -220,4 +221,29 @@ test('runtime lock identity requires every PID-reuse defense field to match', ()
   ]) {
     assert.equal(runtimeIdentityMatches(expected, changed), false);
   }
+});
+
+test('writeConfig validates strictly, canonicalizes named hostname, and replaces privately', async () => {
+  const parent = await tempRoot();
+  const stateRoot = path.join(parent, '.loom');
+  await initializeState(stateRoot);
+  const written = await writeConfig(stateRoot, {
+    version: 1,
+    tunnel: {
+      type: 'named',
+      name: 'loom-prod',
+      hostname: 'LOOM.EXAMPLE.COM',
+      credentialsFile: path.join(stateRoot, 'credentials.json'),
+    },
+    extraRoots: [path.join(stateRoot, 'extra-skills')],
+  });
+  assert.equal(written.tunnel.type, 'named');
+  assert.equal(written.tunnel.type === 'named' ? written.tunnel.hostname : '', 'loom.example.com');
+  assert.equal((await stat(path.join(stateRoot, 'config.json'))).mode & 0o777, 0o600);
+  assert.deepEqual(await checkConfig(stateRoot), written);
+  await assert.rejects(writeConfig(stateRoot, {
+    version: 1,
+    tunnel: { type: 'quick', unexpected: true },
+    extraRoots: [],
+  }), ConfigError);
 });

@@ -300,3 +300,31 @@ test('metadata is exact for the bound MCP resource and secrets are hashed at res
     assert.equal(raw.includes(secret), false);
   }
 });
+
+test('revokeAllOAuth preserves owner credential and endpoint while invalidating OAuth state', async () => {
+  const root = await tempStateRoot();
+  const opened = await AuthStore.open(root);
+  assert.ok(opened.ownerPassword);
+  await opened.store.bindEndpoint('https://loom.example.com/mcp');
+  const client = await opened.store.registerClient({
+    clientName: 'revoke-all-test',
+    redirectUris: ['https://client.example/callback'],
+    scopes: ['loom:tools'],
+  });
+  const { tokens } = await authorizedTokens(opened.store, opened.ownerPassword, client);
+  const beforeGeneration = opened.store.generation;
+  const revoked = await opened.store.revokeAllOAuth();
+  assert.equal(revoked.generation, beforeGeneration + 1);
+  assert.equal(revoked.resource, 'https://loom.example.com/mcp');
+  assert.equal(opened.store.resourceUri, 'https://loom.example.com/mcp');
+  assert.equal(await opened.store.verifyOwnerPassword(opened.ownerPassword), true);
+  await assert.rejects(opened.store.validateAccessToken(tokens.accessToken, {
+    resource: 'https://loom.example.com/mcp',
+  }), OAuthError);
+  const replacement = await opened.store.registerClient({
+    clientName: 'replacement',
+    redirectUris: client.redirectUris,
+    scopes: ['loom:tools'],
+  });
+  assert.equal(replacement.redirectUris[0], client.redirectUris[0]);
+});
