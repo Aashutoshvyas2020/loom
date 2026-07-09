@@ -572,6 +572,10 @@ T15 — Packaging and documentation
 
 Finalize README, install/setup guide, security warning, Cloudflare named-tunnel guide, browser setup, config/auth reset behavior, troubleshooting, license/notices, npm file list, shebang/executable behavior, and clean packed install. Do not publish.
 
+T15.1 — Fail-closed certification evidence tooling
+
+Add a packaged `loom-certify` command that collects deterministic local gates for the exact clean commit, validates the strict shape and release SHA of optional external evidence manifests, verifies pinned managed-component metadata, hashes private regular-file artifacts without following symbolic links, and writes a private canonical report. Self-reported fields or artifact hashes must never be treated as proof that Cloudflare, ChatGPT, OAuth, tool-call, cleanup, clean-host, sleep/wake, or connector-persistence events occurred. G5–G7 therefore remain blocked until a human reviews the real sanitized evidence; the automated command may fail or report blocked but cannot independently grant production certification. Quick Tunnel evidence is optional and non-certifying. Package and symlink invocation, required release assets, process-residue coverage, and report-path safety require deterministic tests.
+
 T16 — Production certification on a clean supported Mac
 
 - Clean clone or clean temporary directory.

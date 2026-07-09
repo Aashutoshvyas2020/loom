@@ -14,11 +14,14 @@
   },
   "files": [
     "dist/src",
+    "public",
     "README.md",
+    "LICENSE",
+    "NOTICE",
     "docs/OPERATOR.md",
     "docs/SECURITY.md",
     "docs/DEVELOPMENT.md",
-    "docs/CERTIFICATION.md",
+    "docs/RELEASE_CERTIFICATION.md",
     "docs/certification-evidence.example.json"
   ],
   "scripts": {

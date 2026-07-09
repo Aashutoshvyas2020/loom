@@ -1,0 +1,19 @@
+Loom
+Copyright (c) 2026 Aashutosh Vyas
+
+Loom is licensed under the MIT License. See LICENSE.
+
+This distribution includes or depends on third-party open-source software, including:
+
+- @modelcontextprotocol/sdk, licensed by its respective contributors
+- Express, licensed under the MIT License
+- Zod, licensed under the MIT License
+- Playwright Core, licensed under the Apache License 2.0
+
+The exact dependency graph and versions are recorded in package-lock.json. Each third-party component remains subject to its own license and notices.
+
+Loom can explicitly download a pinned Chromium build from the official Playwright distribution service. Chromium is a separate third-party work and is not relicensed by Loom.
+
+Loom can explicitly download a pinned Cloudflared binary from official Cloudflare release hosting. Cloudflared is a separate third-party work and is not relicensed by Loom.
+
+Cloudflare, Chromium, Chrome, Playwright, ChatGPT, and OpenAI are trademarks or product names of their respective owners. Their inclusion in documentation does not imply endorsement, affiliation, or certification.

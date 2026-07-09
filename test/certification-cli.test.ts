@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, realpath, symlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   EXPECTED_LOOM_TOOLS,
@@ -14,6 +18,9 @@ import {
 } from '../src/certification-cli.js';
 
 const SHA = 'a'.repeat(40);
+const ARM64_CLOUDFLARED_SHA256 = 'cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04';
+const ARM64_CHROMIUM_SHA256 = 'b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7';
+const certificationCliPath = fileURLToPath(new URL('../src/certification-cli.js', import.meta.url));
 
 function deterministic(): DeterministicCertificationEvidence {
   return {
@@ -34,13 +41,19 @@ function deterministic(): DeterministicCertificationEvidence {
     },
     packageFiles: [
       'package.json',
+      'LICENSE',
+      'NOTICE',
       'README.md',
       'dist/src/cli.js',
       'dist/src/runtime.js',
+      'dist/src/certification-cli.js',
+      'public/dashboard.css',
+      'public/dashboard.html',
+      'public/dashboard.js',
       'docs/OPERATOR.md',
       'docs/SECURITY.md',
       'docs/DEVELOPMENT.md',
-      'docs/CERTIFICATION.md',
+      'docs/RELEASE_CERTIFICATION.md',
       'docs/certification-evidence.example.json',
     ],
     processResidue: [],
@@ -50,8 +63,8 @@ function deterministic(): DeterministicCertificationEvidence {
 
 function external(): ExternalCertificationEvidence {
   const artifact = { path: '/evidence/redacted.txt', sha256: 'b'.repeat(64) };
-  const cloudflaredArtifact = { path: '/evidence/cloudflared', sha256: 'c'.repeat(64) };
-  const chromiumArtifact = { path: '/evidence/chromium', sha256: 'd'.repeat(64) };
+  const cloudflaredArtifact = { path: '/evidence/cloudflared', sha256: ARM64_CLOUDFLARED_SHA256 };
+  const chromiumArtifact = { path: '/evidence/chromium', sha256: ARM64_CHROMIUM_SHA256 };
   const packageArtifact = { path: '/evidence/loom.tgz', sha256: 'e'.repeat(64) };
   return {
     g5: {
@@ -59,8 +72,8 @@ function external(): ExternalCertificationEvidence {
       host: {
         platform: 'darwin', architecture: 'arm64', macosVersion: '15.5', nodeVersion: 'v22.17.0',
       },
-      cloudflared: { managed: true, version: '2026.6.1', sha256: 'c'.repeat(64) },
-      chromium: { managed: true, revision: '138.0.7204.92', sha256: 'd'.repeat(64) },
+      cloudflared: { managed: true, version: '2026.7.0', sha256: ARM64_CLOUDFLARED_SHA256 },
+      chromium: { managed: true, revision: '1228', sha256: ARM64_CHROMIUM_SHA256 },
       quickTunnel: { registered: true, productionEligible: false, publicAccessTerminated: true },
       namedTunnel: {
         registered: true,
@@ -121,7 +134,7 @@ test('certification CLI writes a blocked report and returns 2 without external e
   assert.match(output.join(''), /not certified/i);
 });
 
-test('certification CLI validates external evidence and returns 0 only for all passing gates', async () => {
+test('certification CLI validates external evidence but remains blocked pending human review', async () => {
   const writes: CertificationReport[] = [];
   const code = await runCertificationCli(
     ['--output', '/tmp/report.json', '--external', './external.json'],
@@ -137,9 +150,9 @@ test('certification CLI validates external evidence and returns 0 only for all p
       stdout: () => undefined,
     },
   );
-  assert.equal(code, 0);
-  assert.equal(writes[0]!.overall, 'pass');
-  assert.equal(writes[0]!.releaseCertified, true);
+  assert.equal(code, 2);
+  assert.equal(writes[0]!.overall, 'blocked');
+  assert.equal(writes[0]!.releaseCertified, false);
 });
 
 test('certification CLI returns 1 for deterministic failure and rejects unsafe arguments', async () => {
@@ -164,6 +177,18 @@ test('certification CLI returns 1 for deterministic failure and rejects unsafe a
     runCertificationCli([], { cwd: '/repo' }),
     /--output/,
   );
+});
+
+test('certification CLI executes when invoked through a package-bin symlink', async () => {
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), 'loom-certification-cli-link-')));
+  const linkedCli = path.join(root, 'loom-certify');
+  await symlink(certificationCliPath, linkedCli);
+
+  const result = spawnSync(process.execPath, [linkedCli, '--help'], { encoding: 'utf8' });
+
+  assert.equal(result.status, 0);
+  assert.equal(result.stderr, '');
+  assert.match(result.stdout, /loom-certify --output/);
 });
 
 test('certification CLI help has no side effects', async () => {

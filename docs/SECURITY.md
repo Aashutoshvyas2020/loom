@@ -1,82 +1,175 @@
 # Loom Security Model
 
-## The actual trust boundary
+Loom is deliberately powerful. Its security boundary is explicit local owner consent plus endpoint-bound OAuth, not command approval or sandboxing.
 
-Loom is not a sandbox. `loom launch --yolo` intentionally grants an authenticated remote MCP client unrestricted access equivalent to giving that client your computer account. The owner password is an authorization credential, not a safety boundary against a client you authorize.
+> **FULL COMPUTER ACCESS ENABLED — sharing the owner password or authorizing an untrusted client is equivalent to giving away this macOS account.**
 
-The seven public tools include unrestricted `loom_terminal`, file read/write/edit, skill discovery, persistent memory, and browser control. A malicious or compromised authorized client can read private files, change code, run commands, access browser sessions, persist changes, or destroy data available to the macOS account.
+## Security goals
 
-Do not expose Loom from a machine or account containing data you are unwilling to hand to the authorized client.
+Loom aims to ensure that:
 
-## Terminal execution
+- unrestricted access exists only while `loom launch --yolo` is running in a visible local terminal
+- public MCP remains NOT_READY until a canonical HTTPS `/mcp` resource is known and OAuth is bound to it
+- owner credentials, OAuth secrets, commands, environment values, browser typed values, and file content do not enter the dashboard or structured audit metadata
+- Loom-owned process trees are identifiable, bounded, and cleaned on stop, timeout, signal, or parent death
+- state is private, validated, and written atomically
+- file mutations and other sensitive actions fail closed when durable audit start is unavailable
+- a changed tunnel endpoint invalidates endpoint-bound OAuth without rotating the installation owner password
 
-`loom_terminal` is the only intentional shell boundary. It uses one static typed adapter equivalent to `/bin/sh -lc <command>` through ProcessManager. It has no PTY and no stdin. Commands, environment values, and output are not written to audit logs.
+## Non-goals
 
-Every terminal job receives a stable job ID and bounded output cursor. Cancellation, timeout, runtime shutdown, watchdog recovery, and parent death target the entire owned process group, including descendants.
+Loom does not provide:
 
-No other Loom-owned command is assembled as a shell string. Cloudflared, Chromium, the macOS opener, and wrapper targets use explicit executable paths and argument arrays.
+- a command approval layer
+- command risk classification
+- a filesystem allowlist or workspace sandbox
+- a PTY or interactive stdin
+- multi-user authorization
+- protection from the same macOS user modifying Loom files or binaries
+- tamper-proof audit logs
+- a hidden daemon or persistent cloud control plane
+- automatic recovery of a lost owner password
+
+The same macOS user can inspect, modify, or delete local state. Audit is operational evidence, not a cryptographic accountability system against that user.
+
+## Foreground-only access
+
+`loom launch --yolo` is the only unrestricted launch path. The mode cannot be enabled through configuration, environment variables, aliases, or plain `loom launch`.
+
+Launch requires a direct local `/dev/tty`, macOS 14 or newer, and Node.js 22 or newer. Loom prints the full-access warning locally. A newly generated owner password is displayed only on that local terminal.
+
+There is no launchd job, login item, auto-start, or detached long-lived Loom daemon.
+
+## Owner password
+
+The owner password is a persistent installation credential stored only as a scrypt-derived verifier. It is created once and changes only through:
+
+```bash
+loom auth reset
+```
+
+The reset command requires direct local confirmation. It rotates the owner credential and revokes OAuth state. Restarts, Quick Tunnel changes, Named Tunnel changes, browser reset, configuration reset, refresh-token rotation, and package upgrades do not rotate it.
+
+Never share the password with a client, collaborator, support contact, or advertiser. Authorizing an untrusted client is equivalent to granting that client the enabled macOS account capabilities.
+
+## OAuth boundary
+
+OAuth state is bound to the exact canonical public resource:
+
+```text
+https://<public-host>/mcp
+```
+
+Authorization uses a short-lived, single-use server-side transaction containing the client, redirect URI, scope, resource, state, endpoint generation, and PKCE challenge. The password POST carries only the transaction ID and owner password, preventing parameter substitution.
+
+Access and refresh tokens are generation-bound. Refresh rotates both tokens and cannot expand scopes or change resources. Endpoint changes and revoke-all increment generation and invalidate clients, transactions, codes, access tokens, and refresh tokens while preserving the owner password.
+
+## Terminal boundary
+
+`loom_terminal` is unrestricted but noninteractive. The only shell adapter is statically defined as:
+
+```text
+/bin/sh -lc <command>
+```
+
+There is no PTY and no usable stdin. Loom does not use reflection, method-name guessing, or command strings to launch its own browser or Cloudflared binaries. Those components use verified executable paths and explicit argument arrays.
+
+Commands, cwd, environment names/values, and output do not enter audit records. Output is returned only in MCP content; structured metadata contains lifecycle, cursor, byte, exit, signal, and process-group information.
+
+Audit failure blocks start and cancel. Polling an already-running job remains available so the owner can observe and recover it.
 
 ## Process ownership
 
-ProcessManager launches targets through the child-wrapper/watchdog protocol. The wrapper must flush readiness before a fast target exit or IPC disconnect. The parent verifies wrapper identity, process-group membership, PID start time, and canonical executable path.
+Terminal, Cloudflared, and Chromium run under a wrapper-owned detached process group. The wrapper:
 
-Heartbeat loss and process-table fallback trigger group cleanup. Shutdown uses graceful termination followed by forced termination within the fixed deadline. Transient negative-PGID `EPERM` is retried only after fresh identity and membership validation; persistent uncertainty fails closed.
+- establishes the process group before reporting readiness
+- ignores stdin
+- forwards bounded stdout/stderr
+- receives heartbeats
+- validates parent PID, start time, and executable identity
+- terminates the complete group after missed heartbeat or parent mismatch
+- escalates TERM to KILL within fixed deadlines
 
-The runtime removes ownership files only after ProcessManager reports zero active jobs.
+Negative-PGID signaling retries transient `EPERM` only after ownership revalidation. Persistent permission failure rejects cleanup rather than widening the signal target.
 
-## Runtime state ownership
+## Filesystem boundary
 
-`loom.lock` records the exact launch identity. A live exact identity blocks a second launch. A stale lock is re-read before removal. Release verifies that the lock bytes still represent the same launch and that the current process identity still matches.
+Public file paths and terminal cwd accept only absolute paths or `~/...`.
 
-`current.json` is owned separately. RuntimeReadiness removes it only if its bytes exactly match the canonical state that the same runtime last persisted. A replacement, disappearance, symlink, nonregular file, or other mismatch preserves the lock and fails closed.
+- Reads may follow a final symlink only after resolving a stable regular-file target.
+- Terminal cwd resolves through `realpath` and may use safe symlink traversal.
+- Writes and edits reject every existing symlink component.
+- Mutations serialize per canonical path, support expected-hash conflicts, audit before mutation, and replace atomically in the same directory.
+- PNG, JPEG, GIF, and WebP are recognized by magic bytes rather than extension.
 
-The absolute shutdown deadline bounds every awaited cleanup operation. Hitting the deadline does not turn uncertainty into success; ownership files remain.
+## Browser boundary
 
-## Authentication and OAuth
+The browser uses a pinned Playwright Chromium revision and a dedicated persistent profile. Loom never attaches to the normal Chrome profile.
 
-The owner password is generated once for a new auth store, printed only to `/dev/tty`, and stored only as a verifier. It is not printed by `loom status`, included in runtime state, returned by tools, or written to AuditLogger.
+Browser setup is explicit and verifies:
 
-OAuth clients, authorization codes, and tokens are endpoint-bound. The canonical `/mcp` resource URI has a generation. A public endpoint change increments that OAuth generation and invalidates endpoint-bound credentials. Endpoint changes do not rotate the owner password.
+- architecture and revision
+- exact executable SHA-256
+- official Playwright download source
+- a real wrapper-owned loopback CDP launch
+- atomic promotion and rollback
 
-Revocation is available through the local dashboard. Never enter the owner password anywhere except the verified Loom authorization page for your own endpoint.
+Missing or corrupt browser installation data puts Loom in browser-unavailable mode while preserving the other six tools. Internal page evaluations are bounded; a hung page is recovered before considering a full-browser restart. Screenshots and downloads use private no-overwrite persistence.
 
-## Tunnel security
+## Cloudflare boundary
 
-Quick Tunnel is temporary and non-production. Loom accepts only a strict single-label `trycloudflare.com` origin from bounded Cloudflared output, requires a registered connection, and rejects persistent config conflicts. URL changes invalidate endpoint-bound OAuth state.
+Cloudflared is pinned by architecture, archive size, archive SHA-256, executable SHA-256, and exact version. Downloads use credential-free HTTPS, bounded redirects and timeout, private staging, safe extraction, verification, and atomic promotion.
 
-Named Tunnel is the stable path. Loom validates current-user private origin certificate and credential files, strict fields, account matching, tunnel-name matching, UUID and secret encoding, and stable file identity before every process attempt. Authentication/configuration failures stop immediately. Only transient failures retry, cleanup must finish between attempts, and there is no Quick Tunnel fallback.
+Every launch re-verifies the executable and uses explicit arguments with:
 
-Public endpoint status remains unavailable until registration. Closing the tunnel is part of foreground shutdown and public access must end before ownership files are removed.
+```text
+tunnel --no-autoupdate --metrics 127.0.0.1:0
+```
 
-## Browser security
+### Quick Tunnel
 
-The managed browser uses the recorded supported Chromium revision and executable identity. It rejects arbitrary executable substitution. Browser absence or browser-specific validation failure produces `Browser: unavailable` and leaves non-browser tools operational.
+Quick Tunnel is temporary testing only and is never production certified. Loom rejects conflicting persistent Cloudflared config, validates a strict single-label `trycloudflare.com` URL, requires a registered connection, permits one transient recreation, and reports `Production: no`.
 
-Browser automation can access whatever the managed browser profile can access. Treat authenticated browser sessions as secrets.
+Quick Tunnel does not prove stable-subdomain ownership, connector persistence, or takeover resistance.
 
-## Audit
+### Named Tunnel
 
-AuditLogger is append-only JSONL with private permissions and durable mutation-start records. Mutating operations fail closed if audit is unavailable before the side effect.
+Named Tunnel is the production path. Loom validates the private current origin certificate and credential JSON, account and tunnel matching, tunnel UUID, canonical secret, stable hostname, explicit ephemeral-origin mapping, transient-only retries, cleanup before retry, and no fallback to Quick.
 
-Audit records intentionally exclude owner passwords, OAuth secrets/tokens, command text, environment values, terminal output, Cloudflared output, tunnel hostname/endpoint, credential and certificate values, file contents, and browser screenshot bytes. Audit proves operation classes and outcomes, not secret payloads.
+Automated tests do not prove real DNS routing or Cloudflare account state.
 
-Dashboard stop is scheduled after its audit record finishes; otherwise shutdown would close audit before the record could be completed.
+## Dashboard boundary
 
-## Threats Loom does not solve
+The dashboard binds only to loopback. Bootstrap uses a 256-bit random token with a five-second TTL and single use, exchanged for an HttpOnly, SameSite=Strict session. Mutations require a per-session CSRF value.
 
-- A malicious authorized MCP client.
-- A compromised macOS user account.
-- Malware already running as the same user.
-- A compromised browser session or external identity provider.
-- Cloudflare, network, DNS, or ChatGPT account compromise.
-- Physical access to an unlocked machine.
-- Recovery of data already copied by an authorized client.
+Host and Origin are exact. There is no permissive CORS. Responses use CSP, no-store, no-sniff, frame denial, and no-referrer headers. Rendered values are escaped and recursively redacted.
+
+## Runtime state and lock ownership
+
+Runtime files are private:
+
+```text
+~/.loom/runtime/current.json
+~/.loom/runtime/loom.lock
+```
+
+The lock records PID, start time, executable path, launch ID, and state path. A live exact-identity lock blocks a second runtime. Stale locks are replaced only after process-table validation.
+
+Shutdown removes `runtime/current.json` only when its private file identity and exact serialized readiness bytes still match the immutable state Loom wrote. It removes `loom.lock` only when the persisted lock identity still matches the acquiring launch. Replacement, timeout, or ownership uncertainty preserves evidence fail-closed.
+
+## Audit limitations
+
+Audit files are private 0600 JSONL with bounded rotation and retention. Mutation-start records must be durable before the mutation begins. Sensitive metadata keys and token-like values are redacted.
+
+Audit does not contain terminal commands, terminal output, environment values, file content, browser typed text, screenshots, OAuth secrets, authorization headers, or owner passwords.
+
+Audit is not tamper-proof against the same macOS user.
 
 ## Incident response
 
-1. Stop the foreground Loom process or disconnect the machine from the network.
-2. Confirm the Cloudflare tunnel and public access are gone.
-3. Run `loom status` and inspect `current.json`, `loom.lock`, audit records, and Loom-owned process groups.
-4. Revoke OAuth through the dashboard if it is still available; otherwise stop and reset local auth state deliberately.
-5. Rotate any external credentials that may have been accessible through files, commands, memory, or browser sessions.
-6. Preserve audit and ownership files when cleanup is uncertain. Do not erase evidence merely to make status look clean.
+1. Stop Loom with `Ctrl+C` or terminate the foreground process.
+2. Verify no Loom-owned wrapper, terminal, browser, or Cloudflared process remains.
+3. Inspect `runtime/current.json`, `runtime/loom.lock`, and private audit files.
+4. Rotate the owner password with `loom auth reset` if authorization may have been exposed.
+5. Revoke or replace Cloudflare credentials if tunnel credentials may have been exposed.
+6. Preserve state and logs before manual cleanup when ownership files were intentionally retained fail-closed.

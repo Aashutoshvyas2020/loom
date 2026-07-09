@@ -1,59 +1,70 @@
 # Loom Operator Guide
 
-Loom exposes unrestricted local computer tools through a remote MCP endpoint. It is not a sandbox. Only run it for a connector and account you trust completely.
+This guide describes the supported foreground workflow for a single macOS owner.
+
+> **FULL COMPUTER ACCESS ENABLED — sharing the owner password or authorizing an untrusted client is equivalent to giving away this macOS account.**
 
 ## Requirements
 
-- A supported macOS host.
-- Node.js 22 or newer.
-- A controlling local terminal. `loom launch --yolo` refuses to start without `/dev/tty`.
-- For a Named Tunnel: a stable DNS hostname, `~/.cloudflared/cert.pem`, and the matching private Cloudflare `credentialsFile` JSON.
-- For ChatGPT: an account or workspace currently eligible to add a custom MCP app/connector. OpenAI changes labels and eligibility; verify the current official Connectors and MCP documentation before certification.
+- macOS 14 or newer
+- Node.js 22 or newer
+- A direct local terminal with `/dev/tty`
+- Cloudflare credentials for Named Tunnel production use
+- Browser setup only when `loom_browser` is required
 
-Until Loom is published, install from a checked-out source tree:
+## Public commands
+
+```text
+loom launch --yolo
+loom setup browser
+loom auth reset
+loom config check
+loom config reset
+loom --version
+loom --help
+```
+
+Plain `loom launch` is intentionally refused.
+
+## Initial setup
+
+From a source checkout:
 
 ```bash
 npm ci
+npm run typecheck
+npm test
 npm run build
 npm link
+loom --version
+loom --help
 ```
 
-## Commands
+Install the dedicated browser explicitly:
 
-```text
-loom setup
-loom setup --with-browser
-loom launch
-loom launch --yolo
-loom status
-loom reset --confirm
+```bash
+loom setup browser
 ```
 
-`loom setup` creates the private `~/.loom` state tree and default config. `loom setup --with-browser` also installs and records the supported pinned Chromium revision. Cloudflared is acquired and verified through Loom's managed release path when the foreground runtime needs it.
+The browser can be omitted. Loom will mark browser tools unavailable while the terminal, file, skill, memory, and MCP services remain usable.
 
-`loom launch` is intentionally side-effect free. It explains that unrestricted launch requires the explicit `--yolo` flag.
+## Configuration
 
-`loom launch --yolo` writes a red `FULL COMPUTER ACCESS ENABLED` warning to `/dev/tty`, shows a newly generated owner password there once, starts the complete runtime, prints one status block, opens the local dashboard, and remains in the foreground until dashboard stop, SIGINT, or SIGTERM.
+Loom stores configuration at `~/.loom/config.json` with mode 0600. Validate it without mutation:
 
-`loom status` reads the private runtime state. It does not reveal the owner password.
+```bash
+loom config check
+```
 
-`loom reset --confirm` removes Loom state only after refusing an exact live runtime owner. Stop Loom first. Back up anything under `~/.loom` you intend to keep.
+Reset invalid configuration only after local confirmation:
 
-## State and configuration
+```bash
+loom config reset
+```
 
-Loom keeps private state under `~/.loom`. Important files include:
+Invalid bytes are preserved with a timestamp before private defaults are written.
 
-- `~/.loom/config.json`: strict versioned configuration.
-- `~/.loom/runtime/current.json`: the latest canonical runtime status.
-- `~/.loom/runtime/loom.lock`: launch identity and ownership.
-- `~/.loom/auth.json`: owner-password verifier and OAuth state.
-- `~/.loom/audit/`: secret-minimized JSONL audit records.
-- `~/.loom/browser/`: pinned browser installation and manifest.
-- `~/.loom/cloudflared/`: managed Cloudflared binary and release metadata.
-
-Loom removes `current.json` only when its bytes exactly match the state that the same runtime last wrote. It removes `loom.lock` only after all supervised jobs are gone and the persisted launch identity still matches the live process. Replacement or uncertain state fails closed and remains for inspection.
-
-The default Quick Tunnel configuration is equivalent to:
+### Quick Tunnel configuration
 
 ```json
 {
@@ -63,7 +74,9 @@ The default Quick Tunnel configuration is equivalent to:
 }
 ```
 
-A Named Tunnel configuration is equivalent to:
+Quick Tunnel is temporary testing only and always reports `Production: no`. Remove or resolve `~/.cloudflared/config.yaml` and `config.yml` before using Quick mode.
+
+### Named Tunnel configuration
 
 ```json
 {
@@ -72,73 +85,144 @@ A Named Tunnel configuration is equivalent to:
     "type": "named",
     "name": "loom-prod",
     "hostname": "loom.example.com",
-    "credentialsFile": "~/.cloudflared/6f4f721c-22f2-41c7-a77d-41e5b09e4fc2.json"
+    "credentialsFile": "/Users/you/.cloudflared/<tunnel-id>.json"
   },
-  "extraRoots": []
+  "extraRoots": [
+    "/Users/you/custom-skills"
+  ]
 }
 ```
 
-The default origin certificate path is `~/.cloudflared/cert.pem`. Named credentials must match the certificate account, configured tunnel name, and current strict credential schema. Authentication files must be current-user private regular files with no symlink components.
+Named mode requires the current private Cloudflare origin certificate at `~/.cloudflared/cert.pem`, a private current tunnel credential JSON, a matching account and tunnel name, and a stable HTTPS hostname that is not under `trycloudflare.com`.
 
-## Tunnel modes
+## Start
 
-### Quick Tunnel
-
-A Quick Tunnel uses a temporary `https://<label>.trycloudflare.com` origin and publishes the complete MCP endpoint ending in `/mcp`. Quick Tunnel is explicitly non-production. Loom rejects persistent Cloudflared config files that could redirect the ephemeral local origin, requires registration within the readiness deadline, and permits only the bounded transient recreation defined by the implementation.
-
-The temporary URL can change on restart. A URL change increments the OAuth generation and invalidates endpoint-bound OAuth state. It does not rotate the persistent owner password.
-
-### Named Tunnel
-
-A Named Tunnel uses the configured stable hostname and publishes:
-
-```text
-https://<hostname>/mcp
+```bash
+loom launch --yolo
 ```
 
-Loom uses an explicit ephemeral loopback origin mapping rather than a persistent ingress target, validates the certificate and credentials before every attempt, waits for a registered connection, retries only transient failures within the fixed bounds, and never falls back to Quick Tunnel.
+The command requires a direct local terminal. Loom prints the warning locally. On first installation it prints the owner password once. Store it securely and never paste it into chat, source control, screenshots, logs, or tickets.
 
-Restarting with the same canonical stable endpoint preserves the OAuth generation and owner password. Changing the hostname changes the endpoint, increments the OAuth generation, and invalidates endpoint-bound OAuth state without rotating the owner password.
+Startup proceeds in this order:
 
-## Connecting ChatGPT
+1. Validate support and configuration.
+2. Acquire `~/.loom/runtime/loom.lock`.
+3. Initialize audit and process ownership.
+4. Start loopback MCP in NOT_READY state.
+5. Start the loopback dashboard.
+6. Rescan skill and memory catalogs.
+7. Start the verified browser or mark it unavailable.
+8. Start the configured Cloudflare tunnel.
+9. Bind OAuth to the exact public `/mcp` resource.
+10. Write `~/.loom/runtime/current.json`.
+11. Print one status block and request opening the local dashboard.
+12. Remain in the foreground.
 
-The exact ChatGPT UI labels can change. Use the current official OpenAI Connectors/Apps and MCP documentation for your eligible account or workspace.
+No public OAuth challenge is available before step 9.
 
-1. Run `loom launch --yolo` and wait for `Connector ready: yes`.
-2. Copy the full `Public MCP` value from the status block. It must be HTTPS and end in `/mcp`.
-3. In ChatGPT's current custom app/connector or developer-mode interface, add a remote MCP server using that exact URL.
-4. Complete the OAuth flow. Enter the Loom owner password only on the authorization page served from the Loom endpoint after verifying its hostname. Never paste the owner password into a conversation, message, configuration shared with another person, or support ticket.
-5. Confirm the connector exposes all seven tools before using it with sensitive data.
+## Read the status block
 
-Useful official references:
+The block reports:
 
-- OpenAI Help Center: Connectors in ChatGPT — https://help.openai.com/en/articles/11487775-connectors-in-chatgpt
-- OpenAI platform MCP documentation — https://platform.openai.com/docs/mcp
+- MCP phase
+- browser state and version
+- skills and memory state/counts
+- tunnel mode
+- connector readiness
+- audit health
+- full local MCP URL
+- full public MCP URL ending `/mcp`
+- dashboard URL
+- production eligibility
 
-## Reading the status block
+A Quick Tunnel must show `Production: no`. A Named Tunnel is eligible only after registration and still requires real external certification.
 
-A ready runtime prints the local MCP endpoint, dashboard URL, public origin, complete public `/mcp` endpoint, tunnel mode, connector readiness, production eligibility, browser state, catalog counts, and audit state.
+## Local dashboard
 
-`Browser: unavailable` is an intentional degraded state. Missing, corrupt, unsupported, or unverifiable browser installation disables only browser tools. File, terminal, skill, memory, OAuth, dashboard, and connector operation continue.
+The dashboard binds only to loopback. Loom generates a 256-bit, five-second, single-use bootstrap token and exchanges it for an HttpOnly, SameSite=Strict local session. The dashboard can:
 
-A Quick Tunnel always reports non-production eligibility. A Named Tunnel becomes production-eligible only after registration and stable endpoint binding. This label is an implementation status, not external release certification.
+- rescan skills and memory
+- restart the dedicated browser
+- reveal the private audit folder locally
+- validate and save next-launch tunnel/extra-root configuration
+- revoke all OAuth state without rotating the owner password
+- stop Loom
 
-## Shutdown
+It never shows the owner password, terminal commands, environment values, OAuth tokens, browser typed values, or file content.
 
-Use the dashboard stop control or send SIGINT/SIGTERM to the foreground process. Loom immediately rejects new terminal jobs, then shuts down terminal groups, browser, tunnel/public access, MCP, dashboard, supervised processes, audit, owned `current.json`, and the exact owned lock.
+## Stop
 
-Every awaited cleanup operation shares one absolute shutdown deadline. If a process, state file, or lock cannot be proven clean, Loom preserves ownership evidence and exits with an error instead of claiming success.
+Use any supported path:
 
-## Troubleshooting
+- press `Ctrl+C`
+- send `SIGTERM`
+- use the dashboard stop action
+- close the foreground terminal and allow the parent-death watchdog to clean the owned process group
 
-**No controlling local terminal:** Run the command directly in Terminal, iTerm, or another real macOS terminal. Piped or detached launch is intentionally refused.
+Shutdown rejects new terminal jobs, cancels retained terminal groups, closes the managed browser, stops Cloudflared, closes MCP and dashboard listeners, drains ProcessManager and audit, and removes ownership files only after cleanup certainty.
 
-**`Browser: unavailable`:** Run `loom setup --with-browser`. If it remains unavailable, inspect the browser manifest and executable ownership/version. Do not substitute an arbitrary Chromium binary.
+Private runtime files:
 
-**Quick Tunnel config conflict:** Remove or relocate `~/.cloudflared/config.yaml` or `config.yml` only after confirming it is yours and not needed. Loom will not silently ignore persistent ingress configuration.
+```text
+~/.loom/runtime/current.json
+~/.loom/runtime/loom.lock
+```
 
-**Named Tunnel authentication/config failure:** Verify `credentialsFile`, `~/.cloudflared/cert.pem`, tunnel name, hostname, file ownership, and permissions. Loom does not fall back to Quick Tunnel.
+`runtime/current.json` is deleted only when its private identity and exact serialized readiness bytes still match what Loom wrote. `runtime/loom.lock` is deleted only when its persisted identity still matches the current launch. If either file was replaced, cleanup stops and preserves the ownership evidence.
 
-**Lock remains after shutdown:** Treat it as cleanup uncertainty. Run `loom status`, inspect `current.json`, `loom.lock`, audit records, and process groups. Do not delete ownership files until you have proved no Loom process or descendant remains.
+## Owner password rotation
 
-**Owner password lost:** Loom stores only a verifier and will not reveal it again. Stop Loom and use the explicit reset workflow, understanding that reset invalidates local state and OAuth material.
+```bash
+loom auth reset
+```
+
+This requires local confirmation, rotates the owner password, increments OAuth generation, and revokes registered clients, pending authorizations, codes, access tokens, and refresh tokens. It does not delete browser state, memory, skills, audit history, downloads, or general configuration.
+
+Tunnel URL or hostname changes never rotate the owner password.
+
+## Browser recovery
+
+Symptoms:
+
+- `Browser: unavailable`
+- browser tool returns a pinned-browser installation error
+- manifest or executable verification fails
+
+Repair:
+
+```bash
+loom setup browser
+```
+
+The installer downloads the pinned revision from the official Playwright CDN, verifies architecture-specific SHA-256, proves a real wrapper-owned launch, and atomically replaces the prior installation only after verification.
+
+## Cloudflared recovery
+
+Loom installs or verifies the pinned Cloudflared release under `~/.loom/cloudflared/`.
+
+Quick mode failures:
+
+- resolve `~/.cloudflared/config.yaml` or `config.yml` conflicts
+- confirm outbound HTTPS access
+- retry after a transient Cloudflare edge failure
+
+Named mode failures:
+
+- confirm `~/.cloudflared/cert.pem` is current and private
+- confirm the configured credential JSON is current, private, and matches the tunnel/account/name
+- confirm the stable hostname routes to the named tunnel
+- do not switch to Quick mode as an automatic fallback
+
+## Diagnostic files
+
+- Configuration: `~/.loom/config.json`
+- OAuth/owner state: `~/.loom/auth.json`
+- Runtime status: `~/.loom/runtime/current.json`
+- Runtime ownership: `~/.loom/runtime/loom.lock`
+- Audit: `~/.loom/audit/*.jsonl`
+- Memory: `~/.loom/memory/`
+- Browser installation: `~/.loom/browser/`
+- Browser profile: `~/.loom/browser-profile/`
+- Downloads and screenshots: `~/.loom/downloads/`
+
+Audit is private operational logging, not a tamper-proof security boundary against the same macOS user.

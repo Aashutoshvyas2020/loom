@@ -687,3 +687,60 @@ PASS (185/185)
 npm run build
 PASS
 ```
+
+### T15 — packaging and public operating documentation
+
+- Finalized the operator and security guides around the actual supported command surface, foreground-only trust boundary, Quick-versus-Named tunnel behavior, browser setup/recovery, configuration and owner-password reset, shutdown ownership rules, diagnostics, and incident response.
+- Added the MIT distribution notice and the public release-certification guide plus a sanitized release-evidence index.
+- Corrected the package allowlist so the tarball contains the compiled runtime, dashboard assets, README, license, notice, and only the public operator/security/development/certification documents. Internal implementation plans, release-evidence artifacts, source tests, and compiled tests are explicitly excluded.
+- Corrected both packaged executable boundaries. `loom` and `loom-certify` now execute through npm-created package-bin symbolic links; the certification CLI regression was reproduced as silent output before the realpath fix.
+- Built `loom-mcp-0.1.0.tgz`, installed it with scripts disabled into a new temporary prefix and temporary HOME, and verified installed version/help behavior, public assets, and fail-closed launches. Plain launch and sessionless YOLO launch both exit 2, and the failed YOLO attempt creates no `~/.loom` state.
+- The candidate tarball contains 90 files, is 186200 bytes, and has SHA-256 `3711d511bf530ec3d834b4a021d960cbb001af43c126c850069640bfd7f7a549`. The temporary installation and tarball directory were removed after verification. No package was published.
+- Sanitized local package evidence is recorded in `docs/release-evidence/t15-local-package.md`.
+
+### T15.1 — fail-closed certification evidence tooling and recovery
+
+- Resumed from commits that had advanced beyond the T14 handoff without same-commit governance and with a non-compiling certification test. The mandated startup gate first exposed invalid TypeScript syntax, then a missing `./filesystem.js` import. The repair reused the existing path-policy module rather than inventing a duplicate filesystem abstraction.
+- Added a packaged `loom-certify` command that collects deterministic typecheck/test/build/documentation/map/package/residue evidence for the exact current commit, writes a private canonical report, and validates strict optional external-evidence manifests and stable private artifact hashes.
+- Closed a release-blocking trust flaw found during adversarial review: self-authored JSON booleans and artifact hashes cannot prove real Cloudflare, ChatGPT, OAuth, tool-call, cleanup, clean-host, sleep/wake, or connector-persistence events. G5–G7 now remain blocked pending human review even when a supplied manifest passes schema and hash checks; the automated tool cannot independently mark a release certified.
+- Bound G5 evidence to the exact pinned architecture-specific Cloudflared executable, Cloudflared version `2026.7.0`, Chromium revision `1228`, and architecture-specific Chromium executable hash. Quick Tunnel evidence is optional and never certifying.
+- Hardened artifact/report paths against symbolic links, including rejecting an existing symbolic-link parent before directory creation. Report files remain private canonical JSON.
+- Strengthened package certification to require every public release asset and reject `.loom`, credential-like files, source/compiled tests, internal plans, release-evidence artifacts, dependencies, and VCS content.
+- Strengthened process-residue checks to include wrapper/runtime/terminal groups, the managed `~/.loom/cloudflared/cloudflared` executable, and the dedicated `~/.loom/browser-profile` process family.
+- Added executable documentation checks for the human-review boundary and corrected stale certification examples to the current managed-component pins.
+- Independent automated review was attempted in read-only mode, but Gemini lacked `GEMINI_API_KEY` and no Codex reviewer CLI was installed. This was not treated as approval; a direct adversarial review produced the trust, symlink, package, pinning, and residue fixes above.
+- Final focused certification/documentation validation passes 19/19. Full typecheck, 204/204 tests, build, the 90-file package dry run, clean-prefix install, and delayed Loom-owned process scan all pass.
+
+Evidence:
+
+```text
+npm run typecheck
+PASS
+
+npm test
+PASS (204/204)
+
+npm run build
+PASS
+
+node --test dist/test/certification.test.js dist/test/certification-cli.test.js dist/test/docs.test.js
+PASS (19/19)
+
+npm pack --dry-run --json
+PASS (90 public release files)
+forbidden package paths: none
+
+clean temporary-prefix tarball install
+loom --version: 0.1.0
+loom --help: PASS
+loom-certify --help: PASS
+plain launch: exit 2
+sessionless YOLO launch: exit 2
+state created: no
+
+package SHA-256
+3711d511bf530ec3d834b4a021d960cbb001af43c126c850069640bfd7f7a549
+
+post-suite delayed Loom-owned process scan
+<no output>
+```

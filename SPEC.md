@@ -41,6 +41,7 @@ Loom exposes exactly seven tools: `loom_terminal`, `loom_read`, `loom_write`, `l
 - YOLO launch requires a direct local `/dev/tty`, macOS 14+/Node 22+, displays the full-access warning and any newly generated owner password only on that terminal, and never creates runtime state when the local-terminal requirement fails. Plain `loom launch` remains fail-closed.
 - Skill files with an unterminated frontmatter block are skipped with a malformed diagnostic. Interrupted Loom-owned memory-delete tombstones are safely cleaned during initialization or rescan.
 - Browser public-tool policy is separated from the Playwright backend. All internal page evaluations, including snapshots, are deadline-bounded with per-tab recovery before whole-browser restart. Downloads and collision-safe, human-sortable screenshots persist under `~/.loom/downloads/` using private no-overwrite creation.
+- The packaged `loom-certify` command collects deterministic checks for the exact clean commit and may validate optional external evidence manifests by strict schema, release SHA, pinned managed-component metadata, and private artifact hashes. Those checks prove only manifest structure and artifact integrity. Self-reported external fields never make G5–G7 pass; real Cloudflare, ChatGPT, OAuth, tool-call, cleanup, clean-host, sleep/wake, and connector-persistence evidence remains blocked until human review.
 
 ## Technology
 
@@ -63,7 +64,8 @@ Development dependencies are pinned in `package.json` and `package-lock.json`.
 - `loom config reset`
 - `loom --version`
 - `loom --help`
+- `loom-certify --output <report.json> [--external <evidence.json>]`
 
 ## Release contract
 
-Release-ready status requires every automated gate, clean packed install, real named-tunnel test, real ChatGPT OAuth and tool calls, verified process cleanup, verified stable endpoint and owner-password persistence, committed evidence, and a clean repository. Quick Tunnel testing alone cannot satisfy production certification. No push or npm publication occurs without explicit user instruction.
+Release-ready status requires every automated gate, clean packed install, real named-tunnel test, real ChatGPT OAuth and tool calls, verified process cleanup, verified stable endpoint and owner-password persistence, human-reviewed committed evidence, and a clean repository. `loom-certify` cannot replace that human review or independently grant production certification. Quick Tunnel testing alone cannot satisfy production certification. No push or npm publication occurs without explicit user instruction.

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { realpathSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,8 +21,8 @@ export const CERTIFICATION_CLI_USAGE = `Usage:
   loom-certify --help
 
 The command runs deterministic G4 checks for the exact current commit.
-G5-G7 remain blocked unless strict external evidence bound to that commit is supplied.
-Exit 0: all G4-G7 pass
+External G5-G7 evidence is schema- and hash-checked but remains blocked pending human review.
+Exit 0: reserved for a future trusted certification mechanism
 Exit 1: a performed check failed
 Exit 2: no failures, but one or more external gates are blocked
 `;
@@ -151,8 +152,15 @@ export async function runCertificationCli(
   return 2;
 }
 
-const invokedPath = process.argv[1] === undefined ? null : path.resolve(process.argv[1]);
-if (invokedPath === fileURLToPath(import.meta.url)) {
+let invokedPath: string | undefined;
+try {
+  invokedPath = process.argv[1] === undefined
+    ? undefined
+    : realpathSync(path.resolve(process.argv[1]));
+} catch {
+  invokedPath = undefined;
+}
+if (invokedPath !== undefined && realpathSync(fileURLToPath(import.meta.url)) === invokedPath) {
   runCertificationCli(process.argv.slice(2)).then(
     (code) => { process.exitCode = code; },
     (error) => {

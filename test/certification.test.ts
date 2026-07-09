@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chmod, lstat, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -22,10 +22,12 @@ import {
 } from '../src/certification.js';
 
 const SHA = 'a'.repeat(40);
-const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ARM64_CLOUDFLARED_SHA256 = 'cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04';
+const ARM64_CHROMIUM_SHA256 = 'b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7';
+const repositoryRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 async function tempRoot(): Promise<string> {
-  return mkdtemp(path.join(tmpdir(), 'loom-certification-'));
+  return realpath(await mkdtemp(path.join(tmpdir(), 'loom-certification-')));
 }
 
 function deterministic(
@@ -49,13 +51,19 @@ function deterministic(
     },
     packageFiles: [
       'package.json',
+      'LICENSE',
+      'NOTICE',
       'README.md',
       'dist/src/cli.js',
       'dist/src/runtime.js',
+      'dist/src/certification-cli.js',
+      'public/dashboard.css',
+      'public/dashboard.html',
+      'public/dashboard.js',
       'docs/OPERATOR.md',
       'docs/SECURITY.md',
       'docs/DEVELOPMENT.md',
-      'docs/CERTIFICATION.md',
+      'docs/RELEASE_CERTIFICATION.md',
       'docs/certification-evidence.example.json',
     ],
     processResidue: [],
@@ -66,8 +74,8 @@ function deterministic(
 
 function validExternalEvidence(): ExternalCertificationEvidence {
   const artifact = { path: '/evidence/redacted.txt', sha256: 'b'.repeat(64) };
-  const cloudflaredArtifact = { path: '/evidence/cloudflared', sha256: 'c'.repeat(64) };
-  const chromiumArtifact = { path: '/evidence/chromium', sha256: 'd'.repeat(64) };
+  const cloudflaredArtifact = { path: '/evidence/cloudflared', sha256: ARM64_CLOUDFLARED_SHA256 };
+  const chromiumArtifact = { path: '/evidence/chromium', sha256: ARM64_CHROMIUM_SHA256 };
   const packageArtifact = { path: '/evidence/loom.tgz', sha256: 'e'.repeat(64) };
   return {
     g5: {
@@ -80,13 +88,13 @@ function validExternalEvidence(): ExternalCertificationEvidence {
       },
       cloudflared: {
         managed: true,
-        version: '2026.6.1',
-        sha256: 'c'.repeat(64),
+        version: '2026.7.0',
+        sha256: ARM64_CLOUDFLARED_SHA256,
       },
       chromium: {
         managed: true,
-        revision: '138.0.7204.92',
-        sha256: 'd'.repeat(64),
+        revision: '1228',
+        sha256: ARM64_CHROMIUM_SHA256,
       },
       quickTunnel: {
         registered: true,
@@ -158,16 +166,18 @@ test('deterministic failure makes the report fail instead of blocked', () => {
   assert.equal(report.gates.G7.status, 'blocked');
 });
 
-test('complete strict external evidence bound to the release SHA can certify all gates', () => {
+test('self-reported external evidence remains blocked pending human review', () => {
   const external = validateExternalCertificationEvidence(validExternalEvidence(), SHA);
   const report = evaluateCertification({ deterministic: deterministic(), external });
-  assert.equal(report.overall, 'pass');
-  assert.equal(report.releaseCertified, true);
+  assert.equal(report.overall, 'blocked');
+  assert.equal(report.releaseCertified, false);
   assert.deepEqual(
     Object.values(report.gates).map((gate) => gate.status),
-    ['pass', 'pass', 'pass', 'pass'],
+    ['pass', 'blocked', 'blocked', 'blocked'],
   );
-  assert.equal(report.gates.G6.summary.includes('7/7'), true);
+  assert.match(report.gates.G5.summary, /human review/i);
+  assert.match(report.gates.G6.summary, /human review/i);
+  assert.match(report.gates.G7.summary, /human review/i);
 });
 
 test('external evidence rejects SHA mismatch, missing tools, extra secret fields, and unstable endpoints', () => {
@@ -198,6 +208,50 @@ test('external evidence rejects SHA mismatch, missing tools, extra secret fields
     () => validateExternalCertificationEvidence(quickNamed, SHA),
     /stable HTTPS/i,
   );
+
+  const staleCloudflared = validExternalEvidence();
+  (staleCloudflared.g5!.cloudflared as { version: string }).version = '2026.6.1';
+  assert.throws(
+    () => validateExternalCertificationEvidence(staleCloudflared, SHA),
+    /Cloudflared|2026\.7\.0/i,
+  );
+
+  const staleChromium = validExternalEvidence();
+  (staleChromium.g5!.chromium as { revision: string }).revision = '1227';
+  assert.throws(
+    () => validateExternalCertificationEvidence(staleChromium, SHA),
+    /Chromium|1228/i,
+  );
+
+  const wrongManagedHash = validExternalEvidence();
+  wrongManagedHash.g5!.cloudflared.sha256 = 'f'.repeat(64);
+  wrongManagedHash.g5!.artifacts[0] = {
+    path: '/evidence/cloudflared',
+    sha256: 'f'.repeat(64),
+  };
+  assert.throws(
+    () => validateExternalCertificationEvidence(wrongManagedHash, SHA),
+    /pinned Cloudflared|SHA-256/i,
+  );
+
+  const wrongChromiumHash = validExternalEvidence();
+  wrongChromiumHash.g5!.chromium.sha256 = 'e'.repeat(64);
+  wrongChromiumHash.g5!.artifacts[1] = {
+    path: '/evidence/chromium',
+    sha256: 'e'.repeat(64),
+  };
+  assert.throws(
+    () => validateExternalCertificationEvidence(wrongChromiumHash, SHA),
+    /pinned Chromium|SHA-256/i,
+  );
+});
+
+test('G5 evidence does not require a Quick Tunnel smoke test', () => {
+  const evidence = validExternalEvidence() as unknown as {
+    g5: Record<string, unknown>;
+  };
+  delete evidence.g5.quickTunnel;
+  assert.doesNotThrow(() => validateExternalCertificationEvidence(evidence, SHA));
 });
 
 test('external artifact verification hashes stable private regular files and rejects mismatch or symlink', async () => {
@@ -226,7 +280,7 @@ test('external artifact verification hashes stable private regular files and rej
   }, SHA);
   await assert.rejects(
     verifyExternalCertificationArtifacts(linked),
-    /symbolic link|without following/i,
+    /symbolic[- ]link|without following/i,
   );
 });
 
@@ -244,6 +298,19 @@ test('certification report writes private canonical JSON and rejects symlink tar
   const link = path.join(root, 'report-link.json');
   await symlink(target, link);
   await assert.rejects(writeCertificationReport(link, report), /symbolic link/i);
+
+  const outside = path.join(root, 'outside');
+  await mkdir(outside);
+  const linkedDirectory = path.join(root, 'linked-directory');
+  await symlink(outside, linkedDirectory);
+  await assert.rejects(
+    writeCertificationReport(path.join(linkedDirectory, 'created', 'report.json'), report),
+    /symbolic[- ]link/i,
+  );
+  await assert.rejects(
+    lstat(path.join(outside, 'created')),
+    (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT',
+  );
 });
 
 test('deterministic collector runs every repository gate and stores summaries without command output', async () => {
@@ -252,19 +319,26 @@ test('deterministic collector runs every repository gate and stores summaries wi
   await import('node:fs/promises').then(({ writeFile }) => Promise.all([
     writeFile(path.join(root, 'README.md'), '# Loom\n'),
     writeFile(path.join(root, 'package.json'), '{"name":"loom"}\n'),
-    writeFile(path.join(root, 'REPO_MAP.md'), tracked.map((entry) => `### \\`${entry}\\``).join('\n')),
+    writeFile(path.join(root, 'REPO_MAP.md'), tracked.map((entry) => `### \`${entry}\``).join('\n')),
   ]));
   const calls: string[] = [];
   const pack = JSON.stringify([{ files: [
     { path: 'package.json' },
+    { path: 'LICENSE' },
+    { path: 'NOTICE' },
     { path: 'README.md' },
     { path: 'dist/src/cli.js' },
     { path: 'dist/src/runtime.js' },
+    { path: 'dist/src/certification-cli.js' },
+    { path: 'public/dashboard.css' },
+    { path: 'public/dashboard.html' },
+    { path: 'public/dashboard.js' },
     { path: 'docs/OPERATOR.md' },
     { path: 'docs/SECURITY.md' },
     { path: 'docs/DEVELOPMENT.md' },
-    { path: 'docs/CERTIFICATION.md' },
+    { path: 'docs/RELEASE_CERTIFICATION.md' },
     { path: 'docs/certification-evidence.example.json' },
+    { path: 'docs/release-evidence/README.md' },
   ] }]);
   const runner: CertificationCommandRunner = async (executable, args) => {
     const key = [executable, ...args].join(' ');
@@ -329,7 +403,12 @@ test('deterministic collector records failures and residue without throwing away
     if (key === 'npm pack --dry-run --json') return { exitCode: 1, stdout: '', stderr: 'pack failed', timedOut: false };
     if (key === 'ps -axo pid,ppid,pgid,command') return {
       exitCode: 0,
-      stdout: ' 99 1 99 node dist/src/child-wrapper.js\n',
+      stdout: [
+        ' 99 1 99 node dist/src/child-wrapper.js',
+        ' 100 1 100 /Users/aashu/.loom/cloudflared/cloudflared tunnel --no-autoupdate',
+        ' 101 1 101 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --user-data-dir=/Users/aashu/.loom/browser-profile',
+        '',
+      ].join('\n'),
       stderr: '',
       timedOut: false,
     };
@@ -348,7 +427,7 @@ test('deterministic collector records failures and residue without throwing away
   assert.equal(evidence.checks.repositoryMap.status, 'fail');
   assert.equal(evidence.checks.packageDryRun.status, 'fail');
   assert.equal(evidence.checks.processResidue.status, 'fail');
-  assert.equal(evidence.processResidue.length, 1);
+  assert.equal(evidence.processResidue.length, 3);
   assert.equal(evaluateCertification({ deterministic: evidence }).overall, 'fail');
 });
 
@@ -366,25 +445,52 @@ test('package manifest exposes the certification command and an explicit release
   assert.equal(packageJson.files?.includes('dist/src'), true);
   assert.equal(packageJson.files?.includes('dist/test'), false);
   assert.equal(packageJson.files?.includes('test'), false);
+  assert.equal(packageJson.files?.includes('docs'), false);
+  assert.equal(packageJson.files?.includes('docs/RELEASE_CERTIFICATION.md'), true);
   assert.equal(packageJson.files?.includes('docs/certification-evidence.example.json'), true);
 });
 
 test('npm pack dry-run parser requires release files and rejects private or development-only content', () => {
-  const parsed = parseNpmPackDryRun(JSON.stringify([{
-    files: [
-      { path: 'package.json' },
-      { path: 'README.md' },
-      { path: 'dist/src/cli.js' },
-      { path: 'dist/src/runtime.js' },
-      { path: 'docs/OPERATOR.md' },
-      { path: 'docs/SECURITY.md' },
-      { path: 'docs/DEVELOPMENT.md' },
-      { path: 'docs/CERTIFICATION.md' },
-    { path: 'docs/certification-evidence.example.json' },
-    ],
-  }]));
+  const releaseFiles = [
+    'package.json',
+    'LICENSE',
+    'NOTICE',
+    'README.md',
+    'dist/src/cli.js',
+    'dist/src/runtime.js',
+    'dist/src/certification-cli.js',
+    'public/dashboard.css',
+    'public/dashboard.html',
+    'public/dashboard.js',
+    'docs/OPERATOR.md',
+    'docs/SECURITY.md',
+    'docs/DEVELOPMENT.md',
+    'docs/RELEASE_CERTIFICATION.md',
+    'docs/certification-evidence.example.json',
+  ];
+  const packJson = (files: string[]) => JSON.stringify([{
+    files: files.map((entry) => ({ path: entry })),
+  }]);
+
+  const parsed = parseNpmPackDryRun(packJson(releaseFiles));
   assert.equal(parsed.includes('dist/src/cli.js'), true);
 
+  assert.throws(
+    () => parseNpmPackDryRun(packJson(releaseFiles.filter((entry) => entry !== 'NOTICE'))),
+    /NOTICE|required package file/i,
+  );
+  assert.throws(
+    () => parseNpmPackDryRun(packJson([...releaseFiles, 'dist/test/runtime.test.js'])),
+    /development-only/i,
+  );
+  assert.throws(
+    () => parseNpmPackDryRun(packJson([
+      ...releaseFiles,
+      'docs/plans/internal-plan.txt',
+      'docs/release-evidence/private-artifact.txt',
+    ])),
+    /development-only/i,
+  );
   assert.throws(
     () => parseNpmPackDryRun(JSON.stringify([{ files: [
       { path: 'package.json' },

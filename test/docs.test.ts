@@ -81,6 +81,9 @@ test('documentation covers the locked security and operating contract without pl
   assert.match(certification, /deterministic local/i);
   assert.match(certification, /real named tunnel/i);
   assert.match(certification, /real ChatGPT/i);
+  assert.match(certification, /human review/i);
+  assert.match(certification, /does not prove/i);
+  assert.match(certification, /exit code 2/i);
   assert.match(evidence, /G5/i);
   assert.match(evidence, /G6/i);
   assert.match(evidence, /not yet certified/i);
@@ -94,10 +97,25 @@ test('npm package metadata includes runtime assets, documentation, license, and 
     license: string;
     engines: { node: string };
   };
-  assert.deepEqual(packageJson.bin, { loom: 'dist/src/cli.js' });
-  for (const entry of ['dist/src', 'public', 'docs', 'README.md', 'LICENSE', 'NOTICE']) {
+  assert.deepEqual(packageJson.bin, {
+    loom: 'dist/src/cli.js',
+    'loom-certify': 'dist/src/certification-cli.js',
+  });
+  for (const entry of [
+    'dist/src',
+    'public',
+    'README.md',
+    'LICENSE',
+    'NOTICE',
+    'docs/OPERATOR.md',
+    'docs/SECURITY.md',
+    'docs/DEVELOPMENT.md',
+    'docs/RELEASE_CERTIFICATION.md',
+    'docs/certification-evidence.example.json',
+  ]) {
     assert.equal(packageJson.files.includes(entry), true, `${entry} missing from package files`);
   }
+  assert.equal(packageJson.files.includes('docs'), false);
   assert.equal(packageJson.scripts.prepack, 'npm run build');
   assert.equal(packageJson.license, 'MIT');
   assert.equal(packageJson.engines.node, '>=22');

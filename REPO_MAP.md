@@ -32,20 +32,18 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `CHANGELOG.md`
 - **Purpose:** Human-readable implementation and evidence history.
-- **Success check:** Updated in every repository-changing commit with actual command/test evidence.
+- **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records T0–T13.1 implementation history, required RED/GREEN evidence, concurrent-agent reconciliation, wrapper-handshake root cause, exact target/full-suite counts, stress/process-residue checks, and the remaining real G5/G6 certification boundary.
-- **Last meaningful change:** T13.1 terminal recovery and wrapper-handshake evidence, 2026-07-08.
-- **Owning task or gate:** All tasks; current T13.1.
-
+- **Evidence:** Records T0–T15.1, including the T15 clean-prefix package SHA, 204/204 full suite, certification recovery, adversarial trust fixes, unavailable independent reviewer route, and remaining real G5/G6/T16 boundaries.
+- **Last meaningful change:** T15/T15.1 packaging and fail-closed certification evidence, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.1.
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records completed T14 foreground runtime/default assembly/CLI evidence, exact 49-test target, 90/90 runtime stress executions, full 185-test gate, empty Loom-owned process/listener scans, parent HEAD, exact dirty scope, real remaining blockers, and the T14 commit command.
-- **Last meaningful change:** T14 runtime orchestration completion handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T14.
-
+- **Evidence:** Records completed T15/T15.1 local gates, 204/204 tests, final package SHA and clean-prefix behavior, external certification blockers, exact dirty scope, and the candidate commit command.
+- **Last meaningful change:** T15/T15.1 completion handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.1.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
 - **Success check:** Valid MIT license text with copyright attribution.
@@ -55,36 +53,89 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T0 / T15.
 
 ### `README.md`
-- **Purpose:** Minimal repository identity and readiness warning during implementation.
-- **Success check:** Names Loom, foreground-only scope, active branch, and G7 requirement without claiming release readiness.
+- **Purpose:** Public package overview, safety warning, supported commands, setup, tunnel/browser behavior, and documentation links.
+- **Success check:** Matches the implemented CLI and trust boundary without claiming real ChatGPT or production certification.
 - **Current assessment:** PASS
-- **Evidence:** Root README contains no unsupported release claim.
-- **Last meaningful change:** T0 governance baseline, 2026-07-07.
-- **Owning task or gate:** T0; final expansion T15.
-
+- **Evidence:** Executable documentation tests validate the public commands and required safety language; full suite passes 204/204.
+- **Last meaningful change:** T15 public README expansion, 2026-07-08.
+- **Owning task or gate:** T15 packaging and documentation.
 ### `REPO_MAP.md`
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
-- **Success check:** Extracted path headings exactly match `git ls-files | sort` with no undocumented tracked files.
+- **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** T14 updates runtime, CLI, config, OAuth, ProcessManager visibility, four test ledgers, specification, plan, changelog, and handoff while preserving an empty staged tracked-path diff against `git ls-files`.
-- **Last meaningful change:** T14 runtime orchestration map update, 2026-07-08.
-- **Owning task or gate:** All tasks; current T14.
-
+- **Evidence:** T15/T15.1 adds every public guide, notice, evidence index/local package record, certification source/CLI/tests, and documentation test while updating affected ledgers to the 204-test/package gate.
+- **Last meaningful change:** T15/T15.1 exhaustive map repair, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.1.
 ### `SPEC.md`
-- **Purpose:** Approved behavioral, security, dependency, command, and release contract.
-- **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
+- **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
+- **Success check:** Matches the canonical plan and prevents deterministic tooling or self-reported manifests from substituting for real external certification.
 - **Current assessment:** PASS
-- **Evidence:** T14 locks the real YOLO foreground lifecycle, exclusive identity-bound lock, exact startup/publication/shutdown order, all-seven-handler production assembly, browser degradation, pinned tunnel selection/no fallback, secret-free status/TTY credential display, dashboard mutations, signal handling, absolute deadline, and fail-closed ownership preservation.
-- **Last meaningful change:** T14 foreground runtime and CLI security contract, 2026-07-08.
+- **Evidence:** Locks `loom-certify` as schema/hash/deterministic evidence only, requires human review for G5–G7, and adds its packaged CLI to the command contract.
+- **Last meaningful change:** T15.1 fail-closed certification trust boundary, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
-
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
-- **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
+- **Success check:** Covers Sections 0–26, T0–T16, G0–G7, explicit recovery subtasks, governance gates, and external-evidence boundaries.
 - **Current assessment:** PASS
-- **Evidence:** T14 now records the concrete production assembly, CLI/TTY boundary, strict dashboard mutations, lock/deadline ownership rules, browser-degraded mode, controlled integration contract, and 80-run zero-residue stress evidence; G5/G6/T15/T16 remain separate.
-- **Last meaningful change:** T14 runtime orchestration implementation clarification, 2026-07-08.
+- **Evidence:** Adds T15.1 for the packaged fail-closed certification collector, artifact validation, human-review requirement, optional non-certifying Quick evidence, and package/symlink/residue tests.
+- **Last meaningful change:** T15.1 plan amendment, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
+### `NOTICE`
+- **Purpose:** Distribution notice for Loom and third-party software/trademarks.
+- **Success check:** Ships in the public tarball and names the license plus major third-party components without claiming affiliation.
+- **Current assessment:** PASS
+- **Evidence:** Present in the 90-file package and clean-prefix installation.
+- **Last meaningful change:** T15 release notice, 2026-07-08.
+- **Owning task or gate:** T15 packaging and documentation.
+### `docs/DEVELOPMENT.md`
+- **Purpose:** Developer workflow, architecture, validation, security boundaries, and unsupported-claim guidance.
+- **Success check:** Matches the implemented task/gate workflow and does not replace external evidence with local tests.
+- **Current assessment:** PASS
+- **Evidence:** Included in executable documentation tests and the public package; full suite passes 204/204.
+- **Last meaningful change:** T15 public development guide, 2026-07-08.
+- **Owning task or gate:** T15 packaging and documentation.
+### `docs/OPERATOR.md`
+- **Purpose:** Supported installation, configuration, launch, dashboard, shutdown, recovery, and diagnostic guide for the single macOS owner.
+- **Success check:** Lists only real commands and accurately states the full-access, TTY, owner-password, tunnel, browser, and cleanup boundaries.
+- **Current assessment:** PASS
+- **Evidence:** Executable documentation tests pass; included in the clean-prefix package.
+- **Last meaningful change:** T15 operator guide, 2026-07-08.
+- **Owning task or gate:** T15 packaging and documentation.
+### `docs/RELEASE_CERTIFICATION.md`
+- **Purpose:** Public distinction between deterministic readiness, production eligibility, and real externally reviewed certification.
+- **Success check:** Documents G5/G6/T16 evidence, forbidden claims, and that `loom-certify` cannot prove external events or independently certify.
+- **Current assessment:** PASS
+- **Evidence:** Documentation test requires human-review, does-not-prove, and exit-code-2 language; included in package.
+- **Last meaningful change:** T15/T15.1 release certification guide, 2026-07-08.
+- **Owning task or gate:** T15, T15.1, G5–G7, and T16.
+### `docs/SECURITY.md`
+- **Purpose:** Public security model for unrestricted tools, OAuth, process ownership, files, browser, tunnels, dashboard, state, audit, and incident response.
+- **Success check:** Matches the approved trust boundary and explicitly identifies non-goals and same-user limitations.
+- **Current assessment:** PASS
+- **Evidence:** Executable documentation tests pass; included in the clean-prefix package.
+- **Last meaningful change:** T15 public security model, 2026-07-08.
+- **Owning task or gate:** T15 packaging and documentation.
+### `docs/certification-evidence.example.json`
+- **Purpose:** Sanitized strict example manifest for optional G5–G7 artifact-integrity validation.
+- **Success check:** Uses current pinned arm64 Cloudflared/Chromium metadata, contains no secrets, omits optional Quick evidence, and cannot cause automatic certification.
+- **Current assessment:** PASS
+- **Evidence:** Parsed by certification tests; package includes the current example.
+- **Last meaningful change:** T15.1 current pinned example and trust correction, 2026-07-08.
+- **Owning task or gate:** T15.1 and T16.
+### `docs/release-evidence/README.md`
+- **Purpose:** Private-repository index and sanitization rules for deterministic and real external release evidence.
+- **Success check:** Lists current T15 local evidence, required future G5/G6/clean-Mac artifacts, forbidden secrets, and human-review requirement.
+- **Current assessment:** PASS
+- **Evidence:** Indexes the T15 package record and keeps G5/G6/T16 explicitly not certified.
+- **Last meaningful change:** T15/T15.1 evidence index, 2026-07-08.
+- **Owning task or gate:** T15/T15.1, G5–G7, and T16.
+### `docs/release-evidence/t15-local-package.md`
+- **Purpose:** Sanitized deterministic record of the T15 candidate tarball and clean-prefix installation.
+- **Success check:** Records environment, exact commands/results, package hash/size, installed binaries/assets, fail-closed launches, cleanup, and explicit external limitations.
+- **Current assessment:** PASS
+- **Evidence:** Records SHA-256 `3711d511bf530ec3d834b4a021d960cbb001af43c126c850069640bfd7f7a549`, 90 files, 204/204 tests, and no state creation.
+- **Last meaningful change:** T15 local package evidence, 2026-07-08.
+- **Owning task or gate:** T15 packaging and documentation.
 
 ### `package-lock.json`
 - **Purpose:** Reproducible exact npm dependency graph.
@@ -95,13 +146,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T0 / G1.
 
 ### `package.json`
-- **Purpose:** Package identity, Node floor, executable mapping, exact dependencies, and validation scripts.
-- **Success check:** No dependency ranges; Node `>=22`; exact runtime pins; clean/build/typecheck/test/start/pack scripts present; build removes stale output before compiling.
+- **Purpose:** Package identity, Node floor, executable mappings, exact dependencies, scripts, and explicit public release allowlist.
+- **Success check:** No dependency ranges; Node `>=22`; `loom` and `loom-certify` bins; public runtime/assets/docs/license/notice included; tests, plans, and release evidence excluded.
 - **Current assessment:** PASS
-- **Evidence:** A stale-dist reproduction executed quarantined tests; `build` now runs `clean` first and the full tracked suite passes 64/64.
-- **Last meaningful change:** T5 recovery clean-build hardening, 2026-07-08.
-- **Owning task or gate:** T0 / G1; later T15 packaging.
-
+- **Evidence:** Full suite passes 204/204; `npm pack --dry-run --json` reports 90 approved files; clean-prefix install executes both npm bin symlinks and fail-closed launch checks.
+- **Last meaningful change:** T15/T15.1 public package allowlist and certification CLI, 2026-07-08.
+- **Owning task or gate:** T0 / G1 and T15/T15.1.
 ### `src/audit.ts`
 - **Purpose:** Private durable JSONL audit logging with bounded serialization, mutation fail-closed deadlines, rotation, retention, degradation state, and metadata redaction.
 - **Success check:** Mutation start resolves only after fsync, saturation/deadline/write failure disables later mutations, reads remain non-throwing, files remain 0600 in a 0700 directory, rotation is parseable, and forbidden values never appear.
@@ -135,12 +185,26 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T9 / G4; composed by T14 runtime.
 
 ### `src/browser/setup.ts`
-- **Purpose:** Explicit architecture-pinned Chromium acquisition, exact executable verification, wrapper-owned CDP launch proof, private manifest, atomic promotion, and rollback.
-- **Success check:** Resolves the local Playwright CLI independent of cwd, forces the official CDN, skips the unused headless shell, rejects symlinks/hash mismatches, verifies real loopback CDP readiness, and restores an old installation after promoted verification failure.
+- **Purpose:** Explicit architecture-pinned Chromium acquisition, exact executable verification, wrapper-owned launch proof, private manifest, atomic promotion, and pinned metadata export.
+- **Success check:** Retains install/rollback/security behavior and exposes only the architecture-specific pinned executable SHA required by certification validation.
 - **Current assessment:** PASS
-- **Evidence:** Deterministic install/rollback/CWD/launch tests pass; real arm64 setup verified revision 1228, Chrome 149.0.7827.55, executable SHA-256 `b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7`, private modes, and no residue.
-- **Last meaningful change:** T9 pinned browser setup and real launch correction, 2026-07-08.
-- **Owning task or gate:** T9 / G4 and T16 certification.
+- **Evidence:** Browser tests remain green; T15.1 external evidence rejects non-pinned Chromium revision/hash; full suite passes 204/204.
+- **Last meaningful change:** T15.1 pinned certification metadata export, 2026-07-08.
+- **Owning task or gate:** T9 / G4, T15.1, and T16 certification.
+### `src/certification-cli.ts`
+- **Purpose:** Packaged command boundary for deterministic evidence collection, optional manifest/artifact validation, private report output, and blocked/fail exit semantics.
+- **Success check:** Executes through npm bin symlinks, never auto-certifies external gates, reports deterministic failure as 1 and unresolved external gates as 2.
+- **Current assessment:** PASS
+- **Evidence:** Five CLI tests pass, including real package-bin symlink execution and supplied evidence remaining blocked.
+- **Last meaningful change:** T15.1 fail-closed certification CLI and symlink repair, 2026-07-08.
+- **Owning task or gate:** T15.1 and T16.
+### `src/certification.ts`
+- **Purpose:** Strict deterministic certification collector, external manifest schema, artifact verifier, package validator, residue scanner, report evaluator, and private writer.
+- **Success check:** Binds evidence to exact SHA/current pins, rejects unsafe package/report/artifact paths, detects Loom residue, and keeps G5–G7 blocked pending human review.
+- **Current assessment:** PASS
+- **Evidence:** Fourteen certification tests plus five CLI/docs tests pass; full suite 204/204 and 90-file package gate pass.
+- **Last meaningful change:** T15.1 certification recovery and adversarial hardening, 2026-07-08.
+- **Owning task or gate:** T15.1, G5–G7, and T16.
 
 ### `src/child-wrapper.ts`
 - **Purpose:** Detached process-group leader that receives launch data only over IPC, starts targets with ignored stdin, forwards separate output streams, flushes lifecycle IPC in order, and independently watches parent identity.
@@ -253,6 +317,21 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** Targeted browser suite passes 19/19; real external evidence additionally proves pinned arm64 setup and profile persistence across controlled restarts.
 - **Last meaningful change:** T9 browser RED/GREEN and real-browser debugging, 2026-07-08.
 - **Owning task or gate:** T9 / G4.
+
+### `test/certification-cli.test.ts`
+- **Purpose:** CLI-level blocked/fail semantics, strict evidence flow, help side-effect, and npm package-bin symlink regressions.
+- **Success check:** Proves supplied self-reported evidence remains blocked and the installed-style symlink invokes the CLI.
+- **Current assessment:** PASS
+- **Evidence:** Five tests pass as part of the 19-test certification/documentation target.
+- **Last meaningful change:** T15.1 certification CLI RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T15.1 and T16.
+### `test/certification.test.ts`
+- **Purpose:** Unit/integration tests for deterministic collection, external schema/pins, artifact/report path safety, package contents, residue detection, and fail-closed evaluation.
+- **Success check:** Proves no self-certification, optional Quick evidence, exact managed pins, symlink rejection before mutation, complete public package requirements, and managed process detection.
+- **Current assessment:** PASS
+- **Evidence:** Fourteen tests pass; required RED cases reproduced each repaired defect; full suite passes 204/204.
+- **Last meaningful change:** T15.1 certification recovery and adversarial RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T15.1, G5–G7, and T16.
 
 ### `test/cli.test.ts`
 - **Purpose:** Real-process/PTY and injected-routing tests for package/bootstrap, setup/reset, plain-launch refusal, and explicit foreground YOLO launch.
@@ -382,6 +461,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T8 dashboard RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T8.
 
+### `test/docs.test.ts`
+- **Purpose:** Executable contract for real CLI commands, security/operating documentation, certification limitations, and package metadata.
+- **Success check:** Rejects stale commands/placeholders, requires the human-review/no-proof boundary, and verifies the exact public package allowlist and bins.
+- **Current assessment:** PASS
+- **Evidence:** Three tests pass as part of the 19-test certification/documentation target and 204-test full suite.
+- **Last meaningful change:** T15/T15.1 documentation and package contract, 2026-07-08.
+- **Owning task or gate:** T15 and T15.1.
+
 ### `test/files.test.ts`
 - **Purpose:** Real-filesystem proof for stable/ranged reads, image magic bytes, explicit binary base64, stable final-symlink reads, parent/mutation symlink rejection, audited writes/edits, conflicts, concurrency, and dispatcher composition.
 - **Success check:** Final-link reads return target content without weakening writes or edits; parent symlinks fail; content never enters audit records; one concurrent expected-hash writer wins; no temporary residue remains.
@@ -477,9 +564,3 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** Added `types: ["node"]`; clean-install typecheck and build pass.
 - **Last meaningful change:** T0 test-infrastructure correction, 2026-07-08.
 - **Owning task or gate:** T0 / G1.
-
-## Planned paths by owning task
-
-These remain intentionally untracked until their owning task begins.
-
-- **T15:** release documentation/notices and `docs/release-evidence/` index as required.

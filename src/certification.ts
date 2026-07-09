@@ -14,7 +14,12 @@ import { constants as fsConstants, type Stats } from 'node:fs';
 
 import { z } from 'zod';
 
-import { assertNoSymlinkComponents } from './filesystem.js';
+import {
+  PINNED_CHROMIUM_REVISION,
+  pinnedChromiumExecutableSha256For,
+} from './browser/setup.js';
+import { CLOUDFLARED_VERSION, cloudflaredReleaseFor } from './cloudflare.js';
+import { assertNoSymlinkComponents } from './paths.js';
 
 export const CERTIFICATION_VERSION = 1 as const;
 
@@ -30,13 +35,19 @@ export const EXPECTED_LOOM_TOOLS = [
 
 const REQUIRED_PACKAGE_FILES = [
   'package.json',
+  'LICENSE',
+  'NOTICE',
   'README.md',
   'dist/src/cli.js',
   'dist/src/runtime.js',
+  'dist/src/certification-cli.js',
+  'public/dashboard.css',
+  'public/dashboard.html',
+  'public/dashboard.js',
   'docs/OPERATOR.md',
   'docs/SECURITY.md',
   'docs/DEVELOPMENT.md',
-  'docs/CERTIFICATION.md',
+  'docs/RELEASE_CERTIFICATION.md',
   'docs/certification-evidence.example.json',
 ] as const;
 
@@ -117,19 +128,19 @@ const g5EvidenceSchema = z.object({
   }).strict(),
   cloudflared: z.object({
     managed: z.literal(true),
-    version: z.string().min(1).max(128),
+    version: z.literal(CLOUDFLARED_VERSION),
     sha256: z.string().regex(SHA256_PATTERN),
   }).strict(),
   chromium: z.object({
     managed: z.literal(true),
-    revision: z.string().min(1).max(128),
+    revision: z.literal(PINNED_CHROMIUM_REVISION),
     sha256: z.string().regex(SHA256_PATTERN),
   }).strict(),
   quickTunnel: z.object({
     registered: z.literal(true),
     productionEligible: z.literal(false),
     publicAccessTerminated: z.literal(true),
-  }).strict(),
+  }).strict().optional(),
   namedTunnel: z.object({
     registered: z.literal(true),
     endpoint: z.string().superRefine((value, context) => {
@@ -174,6 +185,23 @@ const g5EvidenceSchema = z.object({
       code: 'custom',
       path: ['artifacts'],
       message: 'G5 artifacts must include the managed Chromium executable SHA-256.',
+    });
+  }
+
+  const cloudflaredRelease = cloudflaredReleaseFor(value.host.architecture);
+  if (value.cloudflared.sha256.toLowerCase() !== cloudflaredRelease.executableSha256) {
+    context.addIssue({
+      code: 'custom',
+      path: ['cloudflared', 'sha256'],
+      message: 'G5 Cloudflared SHA-256 does not match the pinned architecture-specific executable.',
+    });
+  }
+  const chromiumSha256 = pinnedChromiumExecutableSha256For(value.host.architecture);
+  if (value.chromium.sha256.toLowerCase() !== chromiumSha256) {
+    context.addIssue({
+      code: 'custom',
+      path: ['chromium', 'sha256'],
+      message: 'G5 Chromium SHA-256 does not match the pinned architecture-specific executable.',
     });
   }
 });
@@ -406,8 +434,8 @@ export function evaluateCertification(input: {
         summary: 'G5 requires real managed components and tunnel evidence from the exact release SHA.',
       }
     : {
-        status: 'pass',
-        summary: 'G5 real managed Cloudflared, Chromium, Quick/Named tunnel, shutdown, and residue evidence validated.',
+        status: 'blocked',
+        summary: 'G5 evidence passed structural and artifact-integrity checks but still requires human review of the real external events.',
       };
   const G6: CertificationGateResult = external.g6 === undefined
     ? {
@@ -415,27 +443,19 @@ export function evaluateCertification(input: {
         summary: 'G6 requires eligible ChatGPT OAuth, all-tool, revocation, audit, shutdown, and residue evidence.',
       }
     : {
-        status: 'pass',
-        summary: `G6 ChatGPT OAuth and ${EXPECTED_LOOM_TOOLS.length}/${EXPECTED_LOOM_TOOLS.length} Loom tools validated.`,
+        status: 'blocked',
+        summary: 'G6 evidence passed structural and artifact-integrity checks but still requires human review of the real ChatGPT and cleanup events.',
       };
 
-  let G7: CertificationGateResult;
-  if (external.g7 === undefined) {
-    G7 = {
-      status: 'blocked',
-      summary: 'G7 requires immutable package and clean supported-Mac installation evidence after G4–G6.',
-    };
-  } else if (G4.status !== 'pass' || G5.status !== 'pass' || G6.status !== 'pass') {
-    G7 = {
-      status: 'blocked',
-      summary: 'G7 evidence exists, but prerequisite G4–G6 gates are not all passing.',
-    };
-  } else {
-    G7 = {
-      status: 'pass',
-      summary: 'G7 immutable release package, clean-host installation, full gate, documentation, shutdown, and residue evidence validated.',
-    };
-  }
+  const G7: CertificationGateResult = external.g7 === undefined
+    ? {
+        status: 'blocked',
+        summary: 'G7 requires immutable package and clean supported-Mac installation evidence after G4–G6.',
+      }
+    : {
+        status: 'blocked',
+        summary: 'G7 evidence passed structural and artifact-integrity checks but still requires human review of the clean-host release evidence.',
+      };
 
   const gates = { G4, G5, G6, G7 };
   const statuses = Object.values(gates).map((gate) => gate.status);
@@ -464,7 +484,7 @@ export function evaluateCertification(input: {
 
 const COMMAND_OUTPUT_LIMIT_BYTES = 1024 * 1024;
 const COMMAND_TIMEOUT_MS = 10 * 60 * 1_000;
-const RESIDUE_PATTERN = /(?:dist\/src\/child-wrapper|loom-runtime|loom-terminal-|loom-process-|\/bin\/sleep 30)/;
+const RESIDUE_PATTERN = /(?:dist\/src\/child-wrapper|loom-runtime|loom-terminal-|loom-process-|\/bin\/sleep 30|\/\.loom\/cloudflared\/cloudflared(?:\s|$)|\/\.loom\/browser-profile(?:\/|\s|$))/;
 
 function appendBounded(chunks: Buffer[], chunk: Buffer, currentBytes: number): number {
   if (currentBytes >= COMMAND_OUTPUT_LIMIT_BYTES) return currentBytes;
@@ -683,6 +703,7 @@ export async function writeCertificationReport(
     throw new CertificationEvidenceError('Certification report path must be absolute.');
   }
   const directory = path.dirname(reportPath);
+  await assertNoSymlinkComponents(directory);
   await mkdir(directory, { recursive: true, mode: 0o700 });
   await assertNoSymlinkComponents(directory);
   try {
@@ -736,6 +757,9 @@ export function parseNpmPackDryRun(value: string): string[] {
     file === '.loom'
     || file.startsWith('.loom/')
     || file.startsWith('test/')
+    || file.startsWith('dist/test/')
+    || file.startsWith('docs/plans/')
+    || file.startsWith('docs/release-evidence/')
     || file.startsWith('node_modules/')
     || file.startsWith('.git/')
     || /(?:^|\/)(?:auth\.json|cert\.pem|credentials[^/]*\.json)$/i.test(file)

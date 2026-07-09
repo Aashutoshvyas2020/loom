@@ -9,18 +9,13 @@
     },
     "cloudflared": {
       "managed": true,
-      "version": "2026.6.1",
-      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      "version": "2026.7.0",
+      "sha256": "cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04"
     },
     "chromium": {
       "managed": true,
-      "revision": "138.0.7204.92",
-      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
-    },
-    "quickTunnel": {
-      "registered": true,
-      "productionEligible": false,
-      "publicAccessTerminated": true
+      "revision": "1228",
+      "sha256": "b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7"
     },
     "namedTunnel": {
       "registered": true,
@@ -35,11 +30,11 @@
     "artifacts": [
       {
         "path": "/absolute/path/to/managed-cloudflared",
-        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        "sha256": "cd33944f6ce65e240942d986932bc96bde8641ecefcd52c1ae5dc21f0bcffb04"
       },
       {
         "path": "/absolute/path/to/managed-chromium",
-        "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        "sha256": "b1b9e2dd063115031f08eadc10ed381ca0fa05b2284baff8f721d87f5f0f61b7"
       },
       {
         "path": "/absolute/path/to/redacted-g5-evidence.txt",

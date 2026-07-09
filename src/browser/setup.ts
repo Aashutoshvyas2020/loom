@@ -84,6 +84,12 @@ function descriptorFor(architecture: NodeJS.Architecture): ArchitectureDescripto
   return { architecture, ...ARCHITECTURES[architecture] };
 }
 
+export function pinnedChromiumExecutableSha256For(
+  architecture: NodeJS.Architecture,
+): string {
+  return descriptorFor(architecture).executableSha256;
+}
+
 function sameIdentity(a: FileIdentity, b: FileIdentity): boolean {
   return a.dev === b.dev && a.ino === b.ino && a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
 }
