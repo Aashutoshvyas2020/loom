@@ -1,0 +1,95 @@
+{
+  "g5": {
+    "releaseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "host": {
+      "platform": "darwin",
+      "architecture": "arm64",
+      "macosVersion": "15.5",
+      "nodeVersion": "v22.17.0"
+    },
+    "cloudflared": {
+      "managed": true,
+      "version": "2026.6.1",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "chromium": {
+      "managed": true,
+      "revision": "138.0.7204.92",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    "quickTunnel": {
+      "registered": true,
+      "productionEligible": false,
+      "publicAccessTerminated": true
+    },
+    "namedTunnel": {
+      "registered": true,
+      "endpoint": "https://loom.example.com/mcp",
+      "stableRestartGenerationPreserved": true,
+      "hostnameChangeGenerationIncremented": true,
+      "ownerPasswordPreserved": true,
+      "noQuickFallback": true,
+      "publicAccessTerminated": true
+    },
+    "processResidue": [],
+    "artifacts": [
+      {
+        "path": "/absolute/path/to/managed-cloudflared",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      {
+        "path": "/absolute/path/to/managed-chromium",
+        "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      {
+        "path": "/absolute/path/to/redacted-g5-evidence.txt",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  "g6": {
+    "releaseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "chatGptEligible": true,
+    "oauthCompleted": true,
+    "unauthorizedRejected": true,
+    "revokedCredentialsRejected": true,
+    "toolsInvoked": [
+      "loom_read",
+      "loom_write",
+      "loom_edit",
+      "loom_terminal",
+      "loom_skills",
+      "loom_memory",
+      "loom_browser"
+    ],
+    "auditSecretScanPassed": true,
+    "publicAccessTerminated": true,
+    "processResidue": [],
+    "artifacts": [
+      {
+        "path": "/absolute/path/to/redacted-g6-evidence.txt",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  },
+  "g7": {
+    "releaseSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "immutableRelease": true,
+    "cleanSupportedMacInstall": true,
+    "packageSha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "fullGatePassed": true,
+    "documentationConsistent": true,
+    "publicAccessTerminated": true,
+    "processResidue": [],
+    "artifacts": [
+      {
+        "path": "/absolute/path/to/loom-package.tgz",
+        "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      {
+        "path": "/absolute/path/to/redacted-g7-evidence.txt",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  }
+}

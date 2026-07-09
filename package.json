@@ -9,13 +9,17 @@
     "node": ">=22"
   },
   "bin": {
-    "loom": "dist/src/cli.js"
+    "loom": "dist/src/cli.js",
+    "loom-certify": "dist/src/certification-cli.js"
   },
   "files": [
-    "dist",
-    "public",
+    "dist/src",
     "README.md",
-    "LICENSE"
+    "docs/OPERATOR.md",
+    "docs/SECURITY.md",
+    "docs/DEVELOPMENT.md",
+    "docs/CERTIFICATION.md",
+    "docs/certification-evidence.example.json"
   ],
   "scripts": {
     "clean": "rm -rf dist",
@@ -24,7 +28,8 @@
     "test": "npm run build && node --test 'dist/test/**/*.test.js'",
     "start": "node dist/src/cli.js launch",
     "pack": "npm pack",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "certify": "npm run build && node dist/src/certification-cli.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",

@@ -95,7 +95,7 @@ test('npm package metadata includes runtime assets, documentation, license, and 
     engines: { node: string };
   };
   assert.deepEqual(packageJson.bin, { loom: 'dist/src/cli.js' });
-  for (const entry of ['dist', 'public', 'docs', 'README.md', 'LICENSE', 'NOTICE']) {
+  for (const entry of ['dist/src', 'public', 'docs', 'README.md', 'LICENSE', 'NOTICE']) {
     assert.equal(packageJson.files.includes(entry), true, `${entry} missing from package files`);
   }
   assert.equal(packageJson.scripts.prepack, 'npm run build');
