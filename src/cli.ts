@@ -26,7 +26,7 @@ const packageJson = JSON.parse(
   readFileSync(new URL('../../package.json', import.meta.url), 'utf8'),
 ) as { version: string };
 
-const HELP = `Loom ${packageJson.version}
+export const CLI_USAGE = `Loom ${packageJson.version}
 
 Foreground-only single-owner MCP server for macOS 14+.
 
@@ -285,7 +285,7 @@ export async function runCliCommand(
   dependencies: CliCommandDependencies = {},
 ): Promise<void> {
   if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
-    process.stdout.write(HELP);
+    process.stdout.write(CLI_USAGE);
     return;
   }
 
@@ -335,7 +335,7 @@ export async function runCliCommand(
     return;
   }
 
-  fail(`Unknown command.\n\n${HELP}`);
+  fail(`Unknown command.\n\n${CLI_USAGE}`);
 }
 
 let invokedPath: string | undefined;
