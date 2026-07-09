@@ -220,6 +220,18 @@ Define once in src/limits.ts and test boundary values:
 
 - MAX_WRITE_BYTES = 8 MiB
 - MAX_EDIT_WINDOW_BYTES = 256 KiB
+- MAX_TERMINAL_COMMAND_BYTES = 65,536
+- MAX_TERMINAL_ENVIRONMENT_ENTRIES = 256
+- MAX_TERMINAL_ENVIRONMENT_KEY_BYTES = 256
+- MAX_TERMINAL_ENVIRONMENT_VALUE_BYTES = 65,536
+- MAX_TERMINAL_TOTAL_ENVIRONMENT_BYTES = 1 MiB
+- MAX_TERMINAL_TIMEOUT_MS = 86,400,000
+- MAX_TERMINAL_POLL_BYTES = 1 MiB
+- DEFAULT_TERMINAL_POLL_BYTES = 64 KiB
+- MAX_TERMINAL_WAIT_MS = 60,000
+- MAX_TERMINAL_RETAINED_JOBS = 128
+- MAX_TERMINAL_JOB_ID_BYTES = 128
+- TERMINAL_POLL_INTERVAL_MS = 25
 - MAX_FILES_PER_ROOT = 10,000
 - MAX_FILE_BYTES_PER_ROOT = 1 MiB
 - MAX_TOTAL_INDEXED_BYTES = 64 MiB
@@ -268,6 +280,8 @@ A synchronous tool call may wait at most 60 seconds. Longer commands return a jo
 Every terminal, Cloudflared, and Chromium tree starts through a Loom child wrapper in its own process group. Record PID, PGID, launch ID, canonical executable path, process start time, and canonical Loom state path.
 
 Loom-owned binaries such as Cloudflared and Chromium must be started directly through ProcessManager using a verified executable path and an explicit `string[]` argument vector. Shell command construction, quoting, parsing, or routing those binaries through the public terminal adapter is forbidden. The unrestricted terminal tool may intentionally invoke `/bin/sh -lc <command>` through one static, strongly typed adapter to ProcessManager; reflection, `Function.toString()`, alternate method-name guessing, and result-shape guessing are forbidden.
+
+The wrapper must flush its `ready` IPC message before any fast target `exit` message and before disconnecting IPC; startup errors must also flush before disconnect. The parent must observe wrapper exit during startup and reject immediately instead of waiting for the startup timeout, while preserving exit events that arrive between readiness and managed-object construction.
 
 The parent sends a heartbeat every second. After three missed heartbeats, the watchdog verifies parent identity through PID plus start time plus canonical executable path. It also scans the process table every two seconds as fallback. Never rely on pipe closure or `kill(pid, 0)` alone.
 
@@ -537,6 +551,10 @@ Before T13, add deterministic coverage for a transient negative-PGID `SIGKILL` `
 T13 — Named Tunnel
 
 Implement canonical stable-hostname config; stable private origin-certificate and current credential validation with exact account/name matching; explicit ephemeral origin argv; registration-gated production status; audit secrecy/fail-closed ordering; no Quick fallback; transient-only retries with five-retry/60-second caps, per-attempt revalidation, and cleanup; prompt stop-during-startup cancellation; and stable endpoint/OAuth-generation plus owner-password persistence behavior.
+
+T13.1 — Terminal tool implementation recovery
+
+Before T14, implement the missing `loom_terminal` handler that T5 registered but no later task supplied. Use exactly one static typed `ProcessManager.start()` adapter with `executable: '/bin/sh'` and `args: ['-lc', command]`; reflection, `Function.toString()`, alternate method names/result shapes, PTY, and usable stdin are forbidden. Canonicalize absolute-or-home cwd through `realpath` and accept safe cwd symlinks. Validate explicit environment overrides and all centralized terminal byte/count/time limits. Return stable `job_<uuid>` IDs; expose bounded cursor/gap polling and at most 60 seconds of wait; keep command output only in MCP content and lifecycle/cursor data only in structured metadata. Audit start and cancel before launch/signaling without command, cwd, environment, or output bytes; audit failure blocks those mutations while poll remains available. Propagate timeout/cancel state, remove complete owned process groups, retain at most 128 jobs, never evict a running job, await completion/audit before eviction, and cancel all retained running jobs during runtime shutdown. Add the terminal dispatcher to the fallback chain and prove real output, environment/cwd, audit fail-closed/secrecy, timeout, descendant cancellation, retention, dispatcher routing, repeated stress, rapid natural-exit wrapper handshakes, and zero residue. Commit this recovery separately with full governance before runtime orchestration.
 
 T14 — Full runtime orchestration and signal cleanup
 

@@ -127,6 +127,33 @@ setInterval(() => {}, 1000);
   assert.equal((await listProcessGroupMembers(job.metadata.pgid)).length, 0);
 });
 
+test('rapid natural exits never lose the wrapper ready handshake', async () => {
+  const root = await tempRoot();
+  const manager = new ProcessManager({
+    statePath: root,
+    outputBytes: 8 * 1024,
+    startupTimeoutMs: 5_000,
+    heartbeatIntervalMs: 50,
+    missedHeartbeatLimit: 3,
+    processScanFallbackMs: 100,
+    softGraceMs: 100,
+    absoluteDeadlineMs: 2_000,
+  });
+
+  for (let index = 0; index < 20; index += 1) {
+    const job = await manager.start({
+      executable: process.execPath,
+      args: ['-e', ''],
+      cwd: root,
+    });
+    const completion = await job.wait();
+    assert.equal(completion.state, 'completed');
+    assert.equal(completion.exitCode, 0);
+    assert.equal((await listProcessGroupMembers(job.metadata.pgid)).length, 0);
+  }
+  await manager.shutdownAll();
+});
+
 test('normal target exit still cleans background descendants in its group', async () => {
   const root = await tempRoot();
   const manager = testManager(root);

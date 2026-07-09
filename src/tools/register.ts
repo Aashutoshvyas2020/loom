@@ -6,6 +6,14 @@ import {
   MAX_BROWSER_SNAPSHOT_BYTES,
   MAX_EDIT_WINDOW_BYTES,
   MAX_SCREENSHOT_BYTES,
+  MAX_TERMINAL_COMMAND_BYTES,
+  MAX_TERMINAL_ENVIRONMENT_ENTRIES,
+  MAX_TERMINAL_ENVIRONMENT_KEY_BYTES,
+  MAX_TERMINAL_ENVIRONMENT_VALUE_BYTES,
+  MAX_TERMINAL_JOB_ID_BYTES,
+  MAX_TERMINAL_POLL_BYTES,
+  MAX_TERMINAL_TIMEOUT_MS,
+  MAX_TERMINAL_WAIT_MS,
   MAX_WRITE_BYTES,
 } from '../limits.js';
 
@@ -30,7 +38,7 @@ const absoluteOrHomePath = z.string().min(1).max(4096).refine(
   'Path must be absolute or start with ~/.',
 );
 const sha256 = z.string().regex(/^[a-fA-F0-9]{64}$/);
-const jobId = z.string().min(1).max(128);
+const jobId = z.string().min(1).max(MAX_TERMINAL_JOB_ID_BYTES);
 const tabId = z.string().min(1).max(128);
 const selector = z.string().min(1).max(4096);
 const safeUrl = z.string().url().max(8192);
@@ -38,17 +46,23 @@ const safeUrl = z.string().url().max(8192);
 const terminalSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('start'),
-    command: z.string().min(1).max(65_536),
+    command: z.string().min(1).max(MAX_TERMINAL_COMMAND_BYTES),
     cwd: absoluteOrHomePath.optional(),
-    environment: z.record(z.string().min(1).max(256), z.string().max(65_536)).optional(),
-    timeoutMs: z.number().int().positive().max(24 * 60 * 60 * 1_000).optional(),
+    environment: z.record(
+      z.string().min(1).max(MAX_TERMINAL_ENVIRONMENT_KEY_BYTES),
+      z.string().max(MAX_TERMINAL_ENVIRONMENT_VALUE_BYTES),
+    ).refine(
+      (value) => Object.keys(value).length <= MAX_TERMINAL_ENVIRONMENT_ENTRIES,
+      `Environment exceeds ${MAX_TERMINAL_ENVIRONMENT_ENTRIES} entries.`,
+    ).optional(),
+    timeoutMs: z.number().int().positive().max(MAX_TERMINAL_TIMEOUT_MS).optional(),
   }).strict(),
   z.object({
     action: z.literal('poll'),
     jobId,
     cursor: z.number().int().nonnegative().optional(),
-    maxBytes: z.number().int().positive().max(1024 * 1024).optional(),
-    waitMs: z.number().int().nonnegative().max(60_000).optional(),
+    maxBytes: z.number().int().positive().max(MAX_TERMINAL_POLL_BYTES).optional(),
+    waitMs: z.number().int().nonnegative().max(MAX_TERMINAL_WAIT_MS).optional(),
   }).strict(),
   z.object({
     action: z.literal('cancel'),

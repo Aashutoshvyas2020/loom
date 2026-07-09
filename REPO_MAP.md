@@ -34,17 +34,17 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command/test evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records T0–T13 implementation history, required RED/GREEN evidence, concurrent-agent reconciliation, exact target/full-suite counts, process-residue checks, and the remaining real G5/G6 certification boundary.
-- **Last meaningful change:** T13 Named Tunnel implementation evidence, 2026-07-08.
-- **Owning task or gate:** All tasks; current T13.
+- **Evidence:** Records T0–T13.1 implementation history, required RED/GREEN evidence, concurrent-agent reconciliation, wrapper-handshake root cause, exact target/full-suite counts, stress/process-residue checks, and the remaining real G5/G6 certification boundary.
+- **Last meaningful change:** T13.1 terminal recovery and wrapper-handshake evidence, 2026-07-08.
+- **Owning task or gate:** All tasks; current T13.1.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records completed T13 named-tunnel validation/lifecycle evidence, concurrent-agent reconciliation, 38-test target, full 158-test gate, parent HEAD, exact dirty scope, and the next T14 command.
-- **Last meaningful change:** T13 Named Tunnel handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T13.
+- **Evidence:** Records completed T13.1 static terminal adapter evidence, 19-test combined target, 40/40 terminal stress executions, full 167-test gate, empty Loom-owned residue scan, parent HEAD, exact dirty scope, and the commit command before T14.
+- **Last meaningful change:** T13.1 terminal recovery handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T13.1.
 
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -66,24 +66,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** T13 updates named Cloudflare, config, limit, test, specification, plan, changelog, and handoff assessments while preserving an empty tracked-path diff against `git ls-files`.
-- **Last meaningful change:** T13 Named Tunnel map update, 2026-07-08.
-- **Owning task or gate:** All tasks; current T13.
+- **Evidence:** T13.1 adds the terminal source/test paths, central terminal limits, schema/dispatcher evidence, and governance while preserving an empty staged tracked-path diff against `git ls-files`.
+- **Last meaningful change:** T13.1 terminal recovery map update, 2026-07-08.
+- **Owning task or gate:** All tasks; current T13.1.
 
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
 - **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T13 locks stable-hostname/name validation, private certificate/current-credential matching, direct ephemeral origin argv, registration-gated production status, transient-only bounded retries, per-attempt revalidation, prompt stop cancellation, audit secrecy, and endpoint/password persistence.
-- **Last meaningful change:** T13 Named Tunnel security contract, 2026-07-08.
+- **Evidence:** T13.1 locks the sole static `/bin/sh -lc` ProcessManager adapter, noninteractive lifecycle, stable job IDs, centralized bounds, cursor/output separation, audit secrecy/fail-closed behavior, completed-only eviction, shutdown cancellation, and ready-before-exit wrapper IPC ordering.
+- **Last meaningful change:** T13.1 terminal security and lifecycle contract, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T13 records four central named-tunnel limits and the exact validation, argv, registration, retry, cleanup, audit, cancellation, and OAuth/password contract proven by implementation.
-- **Last meaningful change:** T13 Named Tunnel implementation clarification, 2026-07-08.
+- **Evidence:** T13.1 explicitly recovers the missing terminal handler before T14, records twelve centralized terminal limits plus the exact static adapter/audit/polling/retention/cleanup contract, and hardens fast-target wrapper readiness ordering.
+- **Last meaningful change:** T13.1 terminal recovery amendment and limits, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -143,12 +143,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T9 / G4 and T16 certification.
 
 ### `src/child-wrapper.ts`
-- **Purpose:** Detached process-group leader that receives launch data only over IPC, starts targets with ignored stdin, forwards separate output streams, and independently watches parent identity.
-- **Success check:** Wrapper and target share one dedicated PGID; missed heartbeat or process-table parent mismatch triggers whole-group TERM then KILL cleanup without relying on IPC closure.
+- **Purpose:** Detached process-group leader that receives launch data only over IPC, starts targets with ignored stdin, forwards separate output streams, flushes lifecycle IPC in order, and independently watches parent identity.
+- **Success check:** Wrapper and target share one dedicated PGID; `ready` is delivered before a fast target `exit`/disconnect; startup errors flush before disconnect; duplicate finish paths are suppressed; missed heartbeat or parent-identity mismatch triggers whole-group TERM then KILL cleanup.
 - **Current assessment:** PASS
-- **Evidence:** Forced-parent-SIGKILL test removes wrapper, target, and grandchild; full suite leaves no matching processes.
-- **Last meaningful change:** T2 wrapper/watchdog completion, 2026-07-08.
-- **Owning task or gate:** T2 / G2; reused for terminal, Cloudflared, and Chromium.
+- **Evidence:** Twenty rapid zero-work targets complete without losing readiness; forced-parent-SIGKILL removes wrapper, target, and grandchild; five terminal stress runs and the full 167-test suite leave no matching processes.
+- **Last meaningful change:** T13.1 fast-target IPC ordering hardening, 2026-07-08.
+- **Owning task or gate:** T2 / G2 and T13.1; reused for terminal, Cloudflared, and Chromium.
 
 ### `src/cli.ts`
 - **Purpose:** Executable command boundary for version/help, explicit YOLO opt-in, browser setup, configuration management, and owner-credential rotation.
@@ -178,17 +178,17 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Single source of truth for all fixed Loom v1 byte, time, count, retry, and shutdown limits.
 - **Success check:** Every exported value exactly matches plan Section 8 and boundary tests import the production constants.
 - **Current assessment:** PASS
-- **Evidence:** `test/limits.test.ts` passes and verifies all 24 approved constants, including 15-second named readiness, five retries, one-second base backoff, and 60-second cap.
-- **Last meaningful change:** T13 named-tunnel limit additions, 2026-07-08.
-- **Owning task or gate:** T1 / G2, T13, and later consumers.
+- **Evidence:** `test/limits.test.ts` passes and verifies all 36 approved constants, including twelve T13.1 command/environment/poll/wait/timeout/retention/job-ID limits.
+- **Last meaningful change:** T13.1 terminal limit additions, 2026-07-08.
+- **Owning task or gate:** T1 / G2, T13, T13.1, and later consumers.
 
 ### `src/process-manager.ts`
-- **Purpose:** Launches wrapper-owned detached process groups, streams bounded output, sends heartbeats, validates ownership, manages timeout/cancellation, and enforces TERM-to-KILL shutdown deadlines.
-- **Success check:** Real processes have no PTY/stdin, natural exit and cancellation clean descendants, SIGTERM-resistant targets receive SIGKILL, transient negative-PGID `EPERM` is revalidated before retry, persistent `EPERM` fails closed, forced manager death is recovered, and no test descendants remain.
+- **Purpose:** Launches wrapper-owned detached process groups, streams bounded output, sends heartbeats, validates ownership, manages startup/exit races, timeout/cancellation, and TERM-to-KILL shutdown deadlines.
+- **Success check:** Real processes have no PTY/stdin; wrapper exit before readiness rejects immediately; exit events between readiness and managed construction are preserved; natural exit/cancellation clean descendants; transient `EPERM` is revalidated; persistent `EPERM` fails closed; forced manager death is recovered; and no test descendants remain.
 - **Current assessment:** PASS
-- **Evidence:** Process-manager/watchdog target passes 12/12; the deterministic signal fault is injected through one optional function rather than a process-global monkeypatch; full suite passes 145/145; delayed post-suite `ps` scan is empty.
-- **Last meaningful change:** T12.1 transient process-group signal hardening and isolated fault seam, 2026-07-08.
-- **Owning task or gate:** T2 / G2 and T12.1; later used by terminal, Cloudflare, browser, and runtime orchestration.
+- **Evidence:** Process-manager/watchdog target passes 13/13, including twenty rapid natural exits and deterministic transient/persistent `EPERM`; terminal stress passes 40/40 executions; full suite passes 167/167; delayed `ps` scan is empty.
+- **Last meaningful change:** T13.1 startup-exit handshake hardening, 2026-07-08.
+- **Owning task or gate:** T2 / G2, T12.1, and T13.1; used by terminal, Cloudflare, browser, and runtime orchestration.
 
 ### `src/runtime.ts`
 - **Purpose:** T11 readiness-only runtime boundary for endpoint canonicalization, MCP binding delegation, immutable readiness/status data, and private atomic runtime-state persistence.
@@ -282,9 +282,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Locks every centralized Loom v1 limit to the approved specification.
 - **Success check:** Exact value comparison passes without duplicating runtime logic.
 - **Current assessment:** PASS
-- **Evidence:** One exact-object test verifies all 24 constants, including the four T13 named-tunnel readiness/retry/backoff values; full suite passes 158/158.
-- **Last meaningful change:** T13 named-tunnel limit contract, 2026-07-08.
-- **Owning task or gate:** T1 and T13.
+- **Evidence:** One exact-object test verifies all 36 constants, including twelve T13.1 terminal bounds; combined T13.1 target passes 19/19 and full suite passes 167/167.
+- **Last meaningful change:** T13.1 terminal limit contract, 2026-07-08.
+- **Owning task or gate:** T1, T13, and T13.1.
 
 ### `public/dashboard.css`
 - **Purpose:** Minimal responsive styling for the authenticated loopback dashboard without inline CSS.
@@ -350,13 +350,21 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Last meaningful change:** T7 skills catalog and malformed-frontmatter handling, 2026-07-08.
 - **Owning task or gate:** T7.
 
-### `src/tools/register.ts`
-- **Purpose:** Registers exactly seven public Loom MCP tools with strict Zod v4 action/path/size/URL schemas and an injected dispatcher for later concrete implementations.
-- **Success check:** The public list contains only `loom_terminal`, `loom_read`, `loom_write`, `loom_edit`, `loom_skills`, `loom_memory`, and `loom_browser`; every safe schema path dispatches; dangerous browser URL schemes and malformed inputs fail before handlers.
+### `src/tools/terminal.ts`
+- **Purpose:** Concrete unrestricted but noninteractive terminal service and dispatcher using the sole static `/bin/sh -lc` ProcessManager adapter.
+- **Success check:** Validates centralized command/environment/cwd/timeout/job/poll bounds; canonicalizes safe cwd symlinks; audits start/cancel before mutation without sensitive bytes; returns stable job IDs and cursor lifecycle metadata with output only in MCP content; never evicts running jobs; awaits audit completion before finished-job eviction; and cancels every retained running process group on shutdown.
 - **Current assessment:** PASS
-- **Evidence:** A real SDK client lists exactly seven tools, calls all seven schema branches safely, and observes rejection of `javascript:` navigation.
-- **Last meaningful change:** T5 seven-tool registration, 2026-07-08.
-- **Owning task or gate:** T5; dispatch implementations arrive in T6, T7, T9, and T10.
+- **Evidence:** `test/terminal.test.ts` passes 8/8 with real shell output, cwd/environment, degraded-audit poll, timeout, grandchild cancellation, idempotent cancel, retention, shutdown, validation, and dispatcher coverage; five consecutive runs pass 40/40 with no residue; the combined target passes 19/19 and full suite passes 167/167.
+- **Last meaningful change:** T13.1 terminal implementation recovery, 2026-07-08.
+- **Owning task or gate:** T13.1; consumed by T14 runtime orchestration.
+
+### `src/tools/register.ts`
+- **Purpose:** Registers exactly seven public Loom MCP tools with strict Zod v4 action/path/size/URL schemas and an injected dispatcher.
+- **Success check:** The public list contains only the seven approved tools; terminal schema bounds import centralized constants; every safe action dispatches; dangerous browser schemes, malformed paths, and oversized inputs fail before handlers.
+- **Current assessment:** PASS
+- **Evidence:** A real SDK client lists/calls all seven branches; T13.1 centralizes terminal command/environment/job/poll/wait/timeout bounds and its dispatcher delegates every non-terminal tool.
+- **Last meaningful change:** T13.1 terminal schema centralization and concrete dispatcher, 2026-07-08.
+- **Owning task or gate:** T5 registration and T13.1 terminal implementation; consumed by T14.
 
 ### `src/watchdog.ts`
 - **Purpose:** macOS process-table observation using `ps` plus canonical executable resolution using `lsof`, observable identity matching, and PGID membership scans.
@@ -431,12 +439,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T2 / G2.
 
 ### `test/process-manager.test.ts`
-- **Purpose:** Real-process proof for no PTY/stdin, dedicated groups, complete descendant cleanup, hard-kill escalation, parent-death watchdog recovery, natural exit, timeouts, and transient/persistent negative-PGID `EPERM` behavior.
-- **Success check:** Every success test ends with an empty owned PGID; transient `EPERM` retries after ownership validation, persistent `EPERM` rejects at the deadline, instance-local signal injection remains parallel-safe, and test cleanup leaves no wrapper/target/grandchild process.
+- **Purpose:** Real-process proof for no PTY/stdin, dedicated groups, complete descendant cleanup, rapid natural-exit wrapper handshakes, hard-kill escalation, parent-death watchdog recovery, timeouts, and transient/persistent negative-PGID `EPERM` behavior.
+- **Success check:** Every success test ends with an empty owned PGID; twenty rapid zero-work targets complete after the ready handshake; transient `EPERM` retries after ownership validation; persistent `EPERM` rejects at the deadline; and no wrapper/target/grandchild process remains.
 - **Current assessment:** PASS
-- **Evidence:** Nine process-manager tests pass, including deterministic transient and persistent `EPERM` through an isolated signal function; combined watchdog target passes 12/12 and external delayed `ps` scan is empty.
-- **Last meaningful change:** T12.1 EPERM RED/GREEN regression cycle and test-isolation follow-up, 2026-07-08.
-- **Owning task or gate:** T2 / G2 and T12.1.
+- **Evidence:** Ten process-manager tests pass, including twenty rapid natural exits and deterministic transient/persistent `EPERM`; the combined T13.1 target passes 19/19, full suite passes 167/167, and delayed residue scan is empty.
+- **Last meaningful change:** T13.1 rapid natural-exit handshake regression, 2026-07-08.
+- **Owning task or gate:** T2 / G2, T12.1, and T13.1.
 
 ### `test/paths.test.ts`
 - **Purpose:** Real-filesystem tests for user-path parsing and symbolic-link rejection.
@@ -445,6 +453,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** Targeted suite passes 4/4 after canonicalizing macOS temporary roots through `realpath`.
 - **Last meaningful change:** T1 path-policy RED/GREEN cycle, 2026-07-08.
 - **Owning task or gate:** T1.
+
+### `test/terminal.test.ts`
+- **Purpose:** Real-process and policy tests for the terminal service, static shell adapter, audit boundary, polling, cancellation, timeout, retention, shutdown, validation, and dispatcher.
+- **Success check:** Proves no PTY/stdin dependency; exact shell behavior; canonical symlink cwd and explicit environment; command/environment/cwd/output audit secrecy; poll availability during audit degradation; complete grandchild cleanup; completed-only eviction; all-running capacity rejection; and zero delayed residue.
+- **Current assessment:** PASS
+- **Evidence:** Targeted suite passes 8/8; terminal-plus-limits target passes 9/9; combined T13.1 target passes 19/19; five stress runs pass 40/40; full tracked suite passes 167/167.
+- **Last meaningful change:** T13.1 terminal RED/GREEN and stress cycle, 2026-07-08.
+- **Owning task or gate:** T13.1.
 
 ### `test/watchdog.test.ts`
 - **Purpose:** Live macOS tests for canonical executable identity, PID-reuse defenses, process-group scans, and absent PID handling.

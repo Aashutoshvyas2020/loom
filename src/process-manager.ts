@@ -439,6 +439,7 @@ export class ProcessManager {
 
     let managed: ManagedProcess | undefined;
     let pendingExit: ExitMessage | undefined;
+    let pendingWrapperExit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
     let startupSettled = false;
     let readyResolve!: (message: ReadyMessage) => void;
     let readyReject!: (error: Error) => void;
@@ -447,6 +448,8 @@ export class ProcessManager {
       readyReject = reject;
     });
     const startupTimer = setTimeout(() => {
+      if (startupSettled) return;
+      startupSettled = true;
       readyReject(new ProcessManagerError('Child wrapper startup timed out.'));
     }, this.options.startupTimeoutMs);
 
@@ -484,6 +487,21 @@ export class ProcessManager {
         readyReject(new ProcessManagerError(`Child wrapper error: ${error.message}`, { cause: error }));
       } else {
         managed?.handleWrapperError(error);
+      }
+    });
+    wrapper.on('exit', (code, signal) => {
+      if (!startupSettled) {
+        startupSettled = true;
+        clearTimeout(startupTimer);
+        readyReject(new ProcessManagerError(
+          `Child wrapper exited before readiness (code=${String(code)}, signal=${String(signal)}).`,
+        ));
+        return;
+      }
+      if (managed === undefined) {
+        pendingWrapperExit = { code, signal };
+      } else {
+        managed.handleWrapperExit(code, signal);
       }
     });
 
@@ -553,9 +571,11 @@ export class ProcessManager {
     );
     this.jobs.add(managed);
 
-    wrapper.on('exit', (code, signal) => managed?.handleWrapperExit(code, signal));
     if (pendingExit !== undefined) {
       managed.handleTargetExit(pendingExit.exitCode, pendingExit.signal);
+    }
+    if (pendingWrapperExit !== undefined) {
+      managed.handleWrapperExit(pendingWrapperExit.code, pendingWrapperExit.signal);
     }
 
     return managed;

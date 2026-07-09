@@ -608,3 +608,44 @@ owner password after restarts/change/reopen: valid
 production eligible before readiness/after stop: false
 production eligible while registered: true
 ```
+
+### T13.1 — terminal tool implementation recovery
+
+- Added the missing concrete `loom_terminal` handler required by the seven-tool contract and blocked T14 until it existed.
+- Added twelve centralized terminal limits for command size, environment entries/key/value/aggregate bytes, timeout, poll/default-poll bytes, wait, retained jobs, job-ID bytes, and poll interval; the exact limit ledger now covers 36 values.
+- Added one static typed process boundary only: `ProcessManager.start({ executable: '/bin/sh', args: ['-lc', command], cwd, env, timeoutMs })`. No reflection, `Function.toString()`, alternate method guessing, PTY, stdin, or shell routing for Loom-owned binaries exists.
+- Added absolute-or-home cwd validation with `realpath`, safe symlink traversal, and directory enforcement. Environment keys use the portable identifier grammar; values and aggregate bytes are bounded and NUL-free.
+- Added stable `job_<uuid>` identifiers, bounded cursor/gap polling, at most 60 seconds of wait, lifecycle statuses (`running`, `exited`, `cancelled`, `timed-out`), timeout propagation, and PGID metadata.
+- Kept command output exclusively in MCP content. Structured data contains lifecycle/cursor/byte/PGID metadata only; audit records never contain command, cwd, environment names/values, or output.
+- Terminal start and cancel require a durable audit-start record before launch/signaling. Audit degradation blocks those mutations while polling an existing job remains available.
+- Added idempotent cancellation and service shutdown that terminate complete wrapper-owned groups, including grandchildren. No PTY or usable stdin is exposed.
+- Added bounded retention of 128 jobs. Capacity rejects only when every retained job is running; finished jobs are awaited through process and audit completion before the oldest finished record is evicted. Running jobs are never evicted.
+- Added `createTerminalToolDispatcher` using the existing fallback-chain convention and centralized the public terminal Zod bounds in `src/tools/register.ts`.
+- The repeated short-command workload exposed a real wrapper race: `ready` and `exit` were asynchronous IPC sends followed by immediate disconnect, so a fast target could lose readiness and leave the parent waiting for the full startup timeout. The wrapper now flushes `ready` before `exit`, flushes startup errors before disconnect, and guards against duplicate finish paths. ProcessManager now rejects wrapper exit during startup immediately, records exits that occur between readiness and managed-object construction, and settles the startup timeout exactly once.
+- Required RED first failed on the missing terminal module/exports. Later stress runs reproduced five-second wrapper startup timeouts and test-owned residue. Concurrent adversarial tests were preserved for typed job/capacity failures, audit-degraded polling, completion-order retention, strict UUID job IDs, aggregate environment limits, and complete group cleanup.
+- Terminal/limits target passes 9/9. The combined ProcessManager/terminal/limits target passes 19/19, including twenty rapid natural exits without losing the wrapper ready handshake. The real terminal suite passes five consecutive runs (40/40 executions) with zero wrapper/target/grandchild residue. Full typecheck, 167/167 tests, and build pass; delayed Loom-owned residue scan is empty.
+
+Evidence:
+
+```text
+node --test dist/test/terminal.test.js dist/test/limits.test.js
+PASS (9/9)
+
+node --test dist/test/process-manager.test.js dist/test/terminal.test.js dist/test/limits.test.js
+PASS (19/19)
+rapid natural exits: 20/20
+
+five consecutive terminal-suite runs
+PASS (40/40 test executions)
+residue after every run: none
+
+npm run typecheck
+PASS
+npm test
+PASS (167/167)
+npm run build
+PASS
+
+Loom-owned delayed process scan
+<no output>
+```

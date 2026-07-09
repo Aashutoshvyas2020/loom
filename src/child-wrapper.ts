@@ -33,11 +33,21 @@ let heartbeatTimer: NodeJS.Timeout | undefined;
 let scanTimer: NodeJS.Timeout | undefined;
 let parentIdentity: StartMessage['parentIdentity'] | undefined;
 let softGraceMs = 5_000;
+let readyDelivery: Promise<void> = Promise.resolve();
+let finishing = false;
 
-function send(message: object): void {
-  if (process.connected && process.send !== undefined) {
-    process.send(message, () => undefined);
-  }
+function send(message: object): Promise<void> {
+  return new Promise((resolve) => {
+    if (!process.connected || process.send === undefined) {
+      resolve();
+      return;
+    }
+    try {
+      process.send(message, () => resolve());
+    } catch {
+      resolve();
+    }
+  });
 }
 
 function clearWatchdogTimers(): void {
@@ -63,7 +73,7 @@ function beginOrphanCleanup(reason: string): void {
   }
   orphaning = true;
   shuttingDown = true;
-  send({ type: 'orphaned', reason });
+  void send({ type: 'orphaned', reason });
 
   try {
     process.kill(-process.pid, 'SIGTERM');
@@ -108,23 +118,33 @@ function installWatchdog(message: StartMessage): void {
   }, message.processScanFallbackMs);
 }
 
-function finishNormally(code: number | null, signal: NodeJS.Signals | null): void {
+async function finishNormally(
+  code: number | null,
+  signal: NodeJS.Signals | null,
+): Promise<void> {
+  if (finishing) return;
+  finishing = true;
   clearWatchdogTimers();
-  send({ type: 'exit', exitCode: code, signal });
+  await readyDelivery;
+  await send({ type: 'exit', exitCode: code, signal });
 
-  if (orphaning) {
-    return;
-  }
-
+  if (orphaning) return;
   process.exitCode = 0;
-  if (process.connected) {
-    process.disconnect?.();
-  }
+  if (process.connected) process.disconnect?.();
+}
+
+async function finishWithStartupError(message: string): Promise<void> {
+  if (finishing) return;
+  finishing = true;
+  clearWatchdogTimers();
+  await send({ type: 'error', message });
+  process.exitCode = 1;
+  if (process.connected) process.disconnect?.();
 }
 
 function startTarget(message: StartMessage): void {
   if (started) {
-    send({ type: 'error', message: 'Child wrapper received more than one start request.' });
+    void send({ type: 'error', message: 'Child wrapper received more than one start request.' });
     return;
   }
   started = true;
@@ -140,9 +160,7 @@ function startTarget(message: StartMessage): void {
     });
     target = spawned;
   } catch (error) {
-    clearWatchdogTimers();
-    send({ type: 'error', message: `Unable to spawn target: ${String(error)}` });
-    process.exitCode = 1;
+    void finishWithStartupError(`Unable to spawn target: ${String(error)}`);
     return;
   }
 
@@ -150,19 +168,17 @@ function startTarget(message: StartMessage): void {
   spawned.stderr.pipe(process.stderr, { end: false });
 
   spawned.once('spawn', () => {
-    send({ type: 'ready', targetPid: spawned.pid, pgid: process.pid });
+    readyDelivery = send({ type: 'ready', targetPid: spawned.pid, pgid: process.pid });
   });
   spawned.once('error', (error) => {
-    clearWatchdogTimers();
-    send({ type: 'error', message: `Target process error: ${error.message}` });
-    process.exitCode = 1;
+    void finishWithStartupError(`Target process error: ${error.message}`);
   });
   spawned.once('close', (code, signal) => {
     if (!process.connected && !shuttingDown) {
       beginOrphanCleanup('parent-ipc-disconnected-before-target-exit');
       return;
     }
-    finishNormally(code, signal);
+    void finishNormally(code, signal);
   });
 }
 
