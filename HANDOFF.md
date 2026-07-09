@@ -1,12 +1,12 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 21:08 PDT
+**Date and local time:** 2026-07-08 21:17 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA before pending T15/T15.1 commit:** `91b6b23cdd8f4f0ba363a969d31a4af81738aa7a`
-**Repository state:** dirty only with completed T15 packaging/documentation, T15.1 fail-closed certification recovery, sanitized local package evidence, and same-commit governance
-**Current task:** T15/T15.1 complete locally; commit pending before T16 clean-clone certification work
-**Last completed gate:** full typecheck, 204/204 tests, build, 90-file public-only package dry run, actual clean-prefix tarball install, installed CLI checks, fail-closed launch checks, and empty delayed Loom-owned process scan
+**HEAD SHA before pending T15.2 documentation commit:** `9cc293323a88bd9100319949e90fe64f19293f34`
+**Repository state:** dirty only with the completed T15.2 external-audit dossier, its executable documentation contract, the explicit plan amendment, and same-commit governance updates
+**Current task:** T15.2 complete locally; final regeneration/verification and commit pending
+**Last completed gate:** preliminary full typecheck, 205/205 tests, build, 90-file package dry run, dossier path/heading coverage, supported secret-material scan, and empty Loom-owned process-residue scan
 **Pushed or published:** no
 
 ## Required startup command
@@ -17,102 +17,103 @@ cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build
 
 ## Completed work
 
-- Finalized the public operator and security documentation, distribution notice, release-certification guide, and sanitized release-evidence index.
-- Narrowed the npm package allowlist to compiled runtime files, dashboard assets, README, license, notice, and only the public operator/security/development/certification documents. Internal plans, release evidence, source tests, and compiled tests are excluded.
-- Added and repaired the packaged `loom-certify` command. Both `loom` and `loom-certify` execute through npm-created package-bin symbolic links.
-- Recovered the committed certification layer from invalid TypeScript and a nonexistent filesystem import.
-- Added deterministic certification collection for the exact current commit, strict external manifest validation, stable private artifact hashing, private canonical report writes, package validation, and process-residue scanning.
-- Closed the false-certification trust flaw: self-reported external fields and artifact hashes cannot make G5–G7 pass. Real external evidence remains blocked pending human review.
-- Bound managed-component evidence to Cloudflared 2026.7.0, Chromium revision 1228, and the exact architecture-specific executable hashes.
-- Made Quick Tunnel evidence optional and non-certifying.
-- Added pre-mutation symbolic-link-parent rejection for report output.
-- Expanded residue detection to managed Cloudflared and dedicated browser-profile processes.
-- Added RED/GREEN regressions for package-bin invocation, self-certification, optional Quick evidence, stale/wrong managed pins, symlinked report parents, missing/forbidden package assets, and managed process residue.
-- Added the explicit T15.1 plan amendment and locked the certification trust boundary in SPEC.md.
-- Recorded deterministic package evidence in `docs/release-evidence/t15-local-package.md`.
+- Added T15.2 to the canonical implementation plan before creating the new deliverable.
+- Added `EXTERNAL_AUDIT.md` as one intentionally large, self-contained repository audit dossier for external experts.
+- Described the product contract, unrestricted trust boundary, non-goals, full architecture, state model, CLI, process wrapper/watchdog, output, audit, OAuth, MCP sessions, every public tool, browser setup/backend, Cloudflared acquisition, Quick and Named tunnels, dashboard, runtime startup/shutdown, package boundary, certification model, implementation chronology, current evidence, unresolved external gates, and recommended independent review priorities.
+- Generated an exact repository inventory with paths, byte/line counts, and SHA-256 values, excluding the dossier’s recursively unknowable self-hash.
+- Generated the production source/export/external-import index directly from `src/**/*.ts`.
+- Generated the executable test-name inventory directly from `test/**/*.test.ts`; 205 static declarations are represented.
+- Embedded verbatim snapshots of the product specification, agent/governance contract, compact algorithm, canonical implementation plan, README, development/operator/security/release guides, repository map, changelog, handoff, release-evidence documents, certification example, package manifests, TypeScript config, license, notice, and gitignore.
+- Kept the dossier repository-only. The npm allowlist is unchanged and the package dry run remains exactly 90 files and 186200 bytes.
+- Added an executable documentation test requiring the mandatory dossier sections, all seven exact tool names, the human-review/does-not-prove certification boundary, G5/G6/G7 status, and representation of every mapped tracked path.
+- Recorded the required RED before the file existed, then targeted GREEN after assembly.
+- Updated `REPO_MAP.md`, `CHANGELOG.md`, and this handoff in the same pending commit.
 
 ## Exact commands and results
 
 ```text
+mandatory startup gate before edits
+npm ci
+PASS — 106 packages installed, 107 audited, 0 vulnerabilities
 npm run typecheck
 PASS
-
 npm test
-PASS — 204/204
+PASS — 204/204 at the T15.1 baseline
+npm run build
+PASS
+git status --short
+PASS — clean
 
+T15.2 required RED
+node --test --test-name-pattern='external audit dossier' dist/test/docs.test.js
+FAIL as expected
+ENOENT: /Users/aashu/loom/EXTERNAL_AUDIT.md
+
+generated dossier assembly
+represented files: 73
+static test declarations: 205
+
+T15.2 targeted GREEN
+node --test --test-name-pattern='external audit dossier' dist/test/docs.test.js
+PASS — 1/1
+
+preliminary complete gate
+npm run typecheck
+PASS
+npm test
+PASS — 205/205
 npm run build
 PASS
 
-node --test dist/test/certification.test.js dist/test/certification-cli.test.js dist/test/docs.test.js
-PASS — 19/19
-
+package boundary
 npm pack --dry-run --json
-PASS — 90 public release files
-forbidden paths (`test/`, `dist/test/`, `docs/plans/`, `docs/release-evidence/`): none
+PASS — 90 files, 186200 bytes
+EXTERNAL_AUDIT.md included: no
+internal/forbidden paths: none
 
-actual tarball
-loom-mcp-0.1.0.tgz
-bytes: 186200
-SHA-256: 3711d511bf530ec3d834b4a021d960cbb001af43c126c850069640bfd7f7a549
+dossier coverage
+mapped paths: 73
+missing mapped paths: none
+missing mandatory headings: none
 
-clean temporary-prefix install
-loom --version: 0.1.0
-loom --help: PASS
-loom-certify --help: PASS
-required public assets: present
-internal plans/evidence/compiled tests: absent
-plain launch: exit 2
-sessionless YOLO launch: exit 2
-state created in temporary HOME: no
+supported secret-material scan
+findings: none
 
-post-suite delayed Loom-owned process scan
-<no output>
+Loom-owned process residue scan
+wrapper: none
+managed cloudflared: none
+dedicated browser-profile process: none
 ```
-
-## Independent review status
-
-The required read-only reviewer route was attempted. Gemini was installed but unavailable because `GEMINI_API_KEY` was not configured; no Codex reviewer CLI was installed. This was not treated as approval. A direct adversarial review found and fixed the false-certification trust flaw, unsafe report-parent ordering, incomplete package/residue checks, stale component metadata, and overbroad package allowlist.
 
 ## Known failures
 
-None in T0–T15.1 deterministic local validation.
+- The initial T15.2 test failure was intentional RED evidence: the dossier did not yet exist.
+- An early ad hoc ripgrep secret pattern used unsupported look-ahead and was discarded. A provider-specific Python scan was run instead and found no private-key, provider-token, or populated secret-field material.
+- A deliberately overbroad 40-character token heuristic matched commit hashes, placeholder values, type names, and lockfile integrity strings. It was not treated as a valid secret result and was replaced with provider-specific formats plus populated sensitive-field detection.
+- No current deterministic product, documentation, package, or process-residue failure is known.
 
 ## Real blockers
 
-- G5 requires actual current Cloudflare Named Tunnel certificate/credentials, stable public DNS routing to the exact ephemeral local origin, and an eligible ChatGPT workspace/account with custom MCP/developer-mode support.
-- G6 requires real ChatGPT OAuth authorization, access-token refresh/reconnect, representative calls to all seven tools, and real cleanup/public-access evidence for Ctrl+C, SIGTERM, terminal close, and forced parent death.
-- T16 still requires a clean committed clone/package run, explicit clean-HOME browser setup, and manual sleep/wake plus connector-persistence observations. Local deterministic or self-authored evidence cannot substitute for those external/manual gates.
-- G7 remains blocked until G5, G6, and all T16 evidence are completed and human-reviewed.
+- G5 still requires a real stable Named Tunnel, public DNS and OAuth discovery to the exact ephemeral local origin, and an eligible current ChatGPT workspace/account with custom MCP/developer-mode support.
+- G6 still requires real ChatGPT authorization, access-token refresh/reconnect, representative calls to all seven tools, and real public-access/process-table evidence for Ctrl+C, SIGTERM, terminal close, and forced parent death.
+- T16 still requires the remaining external/manual evidence, including owner-password lifecycle observation in the real tunnel/client flow, manual sleep/wake, connector persistence, committed sanitized artifacts, and human review.
+- G7 remains blocked until G5, G6, and all T16 requirements are satisfied. This dossier documents those boundaries and does not waive them.
 
 ## Files changed
 
 - `CHANGELOG.md`
+- `EXTERNAL_AUDIT.md`
 - `HANDOFF.md`
-- `NOTICE`
 - `REPO_MAP.md`
-- `SPEC.md`
-- `docs/DEVELOPMENT.md`
-- `docs/OPERATOR.md`
-- `docs/RELEASE_CERTIFICATION.md`
-- `docs/SECURITY.md`
-- `docs/certification-evidence.example.json`
 - `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
-- `docs/release-evidence/README.md`
-- `docs/release-evidence/t15-local-package.md`
-- `package.json`
-- `src/browser/setup.ts`
-- `src/certification-cli.ts`
-- `src/certification.ts`
-- `test/certification-cli.test.ts`
-- `test/certification.test.ts`
 - `test/docs.test.ts`
 
 ## Exact next command
 
 ```bash
-git add CHANGELOG.md HANDOFF.md NOTICE REPO_MAP.md SPEC.md docs/DEVELOPMENT.md docs/OPERATOR.md docs/RELEASE_CERTIFICATION.md docs/SECURITY.md docs/certification-evidence.example.json docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt docs/release-evidence/README.md docs/release-evidence/t15-local-package.md package.json src/browser/setup.ts src/certification-cli.ts src/certification.ts test/certification-cli.test.ts test/certification.test.ts test/docs.test.ts && git diff --cached --check && git commit -m "feat: finish packaging and certification"
+python3 /tmp/loom-generate-external-audit.py && npm run typecheck && npm test && npm run build && npm pack --dry-run --json > /tmp/loom-audit-pack-final.json && git add CHANGELOG.md EXTERNAL_AUDIT.md HANDOFF.md REPO_MAP.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt test/docs.test.ts && git diff --cached --check && git commit -m "docs: add external audit dossier"
 ```
 
 ## Next expected result
 
-A single clean T15/T15.1 commit with all deterministic gates green and no publication. Then create a clean temporary clone at that exact commit and execute the locally available T16 package/browser checks, recording any real external/manual blockers without simulated evidence.
+A single clean T15.2 documentation commit containing the complete audit dossier, executable coverage contract, explicit plan amendment, and synchronized governance files. No push, npm publication, tunnel deployment, or external certification claim is authorized or performed.

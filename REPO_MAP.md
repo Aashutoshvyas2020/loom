@@ -34,16 +34,25 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records T0–T15.1, including the T15 clean-prefix package SHA, 204/204 full suite, certification recovery, adversarial trust fixes, unavailable independent reviewer route, and remaining real G5/G6/T16 boundaries.
-- **Last meaningful change:** T15/T15.1 packaging and fail-closed certification evidence, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.1.
+- **Evidence:** Records T0–T15.2, including the clean-prefix package SHA, certification trust corrections, the audit-dossier RED/GREEN cycle, final repository gates, and remaining real G5/G6/T16 boundaries.
+- **Last meaningful change:** T15.2 external-audit dossier and validation evidence, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.2.
+
+### `EXTERNAL_AUDIT.md`
+- **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
+- **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
+- **Current assessment:** PASS
+- **Evidence:** The generated dossier represents 73 files, all 205 static test declarations, the exact source/export surface, and verbatim governing documents; its targeted test passes, the full suite passes 205/205, package dry run remains 90 public files with the dossier excluded, and supported secret/residue scans are empty.
+- **Last meaningful change:** T15.2 external expert audit dossier, 2026-07-08.
+- **Owning task or gate:** T15.2.
+
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records completed T15/T15.1 local gates, 204/204 tests, final package SHA and clean-prefix behavior, external certification blockers, exact dirty scope, and the candidate commit command.
-- **Last meaningful change:** T15/T15.1 completion handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.1.
+- **Evidence:** Records the T15.2 dossier scope, required RED, targeted and full GREEN, 73-file coverage, unchanged 90-file package boundary, supported secret/residue checks, exact dirty scope, external blockers, and the candidate commit command.
+- **Last meaningful change:** T15.2 external-audit handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.2.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
 - **Success check:** Valid MIT license text with copyright attribution.
@@ -63,9 +72,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** T15/T15.1 adds every public guide, notice, evidence index/local package record, certification source/CLI/tests, and documentation test while updating affected ledgers to the 204-test/package gate.
-- **Last meaningful change:** T15/T15.1 exhaustive map repair, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.1.
+- **Evidence:** T15.2 documents the repository-only audit dossier and all affected governance/test files; final staged-tree comparison covers 73 tracked paths with no difference.
+- **Last meaningful change:** T15.2 audit-dossier map update, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.2.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
 - **Success check:** Matches the canonical plan and prevents deterministic tooling or self-reported manifests from substituting for real external certification.
@@ -77,8 +86,8 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, explicit recovery subtasks, governance gates, and external-evidence boundaries.
 - **Current assessment:** PASS
-- **Evidence:** Adds T15.1 for the packaged fail-closed certification collector, artifact validation, human-review requirement, optional non-certifying Quick evidence, and package/symlink/residue tests.
-- **Last meaningful change:** T15.1 plan amendment, 2026-07-08.
+- **Evidence:** Adds T15.2 for the user-requested repository-only audit dossier, exact inventories, verbatim governing-document snapshots, executable coverage checks, and unchanged runtime/package scope.
+- **Last meaningful change:** T15.2 plan amendment, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 ### `NOTICE`
 - **Purpose:** Distribution notice for Loom and third-party software/trademarks.
@@ -462,12 +471,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T8.
 
 ### `test/docs.test.ts`
-- **Purpose:** Executable contract for real CLI commands, security/operating documentation, certification limitations, and package metadata.
-- **Success check:** Rejects stale commands/placeholders, requires the human-review/no-proof boundary, and verifies the exact public package allowlist and bins.
+- **Purpose:** Executable contract for real CLI commands, security/operating documentation, certification limitations, package metadata, and the repository-only external audit dossier.
+- **Success check:** Rejects stale commands/placeholders, requires the human-review/no-proof boundary, verifies the exact public package allowlist/bins, and requires the dossier’s mandatory sections, exact seven tools, gate boundary, and representation of every mapped tracked path.
 - **Current assessment:** PASS
-- **Evidence:** Three tests pass as part of the 19-test certification/documentation target and 204-test full suite.
-- **Last meaningful change:** T15/T15.1 documentation and package contract, 2026-07-08.
-- **Owning task or gate:** T15 and T15.1.
+- **Evidence:** T15.2 required RED reproduced the missing dossier; targeted GREEN passes 1/1, all four documentation tests pass within the full 205/205 suite, and the generated dossier represents every mapped path.
+- **Last meaningful change:** T15.2 audit-dossier executable contract, 2026-07-08.
+- **Owning task or gate:** T15, T15.1, and T15.2.
 
 ### `test/files.test.ts`
 - **Purpose:** Real-filesystem proof for stable/ranged reads, image magic bytes, explicit binary base64, stable final-symlink reads, parent/mutation symlink rejection, audited writes/edits, conflicts, concurrency, and dispatcher composition.

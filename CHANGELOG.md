@@ -744,3 +744,53 @@ package SHA-256
 post-suite delayed Loom-owned process scan
 <no output>
 ```
+
+### T15.2 — external expert audit dossier
+
+- Added an explicit plan amendment for one repository-root, self-contained external audit dossier without changing runtime behavior, dependencies, public commands, or the npm package allowlist.
+- Added an executable documentation contract requiring the dossier’s core product, architecture, security, repository-ledger, implementation-plan, evidence, and embedded-document sections; the exact seven tools; the human-review and does-not-prove certification boundary; G5/G6/G7 status; and representation of every tracked path documented by `REPO_MAP.md`.
+- Required RED reproduced the missing deliverable as `ENOENT: EXTERNAL_AUDIT.md` before the dossier was created.
+- Authored the audit narrative from the actual source and governance state, including end-to-end startup/shutdown flow, trust boundaries, local state, process supervision, audit, OAuth/MCP, every tool, browser, Cloudflare, dashboard, package/certification behavior, implementation chronology, evidence status, and an external-review checklist.
+- Generated the exact tree, source/export index, test inventory, and verbatim snapshots of the canonical plan plus relevant design, scope, governance, operations, security, release, evidence, package, license, and history documents into the same Markdown file.
+- Fresh pre-edit startup validation passed `npm ci`, typecheck, 204/204 tests, and build with zero vulnerabilities and a clean worktree. Final T15.2 validation is recorded below after dossier assembly.
+
+RED evidence:
+
+```text
+node --test --test-name-pattern='external audit dossier' dist/test/docs.test.js
+FAIL (expected)
+ENOENT: /Users/aashu/loom/EXTERNAL_AUDIT.md
+```
+
+GREEN and validation evidence:
+
+```text
+node --test --test-name-pattern='external audit dossier' dist/test/docs.test.js
+PASS (1/1)
+
+npm run typecheck
+PASS
+
+npm test
+PASS (205/205)
+
+npm run build
+PASS
+
+EXTERNAL_AUDIT.md generated inventory
+represented files: 73
+static test declarations: 205
+mandatory headings missing: none
+mapped paths missing: none
+
+npm pack --dry-run --json
+PASS (90 public release files, 186200 bytes)
+EXTERNAL_AUDIT.md packaged: no
+forbidden paths: none
+
+supported secret-material scan
+findings: none
+
+Loom-owned wrapper/cloudflared/browser-profile residue
+none
+```

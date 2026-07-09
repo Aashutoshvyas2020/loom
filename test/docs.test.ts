@@ -89,6 +89,47 @@ test('documentation covers the locked security and operating contract without pl
   assert.match(evidence, /not yet certified/i);
 });
 
+test('external audit dossier is self-contained and represents every mapped tracked file', async () => {
+  const audit = await readDocument('EXTERNAL_AUDIT.md');
+  const repositoryMap = await readDocument('REPO_MAP.md');
+  for (const heading of [
+    '# Loom v1 External Expert Audit Dossier',
+    '## Product, scope, and non-goals',
+    '## Architecture and end-to-end control flow',
+    '## Security model and trust boundaries',
+    '## Complete repository file-by-file ledger',
+    '## Implementation plan and chronology',
+    '## Verification, evidence, and release status',
+    '## Embedded canonical documents',
+  ]) {
+    assert.equal(audit.includes(heading), true, `${heading} missing from EXTERNAL_AUDIT.md`);
+  }
+  for (const tool of [
+    'loom_terminal',
+    'loom_read',
+    'loom_write',
+    'loom_edit',
+    'loom_skills',
+    'loom_memory',
+    'loom_browser',
+  ]) {
+    assert.equal(audit.includes(`\`${tool}\``), true, `${tool} missing from audit dossier`);
+  }
+  assert.match(audit, /human review/i);
+  assert.match(audit, /does not prove/i);
+  assert.match(audit, /G5[\s\S]*G6[\s\S]*G7/i);
+
+  const mappedPaths = [...repositoryMap.matchAll(/^### `([^`]+)`/gm)].map((match) => match[1]!);
+  assert.equal(mappedPaths.length > 0, true, 'REPO_MAP.md contains no tracked paths');
+  for (const mappedPath of mappedPaths) {
+    assert.equal(
+      audit.includes(`\`${mappedPath}\``),
+      true,
+      `${mappedPath} is not represented in EXTERNAL_AUDIT.md`,
+    );
+  }
+});
+
 test('npm package metadata includes runtime assets, documentation, license, and notice', async () => {
   const packageJson = JSON.parse(await readDocument('package.json')) as {
     bin: Record<string, string>;
