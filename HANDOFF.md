@@ -1,11 +1,11 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 PDT
+**Date and local time:** 2026-07-08 22:07 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA before pending T15.3 commit:** `82412ef4753ba2bff4ea8e47d7cc52a13a0460ce`
-**Repository state:** dirty only with completed T15.3 adversarial hardening, tests, evidence, public threat-model updates, regenerated audit dossier, and synchronized governance
-**Current task:** T15.3 complete locally; commit pending
+**Completed T15.3 implementation SHA:** `7b64064ea01de77ab0876f3eb68977277d9b930c`
+**Repository state before this governance-finalization commit:** clean at the completed T15.3 implementation SHA
+**Current task:** T15.3 complete and locally committed; next task is the remaining T16 external/manual certification work
 **Last completed gate:** typecheck, 214/214 tests, build, ten-run transient-EPERM stress, exact 74-file map/dossier coverage, 22 embedded-source hash checks, 90-file package inspection, isolated tarball installation, supported secret scan, and empty Loom-owned residue scan
 **Pushed or published:** no
 
@@ -194,9 +194,9 @@ Loom-owned process residue: none
 ## Exact next command
 
 ```bash
-git add CHANGELOG.md EXTERNAL_AUDIT.md HANDOFF.md README.md REPO_MAP.md SPEC.md docs src test && git diff --cached --check && git commit -m "fix: harden adversarial security boundaries"
+cd /Users/aashu/loom && npm run certify -- --output /private/tmp/loom-t16-certification-report.json
 ```
 
 ## Next expected result
 
-A single clean T15.3 local commit with the regenerated 74-file audit dossier, 214/214 tests, unchanged 90-file public allowlist, exact hardened tarball evidence, no secrets or Loom-owned residue, and all external/manual certification gates still honestly blocked. No push, publication, or deployment.
+The deterministic collector should remain blocked with exit code 2 until real G5/G6/T16 evidence is supplied and human-reviewed. The next implementation agent should not change the T15.3 security behavior unless new verified evidence requires it. No push, publication, public tunnel deployment, or production-certification claim is authorized.

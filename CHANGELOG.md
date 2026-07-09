@@ -848,3 +848,9 @@ plain launch: exit 2
 sessionless YOLO launch: exit 2
 state created: no
 ```
+
+### T15.3 — implementation commit recorded
+
+- Committed the verified adversarial security hardening, tests, evidence, public threat-model updates, regenerated audit dossier, and synchronized governance at `7b64064ea01de77ab0876f3eb68977277d9b930c`.
+- The repository was clean immediately after that implementation commit.
+- This follow-up changes only the resumable handoff, changelog/map bookkeeping, and regenerated dossier so the next agent receives the completed implementation SHA and the exact T16 certification command.

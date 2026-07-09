@@ -902,24 +902,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records T15.3 code-grounded adversarial triage, every verified fix/residual/false-positive class, the 214/214 full gate, transient-EPERM stress, and the 90-file hardened tarball SHA/install evidence.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Records the completed T15.3 implementation commit `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean post-commit state, and the governance-only finalization for T16 handoff.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated after T15.3 to include the hardened implementation, 74-file ledger, 214 static test declarations, adversarial evidence, residual-risk disclosures, and updated canonical documents; final dossier integrity and coverage gates pass.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Regenerated after the T15.3 implementation commit so the embedded changelog, handoff, repository map, 74-file inventory, 214-test inventory, and all 22 canonical-source hashes reflect the committed hardening state.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** T15.2 and T15.3.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records T15.3 scope, verified findings, exact tests/package evidence, real residual blockers, resulting commit candidate, and next command.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Records the completed T15.3 implementation SHA `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean state, exact evidence, remaining external blockers, and the next T16 certification command.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -940,8 +940,8 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Documents all 74 tracked T15.3 files and exact changed responsibilities; staged-tree comparison is required to be empty before commit.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Remains exhaustive for all 74 tracked files and records the T15.3 implementation SHA plus governance-only finalization state.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
@@ -1453,13 +1453,13 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ## Exact tracked-tree and repository statistics
 
-- Audit baseline parent commit: `82412ef4753ba2bff4ea8e47d7cc52a13a0460ce`
+- Audit baseline parent commit: `7b64064ea01de77ab0876f3eb68977277d9b930c`
 - Branch: `planning/loom-v1-cavekit`
 - Files represented in this dossier assembly: `74`
 - TypeScript production modules: `26`
 - TypeScript test modules: `22`
-- Total repository bytes represented, excluding generated dossier self-bytes: `1107966`
-- Total repository lines represented, excluding generated dossier self-lines: `27761`
+- Total repository bytes represented, excluding generated dossier self-bytes: `1108428`
+- Total repository lines represented, excluding generated dossier self-lines: `27767`
 
 The dossier’s own final SHA-256 cannot be embedded inside itself without creating a recursive change. All other rows record the bytes present at assembly time.
 
@@ -1468,13 +1468,13 @@ The dossier’s own final SHA-256 cannot be embedded inside itself without creat
 | `.gitignore` | 66 | 6 | `844fc62152e4f94e2438711eedd8f2c37b1e99999adbc408451a9b3bc521e055` |
 | `AGENTS.md` | 2010 | 33 | `fac305e7f7ab4f2e4521f5fcd5b75152bfbe880ca49dba2c8a9896aa49dd052d` |
 | `ALGORITHM.md` | 887 | 17 | `a51c91e490dbdd2e56b345a59bfa8b7dae571172a9d170ee47188361b212e4fb` |
-| `CHANGELOG.md` | 61748 | 850 | `bb4ab3fca62303ae929cdd985e9961835f513ce6fc3fef9cb80be03df6c3a4e2` |
+| `CHANGELOG.md` | 62278 | 856 | `1bb468256f3f819e1f75563ee12e28a357a7e893c072769f294f0dba1e0c6d86` |
 | `EXTERNAL_AUDIT.md` | generated | generated | self-referential; compute after generation |
-| `HANDOFF.md` | 9704 | 202 | `03b190ca755cbd2b066e63125d3fdf8e9f6b0401dff1bb7bc50b1c22870a703d` |
+| `HANDOFF.md` | 9665 | 202 | `7ba8d02ffe15b27b57a44689ee441535d40aaee2e4507577865a93cabac69ebc` |
 | `LICENSE` | 1071 | 21 | `2d69eab09385ed19112c2338c5e1ab27d5f4dbff3a04569df38201e03c2cd26a` |
 | `NOTICE` | 1103 | 19 | `406e2befe8ef0d8493f4309922e7303b2ef030074b91a300e551aa3b9f37666d` |
 | `README.md` | 8766 | 211 | `48d9cedb8f6bb831f45f35cdba15796dcb258b251338b5f89fa1be5495a977bc` |
-| `REPO_MAP.md` | 53242 | 583 | `d175526b35de87e4a106d20f75de897b0a52601df44ae24b8d94aeb6a14e33ae` |
+| `REPO_MAP.md` | 53213 | 583 | `190b903d973b71bd597c78d7fad9730fe3c0e431f810c5125e719bb3cef326a2` |
 | `SPEC.md` | 15230 | 78 | `73d63297a4fd69b17a4d0169f458947eb01bfc9ffa3f2f1b787ce6f4dd367a52` |
 | `docs/DEVELOPMENT.md` | 7427 | 201 | `7f5326ade05681754572f79a27ad17b1ed5257c3c3e0071dc5d2955ecb0759ff` |
 | `docs/OPERATOR.md` | 9911 | 251 | `f86eafb19a47d6a6782a9c5867dc0fa46c566789f12b8c57357b07b3c4c5ad89` |
@@ -3960,9 +3960,9 @@ Store sanitized evidence under `docs/release-evidence/` and index it in `docs/re
 
 ### Embedded source: `REPO_MAP.md`
 
-- Bytes: `53242`
+- Bytes: `53213`
 - Lines: `583`
-- SHA-256: `d175526b35de87e4a106d20f75de897b0a52601df44ae24b8d94aeb6a14e33ae`
+- SHA-256: `190b903d973b71bd597c78d7fad9730fe3c0e431f810c5125e719bb3cef326a2`
 
 ~~~~~markdown
 # Loom Repository Map
@@ -4001,24 +4001,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records T15.3 code-grounded adversarial triage, every verified fix/residual/false-positive class, the 214/214 full gate, transient-EPERM stress, and the 90-file hardened tarball SHA/install evidence.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Records the completed T15.3 implementation commit `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean post-commit state, and the governance-only finalization for T16 handoff.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated after T15.3 to include the hardened implementation, 74-file ledger, 214 static test declarations, adversarial evidence, residual-risk disclosures, and updated canonical documents; final dossier integrity and coverage gates pass.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Regenerated after the T15.3 implementation commit so the embedded changelog, handoff, repository map, 74-file inventory, 214-test inventory, and all 22 canonical-source hashes reflect the committed hardening state.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** T15.2 and T15.3.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records T15.3 scope, verified findings, exact tests/package evidence, real residual blockers, resulting commit candidate, and next command.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Records the completed T15.3 implementation SHA `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean state, exact evidence, remaining external blockers, and the next T16 certification command.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -4039,8 +4039,8 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Documents all 74 tracked T15.3 files and exact changed responsibilities; staged-tree comparison is required to be empty before commit.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Remains exhaustive for all 74 tracked files and records the T15.3 implementation SHA plus governance-only finalization state.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
@@ -4552,9 +4552,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### Embedded source: `CHANGELOG.md`
 
-- Bytes: `61748`
-- Lines: `850`
-- SHA-256: `bb4ab3fca62303ae929cdd985e9961835f513ce6fc3fef9cb80be03df6c3a4e2`
+- Bytes: `62278`
+- Lines: `856`
+- SHA-256: `1bb468256f3f819e1f75563ee12e28a357a7e893c072769f294f0dba1e0c6d86`
 
 ~~~~~markdown
 # Changelog
@@ -5407,23 +5407,29 @@ plain launch: exit 2
 sessionless YOLO launch: exit 2
 state created: no
 ```
+
+### T15.3 — implementation commit recorded
+
+- Committed the verified adversarial security hardening, tests, evidence, public threat-model updates, regenerated audit dossier, and synchronized governance at `7b64064ea01de77ab0876f3eb68977277d9b930c`.
+- The repository was clean immediately after that implementation commit.
+- This follow-up changes only the resumable handoff, changelog/map bookkeeping, and regenerated dossier so the next agent receives the completed implementation SHA and the exact T16 certification command.
 ~~~~~
 
 ### Embedded source: `HANDOFF.md`
 
-- Bytes: `9704`
+- Bytes: `9665`
 - Lines: `202`
-- SHA-256: `03b190ca755cbd2b066e63125d3fdf8e9f6b0401dff1bb7bc50b1c22870a703d`
+- SHA-256: `7ba8d02ffe15b27b57a44689ee441535d40aaee2e4507577865a93cabac69ebc`
 
 ~~~~~markdown
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 PDT
+**Date and local time:** 2026-07-08 22:07 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA before pending T15.3 commit:** `82412ef4753ba2bff4ea8e47d7cc52a13a0460ce`
-**Repository state:** dirty only with completed T15.3 adversarial hardening, tests, evidence, public threat-model updates, regenerated audit dossier, and synchronized governance
-**Current task:** T15.3 complete locally; commit pending
+**Completed T15.3 implementation SHA:** `7b64064ea01de77ab0876f3eb68977277d9b930c`
+**Repository state before this governance-finalization commit:** clean at the completed T15.3 implementation SHA
+**Current task:** T15.3 complete and locally committed; next task is the remaining T16 external/manual certification work
 **Last completed gate:** typecheck, 214/214 tests, build, ten-run transient-EPERM stress, exact 74-file map/dossier coverage, 22 embedded-source hash checks, 90-file package inspection, isolated tarball installation, supported secret scan, and empty Loom-owned residue scan
 **Pushed or published:** no
 
@@ -5612,12 +5618,12 @@ Loom-owned process residue: none
 ## Exact next command
 
 ```bash
-git add CHANGELOG.md EXTERNAL_AUDIT.md HANDOFF.md README.md REPO_MAP.md SPEC.md docs src test && git diff --cached --check && git commit -m "fix: harden adversarial security boundaries"
+cd /Users/aashu/loom && npm run certify -- --output /private/tmp/loom-t16-certification-report.json
 ```
 
 ## Next expected result
 
-A single clean T15.3 local commit with the regenerated 74-file audit dossier, 214/214 tests, unchanged 90-file public allowlist, exact hardened tarball evidence, no secrets or Loom-owned residue, and all external/manual certification gates still honestly blocked. No push, publication, or deployment.
+The deterministic collector should remain blocked with exit code 2 until real G5/G6/T16 evidence is supplied and human-reviewed. The next implementation agent should not change the T15.3 security behavior unless new verified evidence requires it. No push, publication, public tunnel deployment, or production-certification claim is authorized.
 ~~~~~
 
 ### Embedded source: `docs/release-evidence/README.md`

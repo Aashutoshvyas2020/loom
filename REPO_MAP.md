@@ -34,24 +34,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records T15.3 code-grounded adversarial triage, every verified fix/residual/false-positive class, the 214/214 full gate, transient-EPERM stress, and the 90-file hardened tarball SHA/install evidence.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Records the completed T15.3 implementation commit `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean post-commit state, and the governance-only finalization for T16 handoff.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated after T15.3 to include the hardened implementation, 74-file ledger, 214 static test declarations, adversarial evidence, residual-risk disclosures, and updated canonical documents; final dossier integrity and coverage gates pass.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Regenerated after the T15.3 implementation commit so the embedded changelog, handoff, repository map, 74-file inventory, 214-test inventory, and all 22 canonical-source hashes reflect the committed hardening state.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** T15.2 and T15.3.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records T15.3 scope, verified findings, exact tests/package evidence, real residual blockers, resulting commit candidate, and next command.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Records the completed T15.3 implementation SHA `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean state, exact evidence, remaining external blockers, and the next T16 certification command.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -72,8 +72,8 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Documents all 74 tracked T15.3 files and exact changed responsibilities; staged-tree comparison is required to be empty before commit.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Remains exhaustive for all 74 tracked files and records the T15.3 implementation SHA plus governance-only finalization state.
+- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.3.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
