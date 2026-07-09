@@ -167,7 +167,10 @@ async function readSnapshot(inputPath: string): Promise<FileSnapshot> {
 
     const canonicalPath = await realpath(resolvedPath);
     await assertNoSymlinkComponents(canonicalPath);
-    handle = await open(canonicalPath, constants.O_RDONLY | constants.O_NOFOLLOW);
+    handle = await open(
+      canonicalPath,
+      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+    );
     const before = await handle.stat({ bigint: true });
     if (!before.isFile()) {
       throw new FileToolError(`File reads require a regular file: ${resolvedPath}`);

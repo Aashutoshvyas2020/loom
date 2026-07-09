@@ -7,16 +7,18 @@ test('bounded output preserves stdout/stderr order and sanitizes terminal contro
   const output = new BoundedOutput(128);
 
   output.append('stdout', Buffer.from('\u001b[31mred\u001b[0m\u0001\n'));
+  output.append('stdout', Buffer.from('\u001b]52;c;U0VDUkVU\u0007safe\n'));
   output.append('stderr', Buffer.from('error\n'));
 
   const read = output.read(0);
   assert.deepEqual(read.segments, [
     { source: 'stdout', text: 'red\n' },
+    { source: 'stdout', text: 'safe\n' },
     { source: 'stderr', text: 'error\n' },
   ]);
   assert.equal(read.requestedCursor, 0);
   assert.equal(read.availableFrom, 0);
-  assert.equal(read.nextCursor, 10);
+  assert.equal(read.nextCursor, 15);
   assert.equal(read.gap, false);
 });
 

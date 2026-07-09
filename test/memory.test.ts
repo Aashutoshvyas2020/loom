@@ -274,6 +274,40 @@ test('a symlinked memory root is rejected before any catalog generation is publi
   assert.deepEqual(service.getSnapshot().memories, []);
 });
 
+test('tombstone recovery refuses to remove a path replaced after verification', async () => {
+  const root = await tempRoot();
+  const memoryDirectory = path.join(root, 'memory');
+  await mkdir(memoryDirectory, { mode: 0o700 });
+  const tombstoneName = '.loom-delete-mem_replaced.tmp';
+  const tombstonePath = path.join(memoryDirectory, tombstoneName);
+  await writeFile(tombstonePath, 'original', { mode: 0o600 });
+
+  const audit = {
+    degraded: false,
+    async recordMutationStart() {
+      await rm(tombstonePath);
+      await writeFile(tombstonePath, 'replacement', { mode: 0o600 });
+      return {
+        operationId: 'replacement-race',
+        operation: 'memory.tombstone_cleanup',
+        startedAtMs: Date.now(),
+        timestamp: new Date().toISOString(),
+      };
+    },
+    async recordFinish() { return true; },
+    async recordRead() { return true; },
+  } as unknown as AuditLogger;
+  const service = new MemoryStoreService({ memoryDirectory, audit });
+  await service.rescan();
+  const snapshot = service.getSnapshot();
+
+  assert.equal(await readFile(tombstonePath, 'utf8'), 'replacement');
+  assert.equal(
+    snapshot.diagnostics.some((diagnostic) => diagnostic.code === 'tombstone_cleanup_failed'),
+    true,
+  );
+});
+
 test('invalid memory files are diagnosed and stale tombstones are safely recovered', async (t) => {
   const { memoryDirectory, audit, service } = await setupService();
   t.after(() => audit.close());

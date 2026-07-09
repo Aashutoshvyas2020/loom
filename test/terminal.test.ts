@@ -141,7 +141,7 @@ test('terminal audit is durable before launch and never stores command, environm
   }
 });
 
-test('audit failure blocks terminal start and cancel before process signaling while poll remains available', async (t) => {
+test('audit failure blocks terminal start but preserves cancellation and polling as safety operations', async (t) => {
   const { root, auditDirectory, audit, service } = await setup();
   t.after(async () => {
     await service.shutdown();
@@ -158,9 +158,10 @@ test('audit failure blocks terminal start and cancel before process signaling wh
     service.start({ command: `touch ${JSON.stringify(markerPath)}`, cwd: root }),
     AuditUnavailableError,
   );
-  await assert.rejects(service.cancel({ jobId: existingJobId }), AuditUnavailableError);
   const polled = await service.poll({ jobId: existingJobId, waitMs: 100 });
   assert.match(polled.content[0]?.type === 'text' ? polled.content[0].text : '', /poll-remains-available/);
+  const cancelled = await service.cancel({ jobId: existingJobId });
+  assert.equal(cancelled.structuredContent?.status, 'cancelled');
   await assert.rejects(stat(markerPath), /ENOENT/);
 });
 

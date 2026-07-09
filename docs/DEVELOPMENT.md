@@ -118,6 +118,8 @@ ps -axo pid,ppid,pgid,user,command \
 
 A machine may run unrelated Cloudflared infrastructure. Residue checks must identify Loom ownership rather than killing every process named `cloudflared`.
 
+Process-group cleanup covers ordinary descendants. Because `loom_terminal` is unrestricted, a target can deliberately call `setsid()` or create a new session and escape the owned PGID. T15.3 reproduced that behavior with a controlled child and cleaned it manually. Do not broaden the implementation claim to deliberate daemon escape unless the product scope changes to an actual sandbox or OS-level containment mechanism.
+
 ## State and secret handling
 
 Never place these in test output, fixtures committed to Git, audit metadata, screenshots, or documentation examples:
@@ -131,6 +133,10 @@ Never place these in test output, fixtures committed to Git, audit metadata, scr
 
 Use temporary directories and synthetic values. Tests that intentionally contain marker strings must assert those strings are absent from audit and structured metadata.
 
+## Filesystem durability assumptions
+
+Atomic replacement and parent-directory sync are designed and tested on the supported local macOS filesystem. Standard `fsync()` does not by itself establish complete power-loss durability on every Apple storage stack; Apple documents `F_FULLFSYNC` as the stronger request when hardware-cache flush is required. Loom v1 does not call `F_FULLFSYNC`, does not certify state roots on NFS/SMB/network mounts, and must not describe same-directory rename plus `fsync` as proof against sudden power loss. Tests cover process-level failure and atomic visibility, not storage-controller guarantees.
+
 ## Browser development
 
 `npm install` must not download Chromium. Use:
@@ -139,7 +145,7 @@ Use temporary directories and synthetic values. Tests that intentionally contain
 loom setup browser
 ```
 
-Browser tests use deterministic fake backends for public-tool policy and targeted real wrapper/CDP checks for executable verification and shutdown. Optional external smoke tests are not release gates unless the certification plan explicitly promotes them.
+Browser tests use deterministic fake backends for public-tool policy and targeted real wrapper/CDP checks for executable verification and shutdown. Optional external smoke tests are not release gates unless the certification plan explicitly promotes them. The browser profile is intentionally persistent; test fixtures and reviews must consider cookies and local storage as cross-run state rather than assuming a fresh security context.
 
 ## Cloudflare development
 
@@ -174,6 +180,12 @@ npm pack --dry-run
 ```
 
 Then install the tarball into a clean temporary prefix and test the installed `loom` command. Do not publish or push without explicit user instruction.
+
+## Adversarial-review discipline
+
+Treat external findings as hypotheses. Verify the actual code and pinned dependency before changing behavior. Record each finding as verified/fixed, verified/residual, false positive, or intentional scope. T15.3 examples include an actual unbounded SDK JSON-parser boundary and deliberate process-session escape, alongside disproven claims about CDP binding, OAuth entropy, job-ID randomness, config-backup mode, OSC 52 stripping, and Cloudflared launch re-verification.
+
+Security tests must cover the layer before schema validation, not just Zod handlers. Request-size limits belong before JSON parsing. Time-sensitive in-process safety deadlines use monotonic clocks; persisted OAuth expirations and human-readable timestamps remain wall-clock values by design.
 
 ## Evidence discipline
 

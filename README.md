@@ -190,6 +190,14 @@ The dashboard may write validated tunnel and extra-root settings for the next la
 
 Loom implements standard endpoint-bound OAuth and Streamable HTTP MCP. The protected resource is the exact public `/mcp` URL. Availability and naming of custom MCP/developer-mode controls are external to this repository and may differ by ChatGPT workspace or account. Do not claim successful ChatGPT integration until the real G5/G6 evidence in `docs/RELEASE_CERTIFICATION.md` has been collected.
 
+## Unrestricted-agent risk
+
+Loom authenticates the remote client; it does not make that client, its model, or the content it reads trustworthy. A browser page, local file, skill, or saved memory can contain prompt injection that persuades an authorized agent to call another Loom tool. Browser snapshots, file contents, terminal output, screenshots, skills, and memory returned through MCP may leave this Mac and be processed or retained by the authorized remote client or LLM provider.
+
+The dedicated persistent browser profile keeps cookies and logged-in sessions across Loom restarts. Loom memory also persists, and `loom auth reset` does not clear either one. HTTP navigation to localhost and the private network is allowed, so an authorized or manipulated client can reach services that trust local network position. Use a dedicated macOS account when possible, start Loom from a minimal environment, avoid logging sensitive accounts into its browser profile, and treat every tool result as untrusted content.
+
+Containment is local-only: the dashboard and foreground stop control bind to this Mac. There is no separate remote kill service. See the operator and security guides before enabling YOLO mode.
+
 ## Security and operations
 
 - [Operator guide](docs/OPERATOR.md)

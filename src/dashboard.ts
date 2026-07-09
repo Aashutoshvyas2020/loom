@@ -2,6 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import type { Server as HttpServer } from 'node:http';
+import { performance } from 'node:perf_hooks';
 
 import express, { type NextFunction, type Request, type Response } from 'express';
 
@@ -144,7 +145,7 @@ export class LoomDashboardServer {
   constructor(options: LoomDashboardServerOptions) {
     this.statusProvider = options.status;
     this.actions = options.actions;
-    this.now = options.now ?? Date.now;
+    this.now = options.now ?? (() => performance.now());
     this.nonceTtlMs = options.nonceTtlMs ?? DASHBOARD_BOOTSTRAP_NONCE_TTL_MS;
     this.sessionTtlMs = options.sessionTtlMs ?? DEFAULT_SESSION_TTL_MS;
     if (!Number.isSafeInteger(this.nonceTtlMs) || this.nonceTtlMs <= 0) {

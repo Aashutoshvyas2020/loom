@@ -4,9 +4,10 @@ This directory indexes sanitized evidence for release gates. It must never conta
 
 ## Deterministic local evidence
 
-Current local implementation evidence is recorded in `CHANGELOG.md` and `HANDOFF.md` for each task. T14 records the integrated runtime and stress gates. T15/T15.1 record the 204-test full suite, fail-closed certification boundary, 90-file public-only package, clean-prefix installation, installed CLI behavior, and empty delayed Loom-owned process scan.
+Current local implementation evidence is recorded in `CHANGELOG.md` and `HANDOFF.md` for each task. T14 records the integrated runtime and stress gates. T15/T15.1 record the 204-test full suite, fail-closed certification boundary, 90-file public-only package, clean-prefix installation, installed CLI behavior, and empty delayed Loom-owned process scan. T15.2 records the external audit dossier. T15.3 records code-grounded verification of the supplied adversarial reviews, fixes, residual risks, false positives, and controlled process experiments.
 
 - `t15-local-package.md` — candidate tarball hash, environment, package contents, clean-prefix install, installed executable checks, and fail-closed launch evidence.
+- `t15.3-adversarial-review.md` — consolidated adversarial finding classification, deterministic fixes, empirical output/session tests, and residual-risk disclosures.
 
 ## G5 — real Named Tunnel prerequisite
 

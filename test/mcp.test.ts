@@ -20,7 +20,14 @@ async function tempStateRoot(): Promise<string> {
   return stateRoot;
 }
 
-async function setupServer(options: { maxSessions?: number; sessionIdleMs?: number } = {}) {
+async function setupServer(options: {
+  maxSessions?: number;
+  sessionIdleMs?: number;
+  maxRequestBytes?: number;
+  authorizationAttemptLimit?: number;
+  authorizationAttemptWindowMs?: number;
+  monotonicNow?: () => number;
+} = {}) {
   const stateRoot = await tempStateRoot();
   const opened = await AuthStore.open(stateRoot);
   assert.ok(opened.ownerPassword);
@@ -28,6 +35,14 @@ async function setupServer(options: { maxSessions?: number; sessionIdleMs?: numb
     authStore: opened.store,
     ...(options.maxSessions === undefined ? {} : { maxSessions: options.maxSessions }),
     ...(options.sessionIdleMs === undefined ? {} : { sessionIdleMs: options.sessionIdleMs }),
+    ...(options.maxRequestBytes === undefined ? {} : { maxRequestBytes: options.maxRequestBytes }),
+    ...(options.authorizationAttemptLimit === undefined
+      ? {}
+      : { authorizationAttemptLimit: options.authorizationAttemptLimit }),
+    ...(options.authorizationAttemptWindowMs === undefined
+      ? {}
+      : { authorizationAttemptWindowMs: options.authorizationAttemptWindowMs }),
+    ...(options.monotonicNow === undefined ? {} : { monotonicNow: options.monotonicNow }),
     dispatcher: async (name, args) => ({
       content: [{ type: 'text', text: `${name}:${JSON.stringify(args)}` }],
     }),
@@ -111,6 +126,28 @@ test('MCP remains deterministically NOT_READY before public endpoint binding', a
   assert.equal(server.sessionCount, 0);
 });
 
+test('MCP JSON parsing rejects oversized bodies before SDK or tool-schema handling', async (t) => {
+  const { server } = await setupServer({ maxRequestBytes: 256 });
+  t.after(() => server.close());
+  await server.bindPublicEndpoint('https://loom.example.com/mcp');
+
+  const response = await fetch(server.mcpUrl, {
+    method: 'POST',
+    headers: {
+      accept: 'application/json, text/event-stream',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ ...initializeBody(), padding: 'x'.repeat(512) }),
+  });
+  assert.equal(response.status, 413);
+  assert.deepEqual(await response.json(), {
+    jsonrpc: '2.0',
+    error: { code: -32006, message: 'MCP request body exceeds 256 bytes' },
+    id: null,
+  });
+  assert.equal(server.sessionCount, 0);
+});
+
 test('bound server publishes exact metadata and an unauthenticated MCP challenge', async (t) => {
   const { server } = await setupServer();
   t.after(() => server.close());
@@ -156,6 +193,57 @@ test('bound server publishes exact metadata and an unauthenticated MCP challenge
     response.headers.get('www-authenticate'),
     'Bearer error="invalid_token", error_description="Missing Authorization header", scope="loom:tools", resource_metadata="https://loom.example.com/.well-known/oauth-protected-resource/mcp"',
   );
+});
+
+test('owner-password authorization attempts are globally bounded by a monotonic window', async (t) => {
+  let monotonic = 100;
+  const { server, ownerPassword } = await setupServer({
+    authorizationAttemptLimit: 2,
+    authorizationAttemptWindowMs: 1_000,
+    monotonicNow: () => monotonic,
+  });
+  t.after(() => server.close());
+  const resource = 'https://loom.example.com/mcp';
+  await server.bindPublicEndpoint(resource);
+  const registration = await fetch(`${server.origin}/oauth/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      client_name: 'rate-limit-test',
+      redirect_uris: ['https://client.example/callback'],
+      scope: 'loom:tools',
+    }),
+  }).then(async (response) => response.json() as Promise<{ client_id: string; redirect_uris: string[] }>);
+  const verifier = 'r'.repeat(64);
+  const authorizeUrl = new URL(`${server.origin}/oauth/authorize`);
+  authorizeUrl.search = new URLSearchParams({
+    response_type: 'code',
+    client_id: registration.client_id,
+    redirect_uri: registration.redirect_uris[0]!,
+    scope: 'loom:tools',
+    code_challenge: AuthStore.pkceChallenge(verifier),
+    code_challenge_method: 'S256',
+    resource,
+  }).toString();
+  const html = await fetch(authorizeUrl).then((response) => response.text());
+  const transactionId = /name="transaction_id" value="([^"]+)"/.exec(html)?.[1];
+  assert.ok(transactionId);
+
+  const attempt = (password: string) => fetch(`${server.origin}/oauth/authorize`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ transaction_id: transactionId, owner_password: password }),
+  });
+  assert.equal((await attempt('wrong-one')).status, 403);
+  assert.equal((await attempt('wrong-two')).status, 403);
+  const limited = await attempt(ownerPassword);
+  assert.equal(limited.status, 429);
+  assert.equal(limited.headers.get('retry-after'), '1');
+
+  monotonic += 1_001;
+  const accepted = await attempt(ownerPassword);
+  assert.equal(accepted.status, 302);
 });
 
 test('standard HTTP OAuth registration, authorization, exchange, refresh, and revocation work', async (t) => {

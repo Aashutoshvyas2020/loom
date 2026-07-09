@@ -34,25 +34,25 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records T0–T15.2, including the clean-prefix package SHA, certification trust corrections, the audit-dossier RED/GREEN cycle, final repository gates, and remaining real G5/G6/T16 boundaries.
-- **Last meaningful change:** T15.2 external-audit dossier and validation evidence, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.2.
+- **Evidence:** Records T15.3 code-grounded adversarial triage, every verified fix/residual/false-positive class, the 214/214 full gate, transient-EPERM stress, and the 90-file hardened tarball SHA/install evidence.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.3.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** The generated dossier represents 73 files, all 205 static test declarations, the exact source/export surface, and verbatim governing documents; its targeted test passes, the full suite passes 205/205, package dry run remains 90 public files with the dossier excluded, and supported secret/residue scans are empty.
-- **Last meaningful change:** T15.2 external expert audit dossier, 2026-07-08.
-- **Owning task or gate:** T15.2.
+- **Evidence:** Regenerated after T15.3 to include the hardened implementation, 74-file ledger, 214 static test declarations, adversarial evidence, residual-risk disclosures, and updated canonical documents; final dossier integrity and coverage gates pass.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T15.2 and T15.3.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the T15.2 dossier scope, required RED, targeted and full GREEN, 73-file coverage, unchanged 90-file package boundary, supported secret/residue checks, exact dirty scope, external blockers, and the candidate commit command.
-- **Last meaningful change:** T15.2 external-audit handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.2.
+- **Evidence:** Records T15.3 scope, verified findings, exact tests/package evidence, real residual blockers, resulting commit candidate, and next command.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.3.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
 - **Success check:** Valid MIT license text with copyright attribution.
@@ -65,29 +65,29 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Public package overview, safety warning, supported commands, setup, tunnel/browser behavior, and documentation links.
 - **Success check:** Matches the implemented CLI and trust boundary without claiming real ChatGPT or production certification.
 - **Current assessment:** PASS
-- **Evidence:** Executable documentation tests validate the public commands and required safety language; full suite passes 204/204.
-- **Last meaningful change:** T15 public README expansion, 2026-07-08.
-- **Owning task or gate:** T15 packaging and documentation.
+- **Evidence:** Public overview now warns that untrusted tool content can prompt-inject the authorized agent, MCP results leave the Mac, browser/memory state persists, localhost/private-network access is allowed, and containment is local-only.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T15 and T15.3.
 ### `REPO_MAP.md`
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** T15.2 documents the repository-only audit dossier and all affected governance/test files; final staged-tree comparison covers 73 tracked paths with no difference.
-- **Last meaningful change:** T15.2 audit-dossier map update, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.2.
+- **Evidence:** Documents all 74 tracked T15.3 files and exact changed responsibilities; staged-tree comparison is required to be empty before commit.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.3.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
 - **Success check:** Matches the canonical plan and prevents deterministic tooling or self-reported manifests from substituting for real external certification.
 - **Current assessment:** PASS
-- **Evidence:** Locks `loom-certify` as schema/hash/deterministic evidence only, requires human review for G5–G7, and adds its packaged CLI to the command contract.
-- **Last meaningful change:** T15.1 fail-closed certification trust boundary, 2026-07-08.
-- **Owning task or gate:** T0 / G0 and every behavior-changing task.
+- **Evidence:** Locks the body limit, authorization throttling, scrypt migration, refresh-family lifetime, monotonic/bounded watchdog behavior, macOS alias/nonblocking read policy, safety-action audit exception, tombstone/OSC checks, and explicit residual risks.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.3.
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, explicit recovery subtasks, governance gates, and external-evidence boundaries.
 - **Current assessment:** PASS
-- **Evidence:** Adds T15.2 for the user-requested repository-only audit dossier, exact inventories, verbatim governing-document snapshots, executable coverage checks, and unchanged runtime/package scope.
-- **Last meaningful change:** T15.2 plan amendment, 2026-07-08.
+- **Evidence:** Adds T15.3 for code-grounded adversarial verification, concrete hardening, residual-risk disclosure, deterministic regressions, dossier regeneration, and unchanged external certification blockers.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 ### `NOTICE`
 - **Purpose:** Distribution notice for Loom and third-party software/trademarks.
@@ -100,30 +100,30 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Developer workflow, architecture, validation, security boundaries, and unsupported-claim guidance.
 - **Success check:** Matches the implemented task/gate workflow and does not replace external evidence with local tests.
 - **Current assessment:** PASS
-- **Evidence:** Included in executable documentation tests and the public package; full suite passes 204/204.
-- **Last meaningful change:** T15 public development guide, 2026-07-08.
-- **Owning task or gate:** T15 packaging and documentation.
+- **Evidence:** Documents deliberate session escape, APFS/F_FULLFSYNC and local-filesystem durability limits, persistent browser state, code-grounded review discipline, and pre-schema request-boundary testing.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T15 and T15.3.
 ### `docs/OPERATOR.md`
 - **Purpose:** Supported installation, configuration, launch, dashboard, shutdown, recovery, and diagnostic guide for the single macOS owner.
 - **Success check:** Lists only real commands and accurately states the full-access, TTY, owner-password, tunnel, browser, and cleanup boundaries.
 - **Current assessment:** PASS
-- **Evidence:** Executable documentation tests pass; included in the clean-prefix package.
-- **Last meaningful change:** T15 operator guide, 2026-07-08.
-- **Owning task or gate:** T15 packaging and documentation.
+- **Evidence:** Adds TCC, minimal-environment/login-shell guidance, prompt-injection/provider disclosure, persistent profile and artifact handling, terminal-scrollback caution, local-only containment, and complete incident review beyond auth reset.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T15 and T15.3.
 ### `docs/RELEASE_CERTIFICATION.md`
 - **Purpose:** Public distinction between deterministic readiness, production eligibility, and real externally reviewed certification.
 - **Success check:** Documents G5/G6/T16 evidence, forbidden claims, and that `loom-certify` cannot prove external events or independently certify.
 - **Current assessment:** PASS
-- **Evidence:** Documentation test requires human-review, does-not-prove, and exit-code-2 language; included in package.
-- **Last meaningful change:** T15/T15.1 release certification guide, 2026-07-08.
-- **Owning task or gate:** T15, T15.1, G5–G7, and T16.
+- **Evidence:** Requires exact tarball hash and independent artifact verification, states the absence of an out-of-band trust root, and forbids claims about prompt injection, deliberate process escape, forensic audit, or automatic persistent-state cleanup.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T15, T15.1, T15.3, G5–G7, and T16.
 ### `docs/SECURITY.md`
 - **Purpose:** Public security model for unrestricted tools, OAuth, process ownership, files, browser, tunnels, dashboard, state, audit, and incident response.
 - **Success check:** Matches the approved trust boundary and explicitly identifies non-goals and same-user limitations.
 - **Current assessment:** PASS
-- **Evidence:** Executable documentation tests pass; included in the clean-prefix package.
-- **Last meaningful change:** T15 public security model, 2026-07-08.
-- **Owning task or gate:** T15 packaging and documentation.
+- **Evidence:** Expanded threat model covers authorized-agent prompt injection, provider disclosure, persistent browser/memory, sole-factor/throttling limits, deliberate session escape, TCC, LAN pivoting, inherited login-shell secrets, local-only containment, and non-forensic audit.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T15 and T15.3.
 ### `docs/certification-evidence.example.json`
 - **Purpose:** Sanitized strict example manifest for optional G5–G7 artifact-integrity validation.
 - **Success check:** Uses current pinned arm64 Cloudflared/Chromium metadata, contains no secrets, omits optional Quick evidence, and cannot cause automatic certification.
@@ -135,9 +135,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Private-repository index and sanitization rules for deterministic and real external release evidence.
 - **Success check:** Lists current T15 local evidence, required future G5/G6/clean-Mac artifacts, forbidden secrets, and human-review requirement.
 - **Current assessment:** PASS
-- **Evidence:** Indexes the T15 package record and keeps G5/G6/T16 explicitly not certified.
-- **Last meaningful change:** T15/T15.1 evidence index, 2026-07-08.
-- **Owning task or gate:** T15/T15.1, G5–G7, and T16.
+- **Evidence:** Indexes the T15.3 adversarial verification record while preserving all G5/G6/clean-Mac gates as not yet certified.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T15–T16 and G5–G7.
 ### `docs/release-evidence/t15-local-package.md`
 - **Purpose:** Sanitized deterministic record of the T15 candidate tarball and clean-prefix installation.
 - **Success check:** Records environment, exact commands/results, package hash/size, installed binaries/assets, fail-closed launches, cleanup, and explicit external limitations.
@@ -145,6 +145,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Evidence:** Records SHA-256 `3711d511bf530ec3d834b4a021d960cbb001af43c126c850069640bfd7f7a549`, 90 files, 204/204 tests, and no state creation.
 - **Last meaningful change:** T15 local package evidence, 2026-07-08.
 - **Owning task or gate:** T15 packaging and documentation.
+
+### `docs/release-evidence/t15.3-adversarial-review.md`
+- **Purpose:** Sanitized code-grounded classification of the five supplied adversarial audits, including verified fixes, verified residual risks, false positives, intentional scope tradeoffs, and controlled local experiments.
+- **Success check:** Contains no secrets or simulated external evidence; every fixed claim names a regression, every residual risk is disclosed in public docs, and G5–G7 remain explicitly blocked.
+- **Current assessment:** PASS
+- **Evidence:** Records MCP/body/auth/scrypt/refresh/watchdog/path/read/cancel/tombstone/clock fixes, 64 MiB output and deliberate-session-escape experiments, false-positive evidence, and package/full-suite requirements.
+- **Last meaningful change:** T15.3 adversarial verification evidence, 2026-07-08.
+- **Owning task or gate:** T15.3 and T16.
 
 ### `package-lock.json`
 - **Purpose:** Reproducible exact npm dependency graph.
@@ -219,9 +227,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Detached process-group leader that receives launch data only over IPC, starts targets with ignored stdin, forwards separate output streams, flushes lifecycle IPC in order, and independently watches parent identity.
 - **Success check:** Wrapper and target share one dedicated PGID; `ready` is delivered before a fast target `exit`/disconnect; startup errors flush before disconnect; duplicate finish paths are suppressed; missed heartbeat or parent-identity mismatch triggers whole-group TERM then KILL cleanup.
 - **Current assessment:** PASS
-- **Evidence:** Twenty rapid zero-work targets complete without losing readiness; forced-parent-SIGKILL removes wrapper, target, and grandchild; five terminal stress runs and the full 167-test suite leave no matching processes.
-- **Last meaningful change:** T13.1 fast-target IPC ordering hardening, 2026-07-08.
-- **Owning task or gate:** T2 / G2 and T13.1; reused for terminal, Cloudflared, and Chromium.
+- **Evidence:** Uses monotonic heartbeat age and serializes bounded parent-identity probes; confirmed mismatch cleans immediately while transient unobservability with healthy heartbeats no longer causes false orphan cleanup. Rapid exit, parent-death, EPERM, and full suites pass.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T2, T13.1, and T15.3.
 
 ### `src/cli.ts`
 - **Purpose:** Executable command boundary for version/help, explicit foreground YOLO launch, browser setup, configuration management, and owner-credential rotation.
@@ -251,41 +259,41 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Single source of truth for all fixed Loom v1 byte, time, count, retry, and shutdown limits.
 - **Success check:** Every exported value exactly matches plan Section 8 and boundary tests import the production constants.
 - **Current assessment:** PASS
-- **Evidence:** `test/limits.test.ts` passes and verifies all 36 approved constants, including twelve T13.1 command/environment/poll/wait/timeout/retention/job-ID limits.
-- **Last meaningful change:** T13.1 terminal limit additions, 2026-07-08.
-- **Owning task or gate:** T1 / G2, T13, T13.1, and later consumers.
+- **Evidence:** Adds the 9 MiB MCP request limit, ten-attempt/60-second authorization window, and two-second watchdog command timeout; exact 40-constant ledger test passes.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T1, T13.1, and T15.3.
 
 ### `src/process-manager.ts`
 - **Purpose:** Launches wrapper-owned detached process groups, streams bounded output, sends heartbeats, validates ownership, manages startup/exit races, timeout/cancellation, and TERM-to-KILL shutdown deadlines.
 - **Success check:** Real processes have no PTY/stdin; wrapper exit before readiness rejects immediately; exit events between readiness and managed construction are preserved; natural exit/cancellation clean descendants; transient `EPERM` is revalidated; persistent `EPERM` fails closed; forced manager death is recovered; and no test descendants remain.
 - **Current assessment:** PASS
-- **Evidence:** T14 exposes read-only `activeCount` for deterministic runtime cleanup/deadline ownership checks; prior 13/13 process/watchdog and 40/40 terminal stress evidence remains green, and the full suite now passes 185/185.
-- **Last meaningful change:** T14 runtime cleanup visibility, 2026-07-08.
-- **Owning task or gate:** T2 / G2, T12.1, T13.1, and T14.
+- **Evidence:** Owned-group TERM/KILL and EPERM retry deadlines now use monotonic time; process-manager and ten-run transient-EPERM stress pass.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T2, T12.1, T13.1, T14, and T15.3.
 
 ### `src/runtime.ts`
 - **Purpose:** T11 readiness plus T14 exclusive foreground lifecycle, production component assembly, lock/state ownership, status, signals, dashboard actions, and reverse cleanup.
 - **Success check:** Builds all seven handlers; acquires an identity-bound exclusive lock before audit; starts MCP NOT_READY/dashboard/catalogs/browser/tunnel in order; publishes exact `/mcp` once; supports verified browser or missing/corrupt-manifest degraded mode and pinned Quick/Named tunnel without fallback; opens the authenticated local dashboard by default; handles explicit/dashboard/signal stops; enforces a real 15-second per-step deadline; terminates public listeners/process groups; and removes exact readiness state plus lock only after content/identity ownership and cleanup certainty.
 - **Current assessment:** PASS
-- **Evidence:** Runtime target passes 18/18, combined T14 target passes 49/49, five runtime runs pass 90/90, full suite passes 185/185, and post-stress Loom-owned process/listener scans are empty.
-- **Last meaningful change:** T14 full foreground runtime and default production assembly, 2026-07-08.
-- **Owning task or gate:** T11 and T14; consumed by T15/T16 and real G5/G6 certification.
+- **Evidence:** Runtime shutdown uses monotonic deadline arithmetic and lock creation explicitly uses O_CREAT|O_EXCL|O_NOFOLLOW; integrated lifecycle and lock tests pass.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T11, T14, and T15.3.
 
 ### `src/mcp.ts`
 - **Purpose:** Loopback-only Streamable HTTP MCP and OAuth HTTP server with deterministic readiness, endpoint-bound bearer authentication, server-bound authorization transactions, token routes, and bounded client-bound sessions.
 - **Success check:** Authorization GET stores the request server-side; POST accepts only transaction ID and owner password; replay/substitution fail; strict CSP/frame/no-store headers apply; SDK metadata strings are normalized without `any`; sessions and readiness remain bounded.
 - **Current assessment:** PASS
-- **Evidence:** Targeted MCP/OAuth tests pass 15/15 and the full tracked suite passes 64/64.
-- **Last meaningful change:** T5 authorization-boundary recovery, 2026-07-08.
-- **Owning task or gate:** T5; consumed by runtime/tunnel integration and later concrete tool handlers.
+- **Evidence:** Bounds MCP JSON before SDK parsing, preserves SDK localhost Host validation, limits OAuth metadata bodies, returns structured 413/parse errors, rate-limits owner authorization monotonically, and tracks session idleness monotonically. MCP target passes.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T5 and T15.3.
 
 ### `src/oauth.ts`
 - **Purpose:** Persistent single-owner credentials and endpoint-bound OAuth clients, authorization transactions/codes, access/refresh tokens, revocation, metadata, and endpoint-generation state.
 - **Success check:** Exact endpoint/generation bindings remain atomic; `revokeAllOAuth` increments generation and clears clients/codes/tokens while preserving the canonical endpoint and owner credential; owner reset remains the only password rotation path.
 - **Current assessment:** PASS
-- **Evidence:** Nine OAuth tests pass, including T14 dashboard revocation that invalidates an issued token, preserves endpoint/password, and permits fresh registration; the 45-test T14 target is green.
-- **Last meaningful change:** T14 owner-preserving revoke-all dashboard action, 2026-07-08.
-- **Owning task or gate:** T4, T5, and T14.
+- **Evidence:** New owner hashes use scrypt N=32768/r8/p3 with explicit memory, successful legacy verification upgrades atomically, and refresh rotation preserves one absolute 30-day family expiration. OAuth/MCP suites pass.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T4, T5, T14, and T15.3.
 
 ### `src/output.ts`
 - **Purpose:** Ordered bounded terminal-output storage with sanitization, binary suppression, head/tail retention, cursor pagination, gap detection, and terminal state.
@@ -299,9 +307,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Parse absolute or `~/` user paths, reject malformed input, and prevent writes through existing symbolic-link components.
 - **Success check:** Rejects empty, relative, alternate-home, NUL, malformed-Unicode, symlink-parent, symlink-final, and non-directory-intermediate paths while allowing a missing tail under real directories.
 - **Current assessment:** PASS
-- **Evidence:** `test/paths.test.ts` passes 4/4 against real temporary files and symlinks on macOS.
-- **Last meaningful change:** T1 path-policy foundation, 2026-07-08.
-- **Owning task or gate:** T1; reused by T6, T7, T9, and runtime state.
+- **Evidence:** Canonicalizes only macOS /tmp and /var compatibility aliases to /private paths while retaining strict rejection of all other mutation symlinks; path and full suites pass.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T1 and T15.3.
 
 ### `test/audit.test.ts`
 - **Purpose:** Real-filesystem proof for durable starts, 0700/0600 permissions, queue saturation, deadline failure, disk failure, serialized rotation, retention, read availability, finish duration, and redaction.
@@ -323,9 +331,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Deterministic and real-local boundary tests for pinned setup, wrapper-owned launch, install rollback, browser locks, artifacts, audit policy, validation, dispatch, graceful shutdown, and per-tab recovery.
 - **Success check:** Proves exact hashes and symlink rejection, CWD-independent official-CDN installer arguments, CDP readiness cleanup, stale-lock identity rules, no-overwrite downloads, audit secrecy/fail-closed behavior, all actions, bounded snapshot/evaluate recovery, natural shutdown, and cancellation fallback.
 - **Current assessment:** PASS
-- **Evidence:** Targeted browser suite passes 19/19; real external evidence additionally proves pinned arm64 setup and profile persistence across controlled restarts.
-- **Last meaningful change:** T9 browser RED/GREEN and real-browser debugging, 2026-07-08.
-- **Owning task or gate:** T9 / G4.
+- **Evidence:** Proves audit degradation blocks capability-increasing browser work but not tab close/read-only actions; full browser target remains green.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T9 and T15.3.
 
 ### `test/certification-cli.test.ts`
 - **Purpose:** CLI-level blocked/fail semantics, strict evidence flow, help side-effect, and npm package-bin symlink regressions.
@@ -354,9 +362,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Deterministic acquisition/verification plus Quick and Named Tunnel parser, trust, lifecycle, retry, audit, OAuth, status, and cleanup tests.
 - **Success check:** Retains T10/T12 checks and proves named certificate/credential validation, exact direct argv, registration gating, hidden pre-ready status, bounded transient-only retries, no fallback, per-attempt revalidation, cleanup fail-closed behavior, prompt stop cancellation, audit secrecy/order, stable endpoint generation, and owner-password persistence.
 - **Current assessment:** PASS
-- **Evidence:** Targeted Cloudflared suite passes 30/30; combined T13 Cloudflare/config/limits target passes 38/38; full tracked suite passes 158/158 with no delayed Loom-owned process residue. The unrelated DevSpace Cloudflared tunnel is explicitly excluded.
-- **Last meaningful change:** T13 Named Tunnel adversarial RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T10, T12, and T13.
+- **Evidence:** Adds a bounded 256 KiB hostile Quick Tunnel parser case while retaining all acquisition, Quick, Named, retry, OAuth, and cleanup coverage.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T10, T12, T13, and T15.3.
 
 ### `test/config.test.ts`
 - **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, full identity matching, and named-tunnel config canonicalization.
@@ -370,9 +378,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Locks every centralized Loom v1 limit to the approved specification.
 - **Success check:** Exact value comparison passes without duplicating runtime logic.
 - **Current assessment:** PASS
-- **Evidence:** One exact-object test verifies all 36 constants, including twelve T13.1 terminal bounds; combined T13.1 target passes 19/19 and full suite passes 167/167.
-- **Last meaningful change:** T13.1 terminal limit contract, 2026-07-08.
-- **Owning task or gate:** T1, T13, and T13.1.
+- **Evidence:** Locks all 40 current limits including request, authorization, and watchdog bounds.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T1, T13.1, and T15.3.
 
 ### `public/dashboard.css`
 - **Purpose:** Minimal responsive styling for the authenticated loopback dashboard without inline CSS.
@@ -402,33 +410,33 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Loopback-only dashboard HTTP server with one-time bootstrap, bounded sessions, exact Host/Origin validation, CSRF, strict headers, recursive redaction, and allowlisted actions.
 - **Success check:** Nonces are single-use/expiring; cookies are HttpOnly SameSite=Strict; all pages/APIs require a session; mutations require exact Origin and CSRF; hostile Host and unknown actions fail.
 - **Current assessment:** PASS
-- **Evidence:** `test/dashboard.test.ts` passes 2/2; full tracked suite passes 99/99.
-- **Last meaningful change:** T8 secure dashboard, 2026-07-08.
-- **Owning task or gate:** T8.
+- **Evidence:** Production nonce/session lifetimes now default to monotonic time; wall-clock-jump regression and all dashboard security tests pass.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T8 and T15.3.
 
 ### `src/tools/browser.ts`
 - **Purpose:** Public `loom_browser` validation, audit policy, bounded result shaping, image return, typed error preservation, and dispatcher composition.
 - **Success check:** Accepts only approved actions/schemes/origins/permissions/bounds, audits every browser mutation before backend work without secret content, keeps reads available after audit degradation, and never statically loads Playwright.
 - **Current assessment:** PASS
-- **Evidence:** Browser tests cover every action, unsafe URLs/origins/tabs/permissions/bounds, audit failure, audit secrecy, typed backend errors, screenshots, and six-tool fallback dispatch.
-- **Last meaningful change:** T9 public browser tool boundary, 2026-07-08.
-- **Owning task or gate:** T9 / G4.
+- **Evidence:** Capability-increasing browser mutations remain audit-fail-closed while tab close is best-effort audited and remains available for containment during audit degradation.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T9 and T15.3.
 
 ### `src/tools/files.ts`
 - **Purpose:** Concrete bounded text/image/binary read, audited atomic write, exact audited edit, and dispatcher composition for the three public file tools.
 - **Success check:** Reads safely follow only a stable final symlink to a regular-file target, reject symlinked parents, detect image MIME by magic bytes, bound output, and hash the complete stable snapshot; writes/edits retain strict symlink rejection, audit-before-mutation, conflict detection, and atomic replacement.
 - **Current assessment:** PASS
-- **Evidence:** `test/files.test.ts` passes 11/11 and the full tracked suite passes 75/75.
-- **Last meaningful change:** T6 file-tool implementation and final-symlink correction, 2026-07-08.
-- **Owning task or gate:** T6.
+- **Evidence:** Stable read targets are opened O_NONBLOCK|O_NOFOLLOW before regular-file verification, preventing FIFO/device replacement from hanging the server; file suite passes.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T6 and T15.3.
 
 ### `src/tools/memory.ts`
 - **Purpose:** Loom-owned stable-ID memory store with deterministic search, audited save/delete, crash-recovered tombstones, bounded rescans, and dispatcher composition.
 - **Success check:** Save/delete are serialized and audited; stale valid tombstones are durably removed under audit; unsafe tombstones remain with diagnostics; malformed/oversized entries do not corrupt published snapshots; aggregate limits fail atomically.
 - **Current assessment:** PASS
-- **Evidence:** `test/memory.test.ts` passes 12/12; full tracked suite passes 97/97.
-- **Last meaningful change:** T7 memory store and tombstone recovery, 2026-07-08.
-- **Owning task or gate:** T7.
+- **Evidence:** Tombstone cleanup repeats symlink/type and full identity verification immediately before removal and retains a diagnostic on replacement; memory suite passes.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T7 and T15.3.
 
 ### `src/tools/skills.ts`
 - **Purpose:** Bounded deterministic multi-root SKILL.md discovery, metadata extraction, search/read, diagnostics, and dispatcher composition.
@@ -442,9 +450,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Concrete unrestricted but noninteractive terminal service and dispatcher using the sole static `/bin/sh -lc` ProcessManager adapter.
 - **Success check:** Validates centralized command/environment/cwd/timeout/job/poll bounds; canonicalizes safe cwd symlinks; audits start/cancel before mutation without sensitive bytes; returns stable job IDs and cursor lifecycle metadata with output only in MCP content; never evicts running jobs; awaits audit completion before finished-job eviction; and cancels every retained running process group on shutdown.
 - **Current assessment:** PASS
-- **Evidence:** `test/terminal.test.ts` passes 8/8 with real shell output, cwd/environment, degraded-audit poll, timeout, grandchild cancellation, idempotent cancel, retention, shutdown, validation, and dispatcher coverage; five consecutive runs pass 40/40 with no residue; the combined target passes 19/19 and full suite passes 167/167.
-- **Last meaningful change:** T13.1 terminal implementation recovery, 2026-07-08.
-- **Owning task or gate:** T13.1; consumed by T14 runtime orchestration.
+- **Evidence:** Terminal start remains audit-fail-closed while cancel is best-effort audited and remains available for containment; terminal/process suites pass with zero residue.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T13.1, T14, and T15.3.
 
 ### `src/tools/register.ts`
 - **Purpose:** Registers exactly seven public Loom MCP tools with strict Zod v4 action/path/size/URL schemas and an injected dispatcher.
@@ -458,41 +466,41 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** macOS process-table observation using `ps` plus canonical executable resolution using `lsof`, observable identity matching, and PGID membership scans.
 - **Success check:** Returns PID/PPID/PGID/start time/canonical executable, treats missing PIDs as absent, and rejects any PID/start/executable mismatch.
 - **Current assessment:** PASS
-- **Evidence:** `test/watchdog.test.ts` passes 3/3 against live macOS processes.
-- **Last meaningful change:** T2 watchdog identity completion, 2026-07-08.
-- **Owning task or gate:** T2 / G2; reused by runtime and browser lock recovery.
+- **Evidence:** All ps/lsof probes use fixed PATH/LANG/LC_ALL, bounded buffers, and a two-second SIGKILL timeout through one helper; live watchdog and timeout tests pass.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T2, T12.1, and T15.3.
 
 ### `test/dashboard.test.ts`
 - **Purpose:** Real HTTP tests for one-time bootstrap, cookies, strict headers, session/CSRF/Origin/Host boundaries, recursive redaction, and action allowlisting.
 - **Success check:** Replayed nonces, missing sessions, wrong Origin/CSRF/Host, leaked secrets, and unknown actions are all rejected deterministically.
 - **Current assessment:** PASS
-- **Evidence:** Two targeted tests pass; full tracked suite passes 99/99.
-- **Last meaningful change:** T8 dashboard RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T8.
+- **Evidence:** Adds a wall-clock-jump regression proving production dashboard bootstrap lifetime is monotonic; dashboard target passes 3/3.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T8 and T15.3.
 
 ### `test/docs.test.ts`
 - **Purpose:** Executable contract for real CLI commands, security/operating documentation, certification limitations, package metadata, and the repository-only external audit dossier.
 - **Success check:** Rejects stale commands/placeholders, requires the human-review/no-proof boundary, verifies the exact public package allowlist/bins, and requires the dossier’s mandatory sections, exact seven tools, gate boundary, and representation of every mapped tracked path.
 - **Current assessment:** PASS
-- **Evidence:** T15.2 required RED reproduced the missing dossier; targeted GREEN passes 1/1, all four documentation tests pass within the full 205/205 suite, and the generated dossier represents every mapped path.
-- **Last meaningful change:** T15.2 audit-dossier executable contract, 2026-07-08.
-- **Owning task or gate:** T15, T15.1, and T15.2.
+- **Evidence:** Adds executable requirements for prompt injection, persistent browser state, TCC, LAN/provider disclosure, local-only containment, non-forensic audit, process escape, minimal environment, F_FULLFSYNC limits, and artifact trust.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T15, T15.1, T15.2, and T15.3.
 
 ### `test/files.test.ts`
 - **Purpose:** Real-filesystem proof for stable/ranged reads, image magic bytes, explicit binary base64, stable final-symlink reads, parent/mutation symlink rejection, audited writes/edits, conflicts, concurrency, and dispatcher composition.
 - **Success check:** Final-link reads return target content without weakening writes or edits; parent symlinks fail; content never enters audit records; one concurrent expected-hash writer wins; no temporary residue remains.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite passes 11/11; full tracked suite passes 75/75.
-- **Last meaningful change:** T6 RED/GREEN cycle for file tools and approved symlink policy, 2026-07-08.
-- **Owning task or gate:** T6.
+- **Evidence:** Adds a real FIFO final-symlink regression with delayed writer and proves prompt regular-file rejection without blocking; file target passes.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T6 and T15.3.
 
 ### `test/memory.test.ts`
 - **Purpose:** Real-filesystem tests for persistent stable IDs, ranking, audit fail-closed behavior, delete conflicts, concurrency, limits, symlink safety, tombstone recovery, diagnostics, and dispatcher composition.
 - **Success check:** Valid stale tombstones are removed, unsafe tombstones remain diagnosed, aggregate limits are tested with individually valid files, and failed rescans preserve the prior immutable snapshot.
 - **Current assessment:** PASS
-- **Evidence:** Twelve targeted tests pass; full tracked suite passes 97/97.
-- **Last meaningful change:** T7 memory RED/GREEN and aggregate-limit repair, 2026-07-08.
-- **Owning task or gate:** T7.
+- **Evidence:** Adds an adversarial tombstone replacement during audit admission and proves the replacement is preserved with a cleanup diagnostic.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T7 and T15.3.
 
 ### `test/runtime.test.ts`
 - **Purpose:** T11 readiness plus T14 integrated real-local runtime, lock, signal, deadline, factory, degraded-browser, listener, process-group, and cleanup tests.
@@ -514,25 +522,25 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** End-to-end loopback HTTP and pinned-SDK tests for readiness, metadata, bearer challenges, server-bound OAuth authorization, revocation, seven tools, session ownership/capacity/expiry, endpoint lifecycle, and clean shutdown.
 - **Success check:** The authorization page contains only a transaction ID, has CSP and frame denial, ignores attacker-supplied POST parameters, rejects replay, and all existing transport/session behaviors remain green.
 - **Current assessment:** PASS
-- **Evidence:** Seven MCP tests pass; combined MCP/OAuth target passes 15/15; full tracked suite passes 64/64.
-- **Last meaningful change:** T5 authorization-boundary RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T5.
+- **Evidence:** Adds structured pre-SDK 413 and monotonic owner-password throttling regressions while retaining full OAuth/session/seven-tool behavior.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T5 and T15.3.
 
 ### `test/oauth.test.ts`
 - **Purpose:** State-level security tests for owner credentials, endpoint-bound OAuth, rotation/replay/expiry, reset, metadata, and owner-preserving revoke-all behavior.
 - **Success check:** Existing tokens fail after revoke-all, endpoint/password remain unchanged, fresh registration succeeds, and all prior exact binding/secret-at-rest checks remain.
 - **Current assessment:** PASS
-- **Evidence:** Target passes 9/9 and participates in the 49/49 T14 target and 185/185 full suite.
-- **Last meaningful change:** T14 revoke-all OAuth lifecycle test, 2026-07-08.
-- **Owning task or gate:** T4 and T14.
+- **Evidence:** Proves N=32768/r8/p3 creation, successful legacy-hash migration, and absolute refresh-family expiration in addition to all endpoint/token/reset behavior.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T4 and T15.3.
 
 ### `test/output.test.ts`
 - **Purpose:** Boundary tests for terminal stream ordering, sanitization, deterministic binary markers, exact truncation, cursor pagination, UTF-8 boundaries, and lifecycle states.
 - **Success check:** Stale cursors report gaps and pagination preserves source order without duplication or loss.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite reports 6 passed, 0 failed.
-- **Last meaningful change:** T2 output RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T2 / G2.
+- **Evidence:** Adds OSC 52 clipboard-control input and proves only safe text remains while retaining binary/truncation/cursor/lifecycle coverage.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T2 and T15.3.
 
 ### `test/process-manager.test.ts`
 - **Purpose:** Real-process proof for no PTY/stdin, dedicated groups, complete descendant cleanup, rapid natural-exit wrapper handshakes, hard-kill escalation, parent-death watchdog recovery, timeouts, and transient/persistent negative-PGID `EPERM` behavior.
@@ -546,25 +554,25 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Real-filesystem tests for user-path parsing and symbolic-link rejection.
 - **Success check:** Covers accepted absolute/home paths, hostile path strings, malformed surrogate pairs, missing tails, and real directory/file symlinks.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite passes 4/4 after canonicalizing macOS temporary roots through `realpath`.
-- **Last meaningful change:** T1 path-policy RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T1.
+- **Evidence:** Proves exact macOS /tmp and /var compatibility canonicalization without matching similarly prefixed paths, plus existing hostile path/symlink policy.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T1 and T15.3.
 
 ### `test/terminal.test.ts`
 - **Purpose:** Real-process and policy tests for the terminal service, static shell adapter, audit boundary, polling, cancellation, timeout, retention, shutdown, validation, and dispatcher.
 - **Success check:** Proves no PTY/stdin dependency; exact shell behavior; canonical symlink cwd and explicit environment; command/environment/cwd/output audit secrecy; poll availability during audit degradation; complete grandchild cleanup; completed-only eviction; all-running capacity rejection; and zero delayed residue.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite passes 8/8; terminal-plus-limits target passes 9/9; combined T13.1 target passes 19/19; five stress runs pass 40/40; full tracked suite passes 167/167.
-- **Last meaningful change:** T13.1 terminal RED/GREEN and stress cycle, 2026-07-08.
-- **Owning task or gate:** T13.1.
+- **Evidence:** Proves start stays blocked while poll and cancel remain usable after audit storage failure, with all timeout/descendant/retention/shutdown coverage green.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T13.1 and T15.3.
 
 ### `test/watchdog.test.ts`
 - **Purpose:** Live macOS tests for canonical executable identity, PID-reuse defenses, process-group scans, and absent PID handling.
 - **Success check:** Identity changes in PID, start time, or executable all fail matching.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite reports 3 passed, 0 failed.
-- **Last meaningful change:** T2 watchdog RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T2 / G2.
+- **Evidence:** Proves fixed C locale and hard timeout for watchdog subprocesses plus existing live identity/group behavior.
+- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Owning task or gate:** T2 and T15.3.
 
 ### `tsconfig.json`
 - **Purpose:** Strict NodeNext TypeScript compilation for source and tests.

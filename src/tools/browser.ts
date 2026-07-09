@@ -458,13 +458,23 @@ export class BrowserToolService {
 
   async close(input: { tabId: string }): Promise<CallToolResult> {
     const tabId = validateTabId(input.tabId);
-    return this.mutation('browser.close', { tabId }, async () => {
+    let receipt: AuditReceipt | undefined;
+    try {
+      receipt = await this.audit.recordMutationStart('browser.close', { tabId });
+    } catch {
+      // Closing a tab reduces remote capability and remains available when audit storage fails.
+    }
+    try {
       const result = await this.backend.close({ tabId });
       if (result.tabId !== tabId) {
         throw new BrowserToolError('Backend close result belongs to another tab.');
       }
+      if (receipt !== undefined) await finishAudit(this.audit, receipt, 'ok');
       return toolResult(`Closed browser tab ${tabId}.`, { tabId });
-    });
+    } catch (error) {
+      if (receipt !== undefined) await finishAudit(this.audit, receipt, 'error');
+      wrapBrowserError(error, 'browser.close');
+    }
   }
 
   async grantPermissions(input: {

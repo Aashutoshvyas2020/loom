@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { Server as HttpServer } from 'node:http';
 import { once } from 'node:events';
+import { performance } from 'node:perf_hooks';
 
 import { getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/sdk/server/auth/router.js';
-import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
+import { localhostHostValidation } from '@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
@@ -15,6 +16,11 @@ import express, {
   type Response,
 } from 'express';
 
+import {
+  AUTHORIZATION_ATTEMPT_LIMIT,
+  AUTHORIZATION_ATTEMPT_WINDOW_MS,
+  MAX_MCP_REQUEST_BYTES,
+} from './limits.js';
 import { AuthStore, OAuthError } from './oauth.js';
 import { registerLoomTools, type LoomToolDispatcher } from './tools/register.js';
 
@@ -30,6 +36,10 @@ export interface LoomMcpHttpServerOptions {
   dispatcher: LoomToolDispatcher;
   maxSessions?: number;
   sessionIdleMs?: number;
+  maxRequestBytes?: number;
+  authorizationAttemptLimit?: number;
+  authorizationAttemptWindowMs?: number;
+  monotonicNow?: () => number;
 }
 
 interface SessionRecord {
@@ -45,6 +55,9 @@ interface SessionRecord {
 interface RequiredServerOptions {
   maxSessions: number;
   sessionIdleMs: number;
+  maxRequestBytes: number;
+  authorizationAttemptLimit: number;
+  authorizationAttemptWindowMs: number;
 }
 
 const DEFAULT_MAX_SESSIONS = 32;
@@ -197,7 +210,9 @@ export class LoomMcpHttpServer {
   private readonly authStore: AuthStore;
   private readonly dispatcher: LoomToolDispatcher;
   private readonly options: RequiredServerOptions;
-  private readonly app = createMcpExpressApp({ host: '127.0.0.1' });
+  private readonly monotonicNow: () => number;
+  private readonly app = express();
+  private readonly authorizationAttempts: number[] = [];
   private readonly sessions = new Map<string, SessionRecord>();
   private readonly reaper: NodeJS.Timeout;
   private httpServer: HttpServer | undefined;
@@ -210,16 +225,33 @@ export class LoomMcpHttpServer {
   constructor(options: LoomMcpHttpServerOptions) {
     const maxSessions = options.maxSessions ?? DEFAULT_MAX_SESSIONS;
     const sessionIdleMs = options.sessionIdleMs ?? DEFAULT_SESSION_IDLE_MS;
-    if (!Number.isSafeInteger(maxSessions) || maxSessions <= 0) {
-      throw new McpHttpError('maxSessions must be a positive safe integer.');
-    }
-    if (!Number.isSafeInteger(sessionIdleMs) || sessionIdleMs <= 0) {
-      throw new McpHttpError('sessionIdleMs must be a positive safe integer.');
+    const maxRequestBytes = options.maxRequestBytes ?? MAX_MCP_REQUEST_BYTES;
+    const authorizationAttemptLimit = options.authorizationAttemptLimit
+      ?? AUTHORIZATION_ATTEMPT_LIMIT;
+    const authorizationAttemptWindowMs = options.authorizationAttemptWindowMs
+      ?? AUTHORIZATION_ATTEMPT_WINDOW_MS;
+    for (const [name, value] of [
+      ['maxSessions', maxSessions],
+      ['sessionIdleMs', sessionIdleMs],
+      ['maxRequestBytes', maxRequestBytes],
+      ['authorizationAttemptLimit', authorizationAttemptLimit],
+      ['authorizationAttemptWindowMs', authorizationAttemptWindowMs],
+    ] as const) {
+      if (!Number.isSafeInteger(value) || value <= 0) {
+        throw new McpHttpError(`${name} must be a positive safe integer.`);
+      }
     }
 
     this.authStore = options.authStore;
     this.dispatcher = options.dispatcher;
-    this.options = { maxSessions, sessionIdleMs };
+    this.monotonicNow = options.monotonicNow ?? (() => performance.now());
+    this.options = {
+      maxSessions,
+      sessionIdleMs,
+      maxRequestBytes,
+      authorizationAttemptLimit,
+      authorizationAttemptWindowMs,
+    };
     this.configureRoutes();
 
     const reaperInterval = Math.max(10, Math.min(1_000, Math.floor(sessionIdleMs / 2)));
@@ -343,6 +375,13 @@ export class LoomMcpHttpServer {
   }
 
   private configureRoutes(): void {
+    this.app.use(localhostHostValidation());
+    this.app.use(MCP_PATH, express.json({
+      limit: this.options.maxRequestBytes,
+      strict: true,
+      type: 'application/json',
+    }));
+    this.app.use(express.json({ limit: '64kb', strict: true }));
     this.app.use(express.urlencoded({ extended: false, limit: '64kb' }));
 
     this.app.get(PUBLIC_RESOURCE_METADATA_PATH, (request, response) => {
@@ -445,6 +484,9 @@ export class LoomMcpHttpServer {
         return;
       }
       setAuthorizationSecurityHeaders(response);
+      if (!this.consumeAuthorizationAttempt(response)) {
+        return;
+      }
       try {
         const body = request.body as Record<string, unknown>;
         const issued = await this.authStore.consumeAuthorizationTransaction({
@@ -547,6 +589,66 @@ export class LoomMcpHttpServer {
     this.app.all(MCP_PATH, (_request, response) => {
       jsonRpcError(response, 405, -32005, 'Method not allowed');
     });
+
+    this.app.use((error: unknown, request: Request, response: Response, next: NextFunction) => {
+      const bodyError = error as Error & { type?: string };
+      if (bodyError.type === 'entity.too.large') {
+        if (request.path === MCP_PATH) {
+          jsonRpcError(
+            response,
+            413,
+            -32006,
+            `MCP request body exceeds ${this.options.maxRequestBytes} bytes`,
+          );
+        } else {
+          response.status(413).json({
+            error: 'invalid_request',
+            error_description: 'Request body is too large.',
+          });
+        }
+        return;
+      }
+      if (bodyError instanceof SyntaxError) {
+        if (request.path === MCP_PATH) {
+          jsonRpcError(response, 400, -32700, 'Parse error: Invalid JSON');
+        } else {
+          response.status(400).json({
+            error: 'invalid_request',
+            error_description: 'Request body is invalid.',
+          });
+        }
+        return;
+      }
+      next(error);
+    });
+  }
+
+  private consumeAuthorizationAttempt(response: Response): boolean {
+    const now = this.monotonicNow();
+    if (!Number.isFinite(now) || now < 0) {
+      throw new McpHttpError('Monotonic authorization clock returned an invalid value.');
+    }
+    const cutoff = now - this.options.authorizationAttemptWindowMs;
+    while (this.authorizationAttempts.length > 0
+      && this.authorizationAttempts[0]! <= cutoff) {
+      this.authorizationAttempts.shift();
+    }
+    if (this.authorizationAttempts.length >= this.options.authorizationAttemptLimit) {
+      const retryMs = Math.max(
+        1,
+        this.authorizationAttempts[0]! + this.options.authorizationAttemptWindowMs - now,
+      );
+      response
+        .status(429)
+        .set('Retry-After', String(Math.ceil(retryMs / 1_000)))
+        .json({
+          error: 'temporarily_unavailable',
+          error_description: 'Too many owner-password authorization attempts.',
+        });
+      return false;
+    }
+    this.authorizationAttempts.push(now);
+    return true;
   }
 
   private requireReady(response: Response): boolean {
@@ -597,7 +699,7 @@ export class LoomMcpHttpServer {
             clientId,
             transport,
             server: mcpServer,
-            lastActivity: Date.now(),
+            lastActivity: this.monotonicNow(),
             activeRequests: 1,
             closing: false,
           });
@@ -618,7 +720,7 @@ export class LoomMcpHttpServer {
         if (sessionId !== undefined) {
           const record = this.sessions.get(sessionId);
           if (record !== undefined) {
-            record.lastActivity = Date.now();
+            record.lastActivity = this.monotonicNow();
           }
         }
       } catch (error) {
@@ -634,7 +736,7 @@ export class LoomMcpHttpServer {
           const record = this.sessions.get(sessionId);
           if (record !== undefined) {
             record.activeRequests = Math.max(0, record.activeRequests - 1);
-            record.lastActivity = Date.now();
+            record.lastActivity = this.monotonicNow();
           }
         }
       }
@@ -670,7 +772,7 @@ export class LoomMcpHttpServer {
         return;
       }
 
-      record.lastActivity = Date.now();
+      record.lastActivity = this.monotonicNow();
       record.activeRequests += 1;
       try {
         await record.transport.handleRequest(request, response, request.body);
@@ -678,7 +780,7 @@ export class LoomMcpHttpServer {
         const current = this.sessions.get(sessionId);
         if (current !== undefined) {
           current.activeRequests = Math.max(0, current.activeRequests - 1);
-          current.lastActivity = Date.now();
+          current.lastActivity = this.monotonicNow();
         }
       }
       if (forceClose && this.sessions.has(sessionId)) {
@@ -707,7 +809,7 @@ export class LoomMcpHttpServer {
   }
 
   private async reapInactiveSessions(): Promise<void> {
-    const cutoff = Date.now() - this.options.sessionIdleMs;
+    const cutoff = this.monotonicNow() - this.options.sessionIdleMs;
     const stale = [...this.sessions.values()]
       .filter((record) => record.activeRequests === 0 && record.lastActivity <= cutoff)
       .map((record) => record.id);

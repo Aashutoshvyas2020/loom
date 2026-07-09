@@ -130,6 +130,33 @@ test('external audit dossier is self-contained and represents every mapped track
   }
 });
 
+test('security and operator documents disclose adversarial content and residual unrestricted-agent risks', async () => {
+  const readme = await readDocument('README.md');
+  const operator = await readDocument('docs/OPERATOR.md');
+  const security = await readDocument('docs/SECURITY.md');
+  const development = await readDocument('docs/DEVELOPMENT.md');
+  const certification = await readDocument('docs/RELEASE_CERTIFICATION.md');
+
+  for (const required of [
+    /prompt injection/i,
+    /persistent browser/i,
+    /macOS TCC|Full Disk Access/i,
+    /localhost|private network/i,
+    /authorized remote client|LLM provider/i,
+    /local-only.*stop|physical access/i,
+    /not.*forensic|forensic.*not/i,
+    /process group.*escape|new session.*escape|setsid/i,
+  ]) {
+    assert.match(security, required);
+  }
+  assert.match(operator, /launch.*minimal.*environment|sensitive.*environment/i);
+  assert.match(operator, /auth reset.*does not.*memory|does not delete browser state/is);
+  assert.match(operator, /terminal scrollback|screen sharing/i);
+  assert.match(readme, /untrusted.*browser|prompt injection/is);
+  assert.match(development, /F_FULLFSYNC|power-loss durability/i);
+  assert.match(certification, /out-of-band|detached signature|artifact hash/i);
+});
+
 test('npm package metadata includes runtime assets, documentation, license, and notice', async () => {
   const packageJson = JSON.parse(await readDocument('package.json')) as {
     bin: Record<string, string>;

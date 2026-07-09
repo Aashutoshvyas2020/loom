@@ -1,11 +1,26 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, realpath, stat } from 'node:fs/promises';
+import { randomBytes, scrypt } from 'node:crypto';
+import { mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
 import { initializeState } from '../src/config.js';
 import { AuthStore, OAuthError } from '../src/oauth.js';
+
+async function scryptLegacy(password: string, salt: Buffer): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scrypt(password, salt, 32, {
+      N: 16_384,
+      r: 8,
+      p: 1,
+      maxmem: 64 * 1024 * 1024,
+    }, (error, derivedKey) => {
+      if (error !== null) reject(error);
+      else resolve(derivedKey as Buffer);
+    });
+  });
+}
 
 async function tempStateRoot(): Promise<string> {
   const parent = await realpath(await mkdtemp(path.join(tmpdir(), 'loom-oauth-')));
@@ -74,6 +89,59 @@ test('owner password is created once, scrypt-verified, private, and persistent a
   const raw = await readFile(path.join(stateRoot, 'auth.json'), 'utf8');
   assert.equal(raw.includes(first.ownerPassword), false);
   assert.match(raw, /"algorithm": "scrypt"/);
+  const parsed = JSON.parse(raw) as {
+    owner: { cost: number; blockSize: number; parallelization: number };
+  };
+  assert.deepEqual(parsed.owner, {
+    ...parsed.owner,
+    cost: 32_768,
+    blockSize: 8,
+    parallelization: 3,
+  });
+});
+
+test('successful owner authorization upgrades a legacy scrypt hash in place', async () => {
+  const stateRoot = await tempStateRoot();
+  const now = () => new Date('2026-07-08T07:00:00.000Z');
+  const first = await AuthStore.open(stateRoot, { now });
+  assert.ok(first.ownerPassword);
+  const authPath = path.join(stateRoot, 'auth.json');
+  const state = JSON.parse(await readFile(authPath, 'utf8')) as Record<string, unknown> & {
+    owner: Record<string, unknown>;
+  };
+  const salt = randomBytes(16);
+  const legacyHash = await scryptLegacy(first.ownerPassword, salt);
+  state.owner = {
+    algorithm: 'scrypt',
+    salt: salt.toString('base64'),
+    hash: legacyHash.toString('base64'),
+    keyLength: 32,
+    cost: 16_384,
+    blockSize: 8,
+    parallelization: 1,
+    createdAt: now().getTime(),
+  };
+  await writeFile(authPath, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
+
+  const reopened = await AuthStore.open(stateRoot, { now });
+  await reopened.store.bindEndpoint('https://loom.example.com/mcp');
+  const client = await registeredClient(reopened.store);
+  await reopened.store.issueAuthorizationCode({
+    clientId: client.clientId,
+    redirectUri: client.redirectUris[0]!,
+    scopes: ['loom:tools'],
+    resource: 'https://loom.example.com/mcp',
+    ownerPassword: first.ownerPassword,
+    codeChallenge: AuthStore.pkceChallenge('u'.repeat(64)),
+    codeChallengeMethod: 'S256',
+  });
+
+  const upgraded = JSON.parse(await readFile(authPath, 'utf8')) as {
+    owner: { cost: number; blockSize: number; parallelization: number };
+  };
+  assert.equal(upgraded.owner.cost, 32_768);
+  assert.equal(upgraded.owner.blockSize, 8);
+  assert.equal(upgraded.owner.parallelization, 3);
 });
 
 test('authorization code exchange issues endpoint-bound access and refresh tokens', async () => {
@@ -94,6 +162,30 @@ test('authorization code exchange issues endpoint-bound access and refresh token
   });
   assert.equal(principal.clientId, client.clientId);
   assert.deepEqual(principal.scopes, ['loom:tools']);
+});
+
+test('refresh-token rotation preserves one absolute family expiration', async () => {
+  let current = Date.parse('2026-07-08T07:00:00.000Z');
+  const now = () => new Date(current);
+  const { store, ownerPassword } = await configuredStore(now);
+  const client = await registeredClient(store);
+  const { tokens } = await authorizedTokens(store, ownerPassword!, client);
+
+  current += 29 * 24 * 60 * 60 * 1_000;
+  const rotated = await store.refreshAccessToken({
+    refreshToken: tokens.refreshToken,
+    clientId: client.clientId,
+    clientSecret: client.clientSecret,
+    resource: 'https://loom.example.com/mcp',
+  });
+
+  current += 2 * 24 * 60 * 60 * 1_000;
+  await assert.rejects(store.refreshAccessToken({
+    refreshToken: rotated.refreshToken,
+    clientId: client.clientId,
+    clientSecret: client.clientSecret,
+    resource: 'https://loom.example.com/mcp',
+  }), OAuthError);
 });
 
 test('codes are single-use and reject wrong verifier, redirect, resource, and client secret', async () => {

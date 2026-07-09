@@ -581,7 +581,7 @@ test('mutating browser actions are durably audited before backend calls without 
   assert.equal((await auditRecords(auditDirectory)).filter((record) => record.phase === 'start').length, 10);
 });
 
-test('audit failure blocks browser mutations and persisted screenshots while read-only status, tabs, and snapshots remain available', async (t) => {
+test('audit failure blocks capability-increasing browser mutations but preserves tab close and read-only actions', async (t) => {
   const { auditDirectory, audit } = await setupAudit();
   t.after(() => audit.close());
   const backend = new FakeBrowserBackend();
@@ -602,7 +602,8 @@ test('audit failure blocks browser mutations and persisted screenshots while rea
     service.evaluate({ tabId: backend.tab.id, expression: '1 + 1' }),
     AuditUnavailableError,
   );
-  await assert.rejects(service.close({ tabId: backend.tab.id }), AuditUnavailableError);
+  const closed = await service.close({ tabId: backend.tab.id });
+  assert.equal(closed.structuredContent?.tabId, backend.tab.id);
   await assert.rejects(service.screenshot({ tabId: backend.tab.id }), AuditUnavailableError);
 
   assert.equal((await service.status()).structuredContent?.running, true);
@@ -614,7 +615,7 @@ test('audit failure blocks browser mutations and persisted screenshots while rea
       : '',
     /private page text/,
   );
-  assert.deepEqual(backend.calls.map(([name]) => name), ['status', 'tabs', 'snapshot']);
+  assert.deepEqual(backend.calls.map(([name]) => name), ['close', 'status', 'tabs', 'snapshot']);
 });
 
 test('read results keep page/evaluation/screenshot content out of structured metadata and audit bytes', async (t) => {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, type ChildProcessByStdio } from 'node:child_process';
+import { performance } from 'node:perf_hooks';
 import type { Readable } from 'node:stream';
 
 import { inspectProcess, observableIdentityMatches, type ProcessObservation } from './watchdog.js';
@@ -28,7 +29,10 @@ let target: ChildProcessByStdio<null, Readable, Readable> | undefined;
 let started = false;
 let orphaning = false;
 let shuttingDown = false;
-let lastHeartbeat = Date.now();
+let lastHeartbeat = performance.now();
+let heartbeatIntervalMs = 1_000;
+let missedHeartbeatLimit = 3;
+let verificationInFlight = false;
 let heartbeatTimer: NodeJS.Timeout | undefined;
 let scanTimer: NodeJS.Timeout | undefined;
 let parentIdentity: StartMessage['parentIdentity'] | undefined;
@@ -84,34 +88,48 @@ function beginOrphanCleanup(reason: string): void {
   setTimeout(hardKillOwnGroup, softGraceMs);
 }
 
-async function parentStillMatches(): Promise<boolean> {
-  if (parentIdentity === undefined) {
-    return false;
-  }
+async function inspectParent(): Promise<'match' | 'mismatch' | 'unknown'> {
+  if (parentIdentity === undefined) return 'mismatch';
   try {
     const observed = await inspectProcess(parentIdentity.pid);
-    return observed !== null && observableIdentityMatches(parentIdentity, observed);
+    return observed !== null && observableIdentityMatches(parentIdentity, observed)
+      ? 'match'
+      : 'mismatch';
   } catch {
-    return false;
+    return 'unknown';
   }
 }
 
 async function verifyParent(reason: string): Promise<void> {
-  if (!await parentStillMatches()) {
-    beginOrphanCleanup(reason);
+  if (verificationInFlight || orphaning) return;
+  verificationInFlight = true;
+  try {
+    const result = await inspectParent();
+    if (result === 'mismatch') {
+      beginOrphanCleanup(reason);
+      return;
+    }
+    if (result === 'unknown'
+      && performance.now() - lastHeartbeat >= heartbeatIntervalMs * missedHeartbeatLimit) {
+      beginOrphanCleanup(`${reason}-identity-unavailable`);
+    }
+  } finally {
+    verificationInFlight = false;
   }
 }
 
 function installWatchdog(message: StartMessage): void {
   parentIdentity = message.parentIdentity;
   softGraceMs = message.softGraceMs;
-  lastHeartbeat = Date.now();
+  heartbeatIntervalMs = message.heartbeatIntervalMs;
+  missedHeartbeatLimit = message.missedHeartbeatLimit;
+  lastHeartbeat = performance.now();
 
   heartbeatTimer = setInterval(() => {
-    if (Date.now() - lastHeartbeat >= message.heartbeatIntervalMs * message.missedHeartbeatLimit) {
+    if (performance.now() - lastHeartbeat >= heartbeatIntervalMs * missedHeartbeatLimit) {
       void verifyParent('missed-heartbeats');
     }
-  }, message.heartbeatIntervalMs);
+  }, heartbeatIntervalMs);
 
   scanTimer = setInterval(() => {
     void verifyParent('process-table-fallback');
@@ -191,7 +209,7 @@ process.on('SIGTERM', handleTerminationSignal);
 process.on('SIGINT', handleTerminationSignal);
 process.on('message', (message: ParentMessage) => {
   if (message.type === 'heartbeat') {
-    lastHeartbeat = Date.now();
+    lastHeartbeat = performance.now();
     return;
   }
   if (message.type === 'start') {

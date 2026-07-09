@@ -13,7 +13,15 @@ import {
 test('resolveUserPath accepts only absolute paths or ~/ paths', () => {
   const home = '/Users/example';
 
-  assert.equal(resolveUserPath('/tmp/../tmp/file.txt', home), '/tmp/file.txt');
+  assert.equal(
+    resolveUserPath('/tmp/../tmp/file.txt', home),
+    process.platform === 'darwin' ? '/private/tmp/file.txt' : '/tmp/file.txt',
+  );
+  assert.equal(
+    resolveUserPath('/var/tmp/loom.txt', home),
+    process.platform === 'darwin' ? '/private/var/tmp/loom.txt' : '/var/tmp/loom.txt',
+  );
+  assert.equal(resolveUserPath('/tmp-like/file.txt', home), '/tmp-like/file.txt');
   assert.equal(resolveUserPath('~/Documents/file.txt', home), '/Users/example/Documents/file.txt');
 
   for (const input of ['', '.', 'relative/file.txt', '~', '~other/file.txt', 'foo\0bar']) {

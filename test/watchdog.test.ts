@@ -6,7 +6,31 @@ import {
   inspectProcess,
   listProcessGroupMembers,
   observableIdentityMatches,
+  runWatchdogCommand,
 } from '../src/watchdog.js';
+
+test('watchdog subprocesses are locale-pinned and terminate at their explicit deadline', async () => {
+  const environment = await runWatchdogCommand('/usr/bin/env', [], {
+    maxBuffer: 64 * 1024,
+    timeoutMs: 1_000,
+  });
+  assert.match(environment, /^LC_ALL=C$/m);
+  assert.match(environment, /^LANG=C$/m);
+
+  const started = performance.now();
+  await assert.rejects(
+    runWatchdogCommand('/bin/sh', ['-c', 'sleep 5'], {
+      maxBuffer: 64 * 1024,
+      timeoutMs: 25,
+    }),
+    (error: unknown) => (
+      error instanceof Error
+      && (error as Error & { killed?: boolean; signal?: string }).killed === true
+      && (error as Error & { signal?: string }).signal === 'SIGKILL'
+    ),
+  );
+  assert.equal(performance.now() - started < 1_000, true);
+});
 
 test('inspectProcess returns macOS PID, group, start time, and canonical executable identity', async () => {
   const observed = await inspectProcess(process.pid);

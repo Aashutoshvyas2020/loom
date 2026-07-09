@@ -2,7 +2,14 @@ import { execFile } from 'node:child_process';
 import { realpath } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
+import { WATCHDOG_COMMAND_TIMEOUT_MS } from './limits.js';
+
 const execFileAsync = promisify(execFile);
+const WATCHDOG_ENVIRONMENT = Object.freeze({
+  PATH: '/usr/bin:/bin:/usr/sbin:/sbin',
+  LANG: 'C',
+  LC_ALL: 'C',
+});
 
 export class WatchdogError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -20,6 +27,30 @@ export interface ProcessTableEntry {
 
 export interface ProcessObservation extends ProcessTableEntry {
   executablePath: string;
+}
+
+export interface WatchdogCommandOptions {
+  maxBuffer: number;
+  timeoutMs?: number;
+}
+
+export async function runWatchdogCommand(
+  executable: string,
+  args: string[],
+  options: WatchdogCommandOptions,
+): Promise<string> {
+  const timeoutMs = options.timeoutMs ?? WATCHDOG_COMMAND_TIMEOUT_MS;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new WatchdogError('Watchdog command timeout must be a positive safe integer.');
+  }
+  const { stdout } = await execFileAsync(executable, args, {
+    encoding: 'utf8',
+    maxBuffer: options.maxBuffer,
+    timeout: timeoutMs,
+    killSignal: 'SIGKILL',
+    env: WATCHDOG_ENVIRONMENT,
+  });
+  return stdout;
 }
 
 function parseProcessLine(line: string): ProcessTableEntry {
@@ -43,10 +74,10 @@ function parseProcessLine(line: string): ProcessTableEntry {
 
 async function readExecutablePath(pid: number): Promise<string> {
   try {
-    const { stdout } = await execFileAsync(
+    const stdout = await runWatchdogCommand(
       '/usr/sbin/lsof',
       ['-a', '-p', String(pid), '-d', 'txt', '-Fn'],
-      { encoding: 'utf8', maxBuffer: 1024 * 1024 },
+      { maxBuffer: 1024 * 1024 },
     );
     const lines = stdout.split(/\r?\n/);
     const textIndex = lines.indexOf('ftxt');
@@ -73,10 +104,10 @@ async function readSingleProcess(pid: number): Promise<ProcessTableEntry | null>
   }
 
   try {
-    const { stdout } = await execFileAsync(
+    const stdout = await runWatchdogCommand(
       '/bin/ps',
       ['-p', String(pid), '-o', 'pid=,ppid=,pgid=,lstart='],
-      { encoding: 'utf8', maxBuffer: 64 * 1024 },
+      { maxBuffer: 64 * 1024 },
     );
     const line = stdout.trim();
     return line.length === 0 ? null : parseProcessLine(line);
@@ -115,10 +146,10 @@ export async function listProcessGroupMembers(pgid: number): Promise<ProcessTabl
   }
 
   try {
-    const { stdout } = await execFileAsync(
+    const stdout = await runWatchdogCommand(
       '/bin/ps',
       ['-axo', 'pid=,ppid=,pgid=,lstart='],
-      { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 },
+      { maxBuffer: 8 * 1024 * 1024 },
     );
 
     return stdout

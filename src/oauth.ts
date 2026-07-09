@@ -179,6 +179,7 @@ const tokenSchema = z.object({
   resource: z.string().url(),
   generation: z.number().int().nonnegative(),
   expiresAt: z.number().int().nonnegative(),
+  familyExpiresAt: z.number().int().nonnegative().optional(),
   createdAt: z.number().int().nonnegative(),
 }).strict();
 
@@ -216,9 +217,10 @@ type TokenRecord = z.infer<typeof tokenSchema>;
 type AuthorizationTransactionRecord = z.infer<typeof authorizationTransactionSchema>;
 
 const OWNER_KEY_LENGTH = 32;
-const SCRYPT_COST = 16_384;
+const SCRYPT_COST = 32_768;
 const SCRYPT_BLOCK_SIZE = 8;
-const SCRYPT_PARALLELIZATION = 1;
+const SCRYPT_PARALLELIZATION = 3;
+const SCRYPT_MIN_MAXMEM_BYTES = 64 * 1024 * 1024;
 const CODE_TTL_SECONDS = 300;
 const AUTHORIZATION_TRANSACTION_TTL_SECONDS = 300;
 const ACCESS_TTL_SECONDS = 900;
@@ -231,7 +233,7 @@ function scryptAsync(
   password: string,
   salt: Buffer,
   keyLength: number,
-  options: { N: number; r: number; p: number },
+  options: { N: number; r: number; p: number; maxmem: number },
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     scrypt(password, salt, keyLength, options, (error, derivedKey) => {
@@ -250,6 +252,18 @@ function sha256(value: string | Uint8Array): string {
 
 function randomSecret(bytes = 32): string {
   return randomBytes(bytes).toString('base64url');
+}
+
+function scryptMaxmem(cost: number, blockSize: number, parallelization: number): number {
+  const required = 128 * cost * blockSize + 128 * blockSize * parallelization;
+  return Math.max(SCRYPT_MIN_MAXMEM_BYTES, required + 16 * 1024 * 1024);
+}
+
+function ownerNeedsUpgrade(owner: AuthState['owner']): boolean {
+  if (owner.cost < SCRYPT_COST) return true;
+  if (owner.cost > SCRYPT_COST) return false;
+  return owner.blockSize < SCRYPT_BLOCK_SIZE
+    || owner.parallelization < SCRYPT_PARALLELIZATION;
 }
 
 function currentUserId(): number {
@@ -331,6 +345,7 @@ async function deriveOwner(password: string, createdAt: number): Promise<AuthSta
     N: SCRYPT_COST,
     r: SCRYPT_BLOCK_SIZE,
     p: SCRYPT_PARALLELIZATION,
+    maxmem: scryptMaxmem(SCRYPT_COST, SCRYPT_BLOCK_SIZE, SCRYPT_PARALLELIZATION),
   });
   return {
     algorithm: 'scrypt',
@@ -351,6 +366,7 @@ async function verifyOwner(owner: AuthState['owner'], password: string): Promise
       N: owner.cost,
       r: owner.blockSize,
       p: owner.parallelization,
+      maxmem: scryptMaxmem(owner.cost, owner.blockSize, owner.parallelization),
     });
     return expected.byteLength === actual.byteLength && timingSafeEqual(expected, actual);
   } catch {
@@ -564,6 +580,9 @@ export class AuthStore {
       if (!await verifyOwner(this.state.owner, input.ownerPassword)) {
         throw new OAuthError('Owner password is invalid.', 'access_denied');
       }
+      const upgradedOwner = ownerNeedsUpgrade(this.state.owner)
+        ? await deriveOwner(input.ownerPassword, this.now().getTime())
+        : undefined;
       return this.mutate(async (state) => {
         const transactionHash = sha256(input.transactionId);
         const transaction = state.pendingTransactions[transactionHash];
@@ -575,6 +594,7 @@ export class AuthStore {
         }
         this.validateAuthorizationTransaction(state, transaction);
         delete state.pendingTransactions[transactionHash];
+        if (upgradedOwner !== undefined) state.owner = upgradedOwner;
 
         const code = randomSecret(32);
         const createdAt = this.now().getTime();
@@ -603,6 +623,9 @@ export class AuthStore {
       if (!await verifyOwner(this.state.owner, input.ownerPassword)) {
         throw new OAuthError('Owner password is invalid.', 'access_denied');
       }
+      const upgradedOwner = ownerNeedsUpgrade(this.state.owner)
+        ? await deriveOwner(input.ownerPassword, this.now().getTime())
+        : undefined;
       return this.mutate(async (state) => {
         const resource = this.requireExactResource(state, input.resource);
         const client = this.requireCurrentClient(state, input.clientId);
@@ -617,6 +640,7 @@ export class AuthStore {
         if (input.codeChallengeMethod !== 'S256' || !PKCE_CHALLENGE.test(input.codeChallenge)) {
           throw new OAuthError('S256 PKCE is required.', 'invalid_request');
         }
+        if (upgradedOwner !== undefined) state.owner = upgradedOwner;
 
         const code = randomSecret(32);
         const createdAt = this.now().getTime();
@@ -669,7 +693,13 @@ export class AuthStore {
       }
 
       delete state.refreshTokens[refreshHash];
-      return this.issueTokens(state, refresh.clientId, scopes, resource);
+      return this.issueTokens(
+        state,
+        refresh.clientId,
+        scopes,
+        resource,
+        refresh.familyExpiresAt ?? refresh.expiresAt,
+      );
     }));
   }
 
@@ -901,10 +931,16 @@ export class AuthStore {
     clientId: string,
     scopes: string[],
     resource: string,
+    existingFamilyExpiresAt?: number,
   ): OAuthTokenResponse {
     const accessToken = randomSecret(32);
     const refreshToken = randomSecret(48);
     const createdAt = this.now().getTime();
+    const familyExpiresAt = existingFamilyExpiresAt
+      ?? createdAt + REFRESH_TTL_SECONDS * 1_000;
+    if (familyExpiresAt <= createdAt) {
+      throw new OAuthError('Refresh-token family expired.', 'invalid_grant');
+    }
     const common = {
       clientId,
       scopes: [...scopes],
@@ -918,7 +954,8 @@ export class AuthStore {
     };
     state.refreshTokens[sha256(refreshToken)] = {
       ...common,
-      expiresAt: createdAt + REFRESH_TTL_SECONDS * 1_000,
+      expiresAt: Math.min(createdAt + REFRESH_TTL_SECONDS * 1_000, familyExpiresAt),
+      familyExpiresAt,
     };
     return {
       accessToken,

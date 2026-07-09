@@ -794,3 +794,57 @@ findings: none
 Loom-owned wrapper/cloudflared/browser-profile residue
 none
 ```
+
+### T15.3 — adversarial security verification and hardening
+
+- Treated five externally supplied adversarial reviews as hypotheses and verified each consolidated claim against the exact source, pinned MCP SDK, deterministic tests, or controlled local experiments before changing behavior.
+- Added a complete classification record at `docs/release-evidence/t15.3-adversarial-review.md`, separating verified fixes, verified residual risks, false positives/already-mitigated claims, and intentional scope tradeoffs.
+- Replaced the pinned SDK helper's unbounded global JSON parser with explicit localhost Host validation, a route-specific 9 MiB MCP parser, 64 KiB OAuth metadata parsers, and structured 413/400 responses before SDK or Zod handling.
+- Added a monotonic global owner-password authorization limit of ten attempts per 60-second foreground process window with 429 and `Retry-After` behavior.
+- Raised new owner-password scrypt verifiers to N=32768, r=8, p=3 with explicit memory bounds and added transparent atomic migration after successful verification of legacy N=16384, r=8, p=1 state.
+- Bound refresh-token rotation to one absolute 30-day family expiration so regular use cannot renew access indefinitely.
+- Bounded every watchdog `ps`/`lsof` command with a fixed C locale, bounded output, two-second SIGKILL timeout, serialized wrapper identity probes, monotonic heartbeat age, and distinct mismatch-versus-unavailable handling.
+- Canonicalized only macOS's root-owned `/tmp` and `/var` aliases, opened read targets nonblocking before regular-file verification, rechecked memory tombstone identity immediately before removal, and made runtime-lock creation explicitly `O_EXCL | O_NOFOLLOW`.
+- Preserved capability-reducing safety controls during audit degradation: terminal cancel and browser tab close remain available while capability-increasing mutations remain audit-fail-closed.
+- Converted runtime, ProcessManager, wrapper, dashboard, and MCP in-process safety windows to monotonic time while retaining wall time for persisted OAuth expiry and human-readable records.
+- Added explicit OSC 52 regression coverage and a bounded 256 KiB hostile Quick Tunnel parser input.
+- Controlled experiments showed a 64 MiB terminal-output command completed normally in about 323 ms without false watchdog termination, while a child deliberately launched with `start_new_session=True` escaped owned-PGID cancellation as expected; the escaped process was explicitly killed and the residual limitation is now documented.
+- Expanded README, security, operator, development, release-certification, specification, and evidence guidance for prompt injection, persistent browser/memory state, remote-client/provider disclosure, login-shell secrets, TCC, localhost/LAN pivoting, local-only containment, non-forensic audit, deliberate process escape, filesystem durability assumptions, artifact retention, terminal scrollback, and package trust roots.
+- The first full suite reached 213/214 and exposed a timing-dependent transient-EPERM test failure. Root cause was overlapping wrapper fallback identity probes plus transient `lsof` unavailability being treated as parent death. The wrapper fix passed the transient-EPERM test ten consecutive isolated runs, then the complete suite passed 214/214.
+- Built and installed the hardened tarball into an isolated prefix/HOME. The package remains 90 public files with internal tests, plans, release evidence, and `EXTERNAL_AUDIT.md` excluded. Installed version/help and certification help passed; plain and sessionless YOLO launches exited 2 and created no state. Nothing was published or deployed.
+
+Evidence:
+
+```text
+npm run typecheck
+PASS
+
+npm test
+PASS (214/214)
+
+npm run build
+PASS
+
+focused hardening suite
+PASS (68/68)
+
+transient EPERM isolated stress
+PASS (10/10)
+
+npm pack --dry-run --json
+PASS — 90 files, 194258 bytes
+forbidden internal paths: none
+
+actual tarball
+loom-mcp-0.1.0.tgz
+bytes: 194258
+SHA-256: 31c0f309a0bb94d3b974a852f0510282898ec5087c98f1229fe94c8203f1a491
+
+isolated installed package
+loom --version: 0.1.0
+loom --help: PASS
+loom-certify --help: PASS
+plain launch: exit 2
+sessionless YOLO launch: exit 2
+state created: no
+```

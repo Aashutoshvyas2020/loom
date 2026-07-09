@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 import {
   mkdir,
   mkdtemp,
@@ -166,6 +168,24 @@ test('file tools reject relative paths at their public error boundary', async (t
     service.edit({ path: 'relative.txt', oldText: 'a', newText: 'b' }),
     FileToolError,
   );
+});
+
+test('final symlinks to FIFOs fail promptly without blocking the file-read worker', async (t) => {
+  const { root, audit, service } = await setupService();
+  t.after(() => audit.close());
+  const fifoPath = path.join(root, 'blocked.fifo');
+  const linkedPath = path.join(root, 'linked-fifo');
+  const mkfifo = spawn('/usr/bin/mkfifo', [fifoPath], { stdio: 'ignore' });
+  assert.equal((await once(mkfifo, 'exit'))[0], 0);
+  await symlink(fifoPath, linkedPath);
+  const delayedWriter = spawn('/bin/sh', ['-c', 'sleep 0.8; printf x > "$1"', 'sh', fifoPath], {
+    stdio: 'ignore',
+  });
+  t.after(() => delayedWriter.kill('SIGKILL'));
+
+  const started = performance.now();
+  await assert.rejects(service.read({ path: linkedPath }), /regular file/);
+  assert.equal(performance.now() - started < 400, true);
 });
 
 test('file reads follow a stable final symlink while mutations and parent symlinks remain rejected', async (t) => {

@@ -559,6 +559,10 @@ test('Quick Tunnel parser accepts only strict trycloudflare origins and config c
   assert.equal(quickTunnelOriginFromOutput('https://bad-.trycloudflare.com\n'), null);
   assert.equal(quickTunnelOriginFromOutput('https://two.labels.trycloudflare.com\n'), null);
   assert.equal(quickTunnelOriginFromOutput('prefixhttps://valid.trycloudflare.com\n'), null);
+  const hostile = `${'a'.repeat(256 * 1024)}https://${'-'.repeat(64)}.trycloudflare.com`;
+  const parseStarted = performance.now();
+  assert.equal(quickTunnelOriginFromOutput(hostile), null);
+  assert.equal(performance.now() - parseStarted < 250, true);
 
   const root = await tempRoot('loom-quick-config-');
   const configDirectory = path.join(root, '.cloudflared');

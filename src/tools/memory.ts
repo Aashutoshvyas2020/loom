@@ -701,6 +701,13 @@ export class MemoryStoreService {
     }
 
     try {
+      await assertNoSymlinkComponents(tombstonePath);
+      const beforeRemoval = await lstat(tombstonePath, { bigint: true });
+      if (!beforeRemoval.isFile() || !sameIdentity(stats, beforeRemoval)) {
+        throw new MemoryStoreConfigError(
+          'Delete tombstone changed after verification; refusing cleanup.',
+        );
+      }
       await rm(tombstonePath);
       await syncDirectory(this.memoryDirectory);
       await finishAudit(this.audit, receipt, 'ok');

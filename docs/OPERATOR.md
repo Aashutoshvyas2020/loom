@@ -12,6 +12,17 @@ This guide describes the supported foreground workflow for a single macOS owner.
 - Cloudflare credentials for Named Tunnel production use
 - Browser setup only when `loom_browser` is required
 
+macOS TCC still applies. Desktop, Documents, Downloads, network volumes, Full Disk Access, Accessibility, Automation, Camera, and Microphone can require local approval and may fail with `Operation not permitted`. Loom cannot bypass or reliably answer those prompts remotely.
+
+## Preflight for an unrestricted launch
+
+- Prefer a dedicated macOS account with no personal browser profile or exported cloud credentials.
+- Launch from a minimal environment rather than a development shell containing sensitive environment variables. `/bin/sh -lc` inherits Loom's environment and can source login-shell profile files.
+- Review `~/.profile`, `~/.bash_profile`, and other shell startup files for secrets or commands that should not run on every terminal invocation.
+- Close screen sharing and terminal recording. The owner password can remain in terminal scrollback after first launch or reset.
+- Treat browser pages, files, skills, memory, and terminal output as untrusted content that can carry prompt injection to the authorized agent.
+- Decide whether the authorized remote client or LLM provider is permitted to receive file contents, command output, page text, and screenshots.
+
 ## Public commands
 
 ```text
@@ -46,7 +57,7 @@ Install the dedicated browser explicitly:
 loom setup browser
 ```
 
-The browser can be omitted. Loom will mark browser tools unavailable while the terminal, file, skill, memory, and MCP services remain usable.
+The browser can be omitted. Loom will mark browser tools unavailable while the terminal, file, skill, memory, and MCP services remain usable. When enabled, the dedicated persistent browser profile retains cookies, local storage, and login state across Loom restarts and can expose those sessions to a later authorized client.
 
 ## Configuration
 
@@ -101,7 +112,7 @@ Named mode requires the current private Cloudflare origin certificate at `~/.clo
 loom launch --yolo
 ```
 
-The command requires a direct local terminal. Loom prints the warning locally. On first installation it prints the owner password once. Store it securely and never paste it into chat, source control, screenshots, logs, or tickets.
+The command requires a direct local terminal. Loom prints the warning locally. On first installation it prints the owner password once. Store it securely and never paste it into chat, source control, screenshots, logs, or tickets. Terminal scrollback, session recording, shell history tooling, and screen sharing can retain the display even though Loom does not write the password to its audit log.
 
 Startup proceeds in this order:
 
@@ -159,7 +170,7 @@ Use any supported path:
 - use the dashboard stop action
 - close the foreground terminal and allow the parent-death watchdog to clean the owned process group
 
-Shutdown rejects new terminal jobs, cancels retained terminal groups, closes the managed browser, stops Cloudflared, closes MCP and dashboard listeners, drains ProcessManager and audit, and removes ownership files only after cleanup certainty.
+Shutdown rejects new terminal jobs, cancels retained terminal groups, closes the managed browser, stops Cloudflared, closes MCP and dashboard listeners, drains ProcessManager and audit, and removes ownership files only after cleanup certainty. A deliberate unrestricted command can call `setsid()` or otherwise detach into a new session and escape Loom's process group; ordinary descendant cleanup does not guarantee removal of such an intentionally escaped daemon.
 
 Private runtime files:
 
@@ -176,9 +187,21 @@ Private runtime files:
 loom auth reset
 ```
 
-This requires local confirmation, rotates the owner password, increments OAuth generation, and revokes registered clients, pending authorizations, codes, access tokens, and refresh tokens. It does not delete browser state, memory, skills, audit history, downloads, or general configuration.
+This requires local confirmation, rotates the owner password, increments OAuth generation, and revokes registered clients, pending authorizations, codes, access tokens, and refresh tokens. Auth reset does not delete browser state, memory, skills, audit history, downloads, screenshots, shell profiles, scheduled jobs, or general configuration. It is credential revocation, not complete incident remediation.
 
 Tunnel URL or hostname changes never rotate the owner password.
+
+## Incident containment while remote
+
+The dashboard and foreground stop controls are local-only. Loom has no separate remote kill switch. If an authorized client behaves maliciously while you are away, containment requires physical access or another trusted remote-administration path to the Mac. Do not rely on the compromised agent to revoke itself.
+
+After stopping Loom:
+
+1. Verify public access and Loom-owned processes are gone.
+2. Rotate the owner password and revoke Cloudflare credentials when relevant.
+3. Inspect `~/.loom/memory/`, configured skill roots, shell profile files, launch agents, cron/scheduled jobs, and files modified by the client.
+4. Decide whether to remove or archive `~/.loom/browser-profile/` and `~/.loom/downloads/`; browser cookies, downloads, and screenshots persist until the operator removes them.
+5. Treat audit as a coarse activity record, not forensic proof. Commands, output, page text, file content, and typed values are deliberately omitted, and an authorized shell client can modify local logs.
 
 ## Browser recovery
 
@@ -225,4 +248,4 @@ Named mode failures:
 - Browser profile: `~/.loom/browser-profile/`
 - Downloads and screenshots: `~/.loom/downloads/`
 
-Audit is private operational logging, not a tamper-proof security boundary against the same macOS user.
+Audit is private operational logging, not a tamper-proof or forensic security boundary against the same macOS user or an authorized remote shell client. Downloads, screenshots, memory, and browser-profile data have no automatic retention policy; the operator must review and remove them when appropriate.

@@ -34,6 +34,29 @@ function rawStatus(url: string, host: string): Promise<number> {
   });
 }
 
+test('dashboard bootstrap lifetime is unaffected by wall-clock jumps', async (t) => {
+  let wallClock = 1_000;
+  t.mock.method(Date, 'now', () => wallClock);
+  const server = new LoomDashboardServer({
+    status: () => ({ phase: 'ready' }),
+    actions: {
+      rescanCatalog: async () => undefined,
+      restartBrowser: async () => undefined,
+      revealAuditFolder: async () => undefined,
+      updateConfig: async () => undefined,
+      revokeAllOAuth: async () => undefined,
+      stopLoom: async () => undefined,
+    },
+  });
+  await server.listen();
+  t.after(() => server.close());
+
+  const bootstrapUrl = server.createBootstrapUrl();
+  wallClock += 365 * 24 * 60 * 60 * 1_000;
+  const bootstrap = await fetch(bootstrapUrl, { redirect: 'manual' });
+  assert.equal(bootstrap.status, 303);
+});
+
 test('dashboard bootstrap is loopback-only, single-use, strict-headered, session-bound, and CSRF protected', async (t) => {
   const actions: Array<[string, unknown]> = [];
   const server = new LoomDashboardServer({

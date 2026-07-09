@@ -354,7 +354,12 @@ export class TerminalToolService {
 
   async cancel(input: TerminalCancelInput): Promise<CallToolResult> {
     const jobId = validateJobId(input.jobId);
-    const receipt = await this.audit.recordMutationStart('terminal.cancel', { jobId });
+    let receipt: AuditReceipt | undefined;
+    try {
+      receipt = await this.audit.recordMutationStart('terminal.cancel', { jobId });
+    } catch {
+      // Cancellation reduces capability and must remain available when audit storage fails.
+    }
     try {
       const job = this.requireJob(jobId);
       const before = job.process.poll(0, 1);
@@ -363,10 +368,14 @@ export class TerminalToolService {
       }
       await job.completion;
       const after = job.process.poll(0, 1);
-      await finishAudit(this.audit, receipt, auditFinishStatus(after.state));
+      if (receipt !== undefined) {
+        await finishAudit(this.audit, receipt, auditFinishStatus(after.state));
+      }
       return lifecycleResult(jobId, job.process, publicStatus(after.state), job.startedAt);
     } catch (error) {
-      await finishAudit(this.audit, receipt, 'error');
+      if (receipt !== undefined) {
+        await finishAudit(this.audit, receipt, 'error');
+      }
       if (error instanceof TerminalToolError) throw error;
       throw new TerminalToolError(`Unable to cancel terminal job ${jobId}: ${String(error)}`, {
         cause: error instanceof Error ? error : undefined,

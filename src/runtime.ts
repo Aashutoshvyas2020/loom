@@ -3,6 +3,7 @@ import { constants } from 'node:fs';
 import { lstat, open, realpath, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 
 import { z } from 'zod';
 
@@ -526,7 +527,11 @@ export class RuntimeLock {
 
     let handle: Awaited<ReturnType<typeof open>> | undefined;
     try {
-      handle = await open(lockPath, 'wx', 0o600);
+      handle = await open(
+        lockPath,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+        0o600,
+      );
       await handle.writeFile(`${JSON.stringify(identity, null, 2)}\n`);
       await handle.sync();
     } catch (error) {
@@ -773,9 +778,9 @@ export class ForegroundLoomRuntime {
     this.currentStatus.stopReason = reason;
     this.options.terminal.stopAcceptingNewJobs();
     const failures: unknown[] = [];
-    const deadline = Date.now() + this.shutdownDeadlineMs;
+    const deadline = performance.now() + this.shutdownDeadlineMs;
     const run = async (name: string, operation: () => Promise<void>): Promise<void> => {
-      const remaining = deadline - Date.now();
+      const remaining = deadline - performance.now();
       if (remaining <= 0) {
         failures.push(new RuntimeShutdownDeadlineError(name));
         void operation().catch(() => undefined);

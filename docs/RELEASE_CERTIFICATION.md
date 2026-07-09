@@ -104,6 +104,10 @@ Required before release certification:
 12. test Quick launch as non-production
 13. test Named launch with real credentials
 14. repeat process/listener cleanup scans
+15. record the exact tarball SHA-256 and bind every external artifact to that hash as well as the Git commit
+16. independently inspect the installed tarball bytes rather than trusting the packaged `loom-certify` implementation alone
+
+The repository and tarball do not contain an out-of-band root of trust. A compromised source tree could alter both Loom and `loom-certify`. Production certification therefore requires an independently recorded artifact hash and, when distribution begins, a detached signature or equivalent verification performed by tooling outside the package under review. The in-package certification command cannot certify its own integrity.
 
 ## Unsupported claims
 
@@ -117,7 +121,11 @@ Do not claim any of the following without recorded real evidence:
 - real ChatGPT OAuth, reconnect, or tool compatibility
 - Windows or Linux support
 - protection from the same macOS user
-- tamper-proof audit
+- tamper-proof or complete forensic audit
+- cleanup of a command that deliberately escapes the owned process group with `setsid()` or an equivalent new session
+- automatic removal or safe retention of persistent browser cookies, downloads, screenshots, or Loom memory after an incident
+- protection from indirect prompt injection in files, pages, skills, memory, or terminal output
+- artifact authenticity from Git commit status or the in-package certification tool without an independently checked artifact hash or detached signature
 
 ## Evidence storage
 

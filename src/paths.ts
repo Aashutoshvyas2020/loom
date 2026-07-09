@@ -28,6 +28,16 @@ function assertWellFormedUnicode(value: string): void {
   }
 }
 
+function canonicalizeMacOsSystemAlias(resolvedPath: string): string {
+  if (process.platform !== 'darwin') return resolvedPath;
+  for (const alias of ['/tmp', '/var'] as const) {
+    if (resolvedPath === alias || resolvedPath.startsWith(`${alias}${path.sep}`)) {
+      return path.join('/private', resolvedPath);
+    }
+  }
+  return resolvedPath;
+}
+
 export function resolveUserPath(input: string, homeDirectory = homedir()): string {
   if (input.length === 0) {
     throw new PathPolicyError('Path is required.');
@@ -39,7 +49,7 @@ export function resolveUserPath(input: string, homeDirectory = homedir()): strin
   assertWellFormedUnicode(input);
 
   if (input.startsWith('~/')) {
-    return path.resolve(homeDirectory, input.slice(2));
+    return canonicalizeMacOsSystemAlias(path.resolve(homeDirectory, input.slice(2)));
   }
 
   if (input.startsWith('~')) {
@@ -50,7 +60,7 @@ export function resolveUserPath(input: string, homeDirectory = homedir()): strin
     throw new PathPolicyError('Path must be absolute or start with ~/.');
   }
 
-  return path.resolve(input);
+  return canonicalizeMacOsSystemAlias(path.resolve(input));
 }
 
 export async function assertNoSymlinkComponents(targetPath: string): Promise<void> {

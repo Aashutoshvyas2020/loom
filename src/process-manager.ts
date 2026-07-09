@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { realpath } from 'node:fs/promises';
+import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -131,13 +132,13 @@ async function signalOwnedGroup(
       if (members.length === 0) {
         return;
       }
-      if (Date.now() >= deadline) {
+      if (performance.now() >= deadline) {
         throw new ProcessManagerError(
           `Unable to signal owned process group ${metadata.pgid} with ${signal} before the shutdown deadline.`,
           { cause: error instanceof Error ? error : undefined },
         );
       }
-      await sleep(Math.min(POLL_INTERVAL_MS, deadline - Date.now()));
+      await sleep(Math.min(POLL_INTERVAL_MS, deadline - performance.now()));
     }
   }
 }
@@ -174,19 +175,19 @@ async function terminateOwnedGroup(
     return;
   }
 
-  const startedAt = Date.now();
+  const startedAt = performance.now();
   const hardKillAt = startedAt + softGraceMs;
   const deadline = startedAt + absoluteDeadlineMs;
   await signalOwnedGroup(metadata, 'SIGTERM', deadline, signalProcessGroup);
   let hardKillSent = false;
 
-  while (Date.now() < deadline) {
+  while (performance.now() < deadline) {
     await sleep(POLL_INTERVAL_MS);
     members = await validateOwnedGroup(metadata);
     if (members.length === 0) {
       return;
     }
-    if (!hardKillSent && Date.now() >= hardKillAt) {
+    if (!hardKillSent && performance.now() >= hardKillAt) {
       await signalOwnedGroup(metadata, 'SIGKILL', deadline, signalProcessGroup);
       hardKillSent = true;
     }
