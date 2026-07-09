@@ -127,8 +127,7 @@ function truncateUtf8(value: string, maxBytes: number): { text: string; bytes: n
 
 function timeout<T>(milliseconds: number, message: string): Promise<T> {
   return new Promise((_, reject) => {
-    const timer = setTimeout(() => reject(new BrowserEvaluationTimeoutError(message)), milliseconds);
-    timer.unref?.();
+    setTimeout(() => reject(new BrowserEvaluationTimeoutError(message)), milliseconds);
   });
 }
 
@@ -144,7 +143,6 @@ async function waitForManagedExit(job: ClosableBrowserJob, deadlineMs: number): 
           )),
           deadlineMs,
         );
-        timer.unref?.();
       }),
     ]);
   } finally {

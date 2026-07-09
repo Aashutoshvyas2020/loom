@@ -854,3 +854,33 @@ state created: no
 - Committed the verified adversarial security hardening, tests, evidence, public threat-model updates, regenerated audit dossier, and synchronized governance at `7b64064ea01de77ab0876f3eb68977277d9b930c`.
 - The repository was clean immediately after that implementation commit.
 - This follow-up changes only the resumable handoff, changelog/map bookkeeping, and regenerated dossier so the next agent receives the completed implementation SHA and the exact T16 certification command.
+
+### T15.4 — Node 22 compatibility and public CI
+
+- Reproduced the declared Node.js 22 floor on v22.23.1. The first full run completed 185/214 and cancelled 29 tests because awaited timeout/lifecycle promises were backed only by unreferenced timers; Node 26 had masked the issue by keeping unrelated handles alive longer.
+- Kept awaited browser evaluation/shutdown deadlines and Quick/Named Tunnel polling sleeps referenced until settlement. This is a lifecycle correctness fix only; no browser feature or recovery scope changed.
+- Replaced Cloudflared acquisition's `AbortSignal.timeout()` with an explicit referenced `AbortController` timer while preserving the bounded timeout and existing error contract.
+- Added minimal macOS GitHub Actions CI on Node 22 and Node 26 with clean install, typecheck, full tests, and build.
+- Node 22 targeted browser tests now pass 19/19, Cloudflare tests pass 30/30, and the full repository passes 214/214 with typecheck and build.
+
+Evidence:
+
+```text
+RED — Node v22.23.1 full suite
+pass 185
+cancelled 29
+exit 1
+
+GREEN — Node v22.23.1 browser target
+pass 19
+cancelled 0
+
+GREEN — Node v22.23.1 Cloudflare target
+pass 30
+cancelled 0
+
+GREEN — Node v22.23.1 complete gate
+npm run typecheck: PASS
+npm test: PASS (214/214)
+npm run build: PASS
+```

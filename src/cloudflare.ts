@@ -755,10 +755,19 @@ async function downloadCloudflaredArchive(input: {
   let url = new URL(input.release.archiveUrl);
   let response: Response | undefined;
   for (let redirects = 0; redirects <= input.maxRedirects; redirects += 1) {
-    response = await input.fetchImpl(url, {
-      redirect: 'manual',
-      signal: AbortSignal.timeout(input.downloadTimeoutMs),
-    });
+    const abortController = new AbortController();
+    const timeout = setTimeout(
+      () => abortController.abort(new CloudflaredInstallError('Cloudflared download timeout.')),
+      input.downloadTimeoutMs,
+    );
+    try {
+      response = await input.fetchImpl(url, {
+        redirect: 'manual',
+        signal: abortController.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       if (redirects === input.maxRedirects) {
         throw new CloudflaredInstallError('Cloudflared download exceeded the redirect limit.');
@@ -1060,8 +1069,7 @@ export class NamedTunnelManager {
     this.credentialsFile = options.credentialsFile;
     this.now = options.now ?? Date.now;
     this.sleep = options.sleep ?? ((milliseconds) => new Promise((resolve) => {
-      const timer = setTimeout(resolve, milliseconds);
-      timer.unref?.();
+      setTimeout(resolve, milliseconds);
     }));
     this.pollIntervalMs = options.pollIntervalMs ?? TUNNEL_DEFAULT_POLL_MS;
     if (!Number.isSafeInteger(this.pollIntervalMs)
@@ -1349,8 +1357,7 @@ export class QuickTunnelManager {
     this.configDirectory = options.configDirectory ?? path.join(homedir(), '.cloudflared');
     this.now = options.now ?? Date.now;
     this.sleep = options.sleep ?? ((milliseconds) => new Promise((resolve) => {
-      const timer = setTimeout(resolve, milliseconds);
-      timer.unref?.();
+      setTimeout(resolve, milliseconds);
     }));
     this.pollIntervalMs = options.pollIntervalMs ?? TUNNEL_DEFAULT_POLL_MS;
     if (!Number.isSafeInteger(this.pollIntervalMs)

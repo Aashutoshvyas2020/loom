@@ -6,6 +6,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ## Tracked files
 
+### `.github/workflows/ci.yml`
+- **Purpose:** Public macOS CI for the declared Node.js support range.
+- **Success check:** GitHub Actions runs `npm ci`, typecheck, the complete test suite, and build on Node 22 and Node 26 for pushes and pull requests.
+- **Current assessment:** PASS
+- **Evidence:** Minimal `macos-14` matrix added after reproducing and fixing the Node 22 lifecycle-timer regression locally.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T15.4 / G4.
+
 ### `.gitignore`
 - **Purpose:** Excludes dependencies, build output, packages, macOS metadata, coverage, and local skill-observation state.
 - **Success check:** `git status --short` does not show ignored runtime/generated directories.
@@ -34,25 +42,25 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records the completed T15.3 implementation commit `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean post-commit state, and the governance-only finalization for T16 handoff.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, and the complete 214/214 Node 22 gate.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated after the T15.3 implementation commit so the embedded changelog, handoff, repository map, 74-file inventory, 214-test inventory, and all 22 canonical-source hashes reflect the committed hardening state.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** T15.2 and T15.3.
+- **Evidence:** Regenerated for T15.4 so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the Node 22 compatibility state.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T15.2, T15.3, and T15.4.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the completed T15.3 implementation SHA `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean state, exact evidence, remaining external blockers, and the next T16 certification command.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Records the T15.4 Node 22 compatibility fix, CI matrix, exact local gates, current commit state, remaining external blockers, and the next live-test command.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
 - **Success check:** Valid MIT license text with copyright attribution.
@@ -72,22 +80,22 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Remains exhaustive for all 74 tracked files and records the T15.3 implementation SHA plus governance-only finalization state.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records the T15.4 compatibility state.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
 - **Success check:** Matches the canonical plan and prevents deterministic tooling or self-reported manifests from substituting for real external certification.
 - **Current assessment:** PASS
-- **Evidence:** Locks the body limit, authorization throttling, scrypt migration, refresh-family lifetime, monotonic/bounded watchdog behavior, macOS alias/nonblocking read policy, safety-action audit exception, tombstone/OSC checks, and explicit residual risks.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
-- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.3.
+- **Evidence:** Locks the existing security boundaries and now requires the complete 214-test suite on Node 22, referenced awaited lifecycle timers, an explicit Cloudflared abort timer, and Node 22/26 public CI.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.4.
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, explicit recovery subtasks, governance gates, and external-evidence boundaries.
 - **Current assessment:** PASS
-- **Evidence:** Adds T15.3 for code-grounded adversarial verification, concrete hardening, residual-risk disclosure, deterministic regressions, dossier regeneration, and unchanged external certification blockers.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Adds T15.4 for the declared Node 22 floor, referenced awaited timers, explicit Cloudflared download abort timing, and a Node 22/26 macOS CI matrix while leaving G5–G7 external blockers unchanged.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 ### `NOTICE`
 - **Purpose:** Distribution notice for Loom and third-party software/trademarks.
@@ -197,9 +205,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Wrapper-owned persistent Chromium/CDP lifecycle, tabs/actions, browser lock recovery, bounded page operations, downloads, screenshots, permissions, geolocation, and graceful shutdown.
 - **Success check:** Uses direct ProcessManager executable/argv launch, guarded Playwright import, dedicated profile, PID-reuse-safe lock recovery, twelve-tab bound, per-tab timeout recovery, private no-overwrite artifacts, CDP `Browser.close`, and bounded cancellation fallback.
 - **Current assessment:** PASS
-- **Evidence:** Deterministic browser tests cover lock identity, false positives, downloads, shutdown, snapshot/evaluate recovery, and dispatcher boundaries; real Chrome restored localStorage across two controlled restarts with no process or lock residue.
-- **Last meaningful change:** T9 managed Chromium backend and profile-persistence repair, 2026-07-08.
-- **Owning task or gate:** T9 / G4; composed by T14 runtime.
+- **Evidence:** Browser tests pass 19/19 on Node 22 after keeping awaited evaluation and graceful-shutdown deadline timers referenced until settlement; browser behavior and scope are otherwise unchanged.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T9 / G4, T14, and T15.4.
 
 ### `src/browser/setup.ts`
 - **Purpose:** Explicit architecture-pinned Chromium acquisition, exact executable verification, wrapper-owned launch proof, private manifest, atomic promotion, and pinned metadata export.
@@ -243,9 +251,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Pinned Cloudflared acquisition/verification plus Quick and Named Tunnel validation, direct launch, bounded readiness, retry, audit, status, and cleanup.
 - **Success check:** Retains T10/T12 guarantees; named mode validates private stable certificate/current credentials and exact name/account/hostname, launches explicit ephemeral origin argv, exposes production status only after registration, revalidates every attempt, retries only transient failures five times with capped backoff, never falls back to Quick, fails closed on audit/auth/config/cleanup uncertainty, and aborts startup waits on stop without recreation.
 - **Current assessment:** PASS
-- **Evidence:** Cloudflared target passes 30/30. Thirteen named tests prove static validation, exact argv/status, endpoint/password persistence, retry classification/limits, auth/config fail-fast, audit secrecy/order, timeout cleanup, per-attempt revalidation, cleanup failure, benign config notices, option-like rejection, and prompt startup cancellation. T10 real official binary/network evidence remains valid; G5 real named certification remains pending.
-- **Last meaningful change:** T13 Named Tunnel manager and validation, 2026-07-08.
-- **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, and T13 Named Tunnel; consumed by T14.
+- **Evidence:** Cloudflared target passes 30/30 on Node 22. Quick/Named polling sleeps remain referenced until awaited settlement, and acquisition uses an explicit referenced abort timer instead of `AbortSignal.timeout()` so the declared runtime floor cannot exit with pending work. G5 real named certification remains pending.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, T13 Named Tunnel, T14, and T15.4.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, private atomic next-launch replacement, invalid-config preservation, runtime-lock persistence, and PID-reuse identity comparison.

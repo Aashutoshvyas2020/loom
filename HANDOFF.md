@@ -1,12 +1,10 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 22:07 PDT
+**Date and local time:** 2026-07-08 22:54 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**Completed T15.3 implementation SHA:** `7b64064ea01de77ab0876f3eb68977277d9b930c`
-**Repository state before this governance-finalization commit:** clean at the completed T15.3 implementation SHA
-**Current task:** T15.3 complete and locally committed; next task is the remaining T16 external/manual certification work
-**Last completed gate:** typecheck, 214/214 tests, build, ten-run transient-EPERM stress, exact 74-file map/dossier coverage, 22 embedded-source hash checks, 90-file package inspection, isolated tarball installation, supported secret scan, and empty Loom-owned residue scan
+**Base SHA before T15.4:** `440978bc15a17f6c0233d93a88648ae3bcd8a167`
+**Current task:** T15.4 supported-runtime compatibility and public CI
 **Pushed or published:** no
 
 ## Required startup command
@@ -15,188 +13,91 @@
 cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build && git status --short
 ```
 
-## T15.3 completed work
+## Why T15.4 was required
 
-- Treated all five supplied adversarial reviews as hypotheses and verified consolidated claims against source, the pinned MCP SDK, tests, or controlled local experiments.
-- Added `docs/release-evidence/t15.3-adversarial-review.md` with verified/fixed, verified/residual, false-positive/already-mitigated, and intentional-scope classifications.
-- Replaced the SDK helper's unbounded JSON parser with explicit localhost Host validation, a pre-SDK 9 MiB MCP body limit, 64 KiB OAuth metadata parsers, and structured 413/400 responses.
-- Added monotonic owner-password authorization throttling: ten attempts per 60-second foreground-process window with 429 and `Retry-After`.
-- Changed new owner verifiers to scrypt N=32768, r=8, p=3 with explicit memory bounds and transparent atomic migration after successful legacy N=16384, r=8, p=1 verification.
-- Added one absolute 30-day refresh-token family expiration across rotation.
-- Added fixed C locale, bounded output, and two-second hard timeout to all watchdog `ps`/`lsof` probes.
-- Serialized wrapper identity probes, converted wrapper heartbeat age to monotonic time, and distinguished confirmed parent mismatch from temporary process-table unavailability.
-- Converted runtime, ProcessManager, dashboard, and MCP session in-process deadlines to monotonic time.
-- Canonicalized only macOS `/tmp` and `/var` aliases to `/private/tmp` and `/private/var`.
-- Opened final read targets with `O_NONBLOCK | O_NOFOLLOW` before regular-file verification to prevent FIFO/device hangs.
-- Rechecked exact memory-tombstone identity immediately before removal.
-- Made runtime-lock creation explicitly `O_CREAT | O_EXCL | O_NOFOLLOW`.
-- Kept terminal start and capability-increasing browser work audit-fail-closed, while preserving terminal cancellation and browser-tab close as best-effort-audited containment actions.
-- Added OSC 52 stripping coverage, a bounded 256 KiB hostile Quick Tunnel parser case, wall-clock-jump dashboard coverage, body-limit/rate-limit/scrypt/refresh/FIFO/tombstone/watchdog regressions, and updated exact limits.
-- Controlled output-flood experiment: 64 MiB terminal output completed normally in about 323 ms without false watchdog termination or residue.
-- Controlled deliberate-session-escape experiment: a child launched with `start_new_session=True` survived owned-PGID cancellation, was explicitly killed, and is now documented as outside the cleanup guarantee.
-- Expanded README, SPEC, security, operator, development, release-certification, release-evidence, and external-audit guidance for prompt injection, provider disclosure, persistent state, login-shell secrets, TCC, LAN pivoting, local-only containment, non-forensic audit, process escape, storage durability, retention, password scrollback, and artifact trust.
+The package and public documentation declare Node.js 22+ support, but the previous agent had only run the complete suite on Node 26. A fresh Node v22.23.1 run completed 185/214 tests and cancelled 29 because several awaited deadline/lifecycle promises relied only on unreferenced timers. Node 22 allowed the event loop to exit before those promises settled.
+
+This was a real supported-runtime release blocker. It did not indicate a missing browser feature.
+
+## T15.4 implementation
+
+- Kept browser evaluation and graceful-shutdown deadline timers referenced until their awaited promises settle.
+- Kept Quick and Named Tunnel polling sleeps referenced until their awaited operations settle.
+- Replaced Cloudflared download use of `AbortSignal.timeout()` with an explicit referenced `AbortController` timer while preserving the bounded timeout and error behavior.
+- Added `.github/workflows/ci.yml` with a `macos-14` matrix for Node 22 and Node 26 running `npm ci`, typecheck, full tests, and build.
+- Added T15.4 to the canonical plan and synchronized SPEC, CHANGELOG, repository map, and this handoff.
+- No browser feature, public tool schema, security boundary, dependency, package command, tunnel policy, or certification claim was expanded.
 
 ## RED/GREEN evidence
 
 ```text
-MCP body limit RED
-new test failed before the explicit pre-SDK parser existed
-GREEN: structured 413 and zero sessions
+RED — Node v22.23.1 complete suite before correction
+pass 185
+cancelled 29
+exit 1
 
-authorization throttle RED
-new setup options/behavior absent
-GREEN: two attempts accepted in test window, third 429, accepted after monotonic expiry
+RED isolation
+browser: pass 14/19, cancelled 5
+cloudflare: pass 6/30, cancelled 24
 
-owner scrypt migration / refresh family RED
-new parameters and family expiration absent
-GREEN: legacy hash upgraded after correct owner authorization; refresh at day 29 cannot rotate after day 30
+GREEN — Node v22.23.1 targeted browser suite
+pass 19/19
+cancelled 0
 
-watchdog RED
-runWatchdogCommand export absent
-GREEN: fixed C locale and SIGKILL timeout
+GREEN — Node v22.23.1 targeted Cloudflare suite
+pass 30/30
+cancelled 0
 
-FIFO read / macOS aliases / safety cancellation / tombstone identity
-new expectations failed or were absent before production changes
-GREEN in focused suite
-
-documentation RED
-security/operator residual-risk test failed first on missing prompt-injection disclosure
-GREEN: docs target passes
+GREEN — Node v22.23.1 complete gate
+npm run typecheck: PASS
+npm test: PASS — 214/214
+npm run build: PASS
 ```
 
-## Exact final commands and results so far
+## Core MCP status
 
-```text
-mandatory startup gate at 82412ef
-npm ci
-PASS — 106 packages, 0 vulnerabilities
-npm run typecheck
-PASS
-npm test
-PASS — 205/205 baseline
-npm run build
-PASS
-repository map
-PASS — 73/73 before T15.3 edits
+The core release path remains implemented and covered:
 
-focused hardening target
-PASS — 68/68
+- endpoint-bound Streamable HTTP MCP and OAuth
+- exactly seven public Loom tools
+- unrestricted noninteractive terminal jobs and process-group cleanup
+- text/image read, atomic write, and exact edit
+- skills catalog and Loom-owned memory
+- owner-password persistence and explicit reset
+- loopback dashboard and foreground runtime lifecycle
+- Quick Tunnel testing path and Named Tunnel production path
 
-dashboard/runtime/process monotonic target
-PASS — 31/31
+Browser behavior was not expanded during T15.4. The existing browser implementation remains in place and its deterministic suite also passes on Node 22.
 
-browser/terminal containment target
-PASS — 27/27
+## Remaining real blockers
 
-transient EPERM isolated stress after wrapper fix
-PASS — 10/10
+- G5: real stable Named Tunnel, DNS/public `/mcp`, eligible ChatGPT account/workspace, and public OAuth discovery.
+- G6: real ChatGPT authorization, representative calls across all seven tool categories, refresh/reconnect, public-access termination, and process-table cleanup evidence.
+- T16: clean supported-Mac package install, real browser profile persistence, owner-password lifecycle, sleep/wake, connector persistence, sanitized committed evidence, and human review.
+- G7 remains blocked until those external/manual gates pass. Deterministic local success is not production certification.
 
-complete current gate
-npm run typecheck
-PASS
-npm test
-PASS — 214/214
-npm run build
-PASS
+## Files changed in T15.4
 
-npm pack --dry-run --json
-PASS — 90 files, 194258 bytes
-forbidden internal paths: none
-
-actual hardened tarball
-loom-mcp-0.1.0.tgz
-bytes: 194258
-SHA-256: 31c0f309a0bb94d3b974a852f0510282898ec5087c98f1229fe94c8203f1a491
-
-isolated prefix/HOME install
-loom --version: 0.1.0
-loom --help: PASS
-loom-certify --help: PASS
-plain launch: exit 2
-sessionless YOLO launch: exit 2
-state created: no
-```
-
-## Review classification highlights
-
-Already mitigated or false-positive claims include loopback CDP binding, cryptographic OAuth transaction and job IDs, 0600 config backup, launch-time Cloudflared re-verification, absence of public `z.coerce`, exact environment-key grammar, OSC 52 passage, Quick-parser ReDoS, `--` tunnel-name injection, active-request decrement without `finally`, and hard-link overwrite through atomic rename.
-
-Verified residual risks now disclosed include indirect prompt injection/cross-tool escalation, authorized-client/provider data exposure, persistent browser/memory/artifacts, login-shell/inherited secrets, macOS TCC, localhost/private-network pivoting, local-only incident containment, privacy-oriented non-forensic audit, deliberate `setsid()` escape, finite process-identity precision, local-filesystem/power-loss assumptions, operator-managed retention, terminal scrollback, and no out-of-band package-signing root.
-
-## Known failures and corrections
-
-- The first T15.3 full suite reached 213/214. The transient-EPERM escalation test intermittently observed no SIGKILL retry because overlapping wrapper fallback probes and transient bounded `lsof` failure could trigger false orphan cleanup while heartbeats were healthy.
-- Root correction serialized wrapper identity probes, used monotonic heartbeat age, and distinguished `unknown` observation from `mismatch`. The isolated test then passed ten consecutive runs and the full suite passed 214/214.
-- The deliberate process-session escape is not a failed test or claimed fix; it is an experimentally verified residual limitation.
-
-## Real blockers
-
-- G5 requires an eligible current ChatGPT workspace/account, a real stable Named Tunnel, real DNS/public `/mcp` routing, and public OAuth discovery.
-- G6 requires real ChatGPT authorization, all seven real tool categories, access-token refresh/reconnect, public-access termination, and process tables for Ctrl+C, SIGTERM, terminal close, and forced parent death.
-- T16 still requires remaining manual sleep/wake, connector persistence, real owner-password lifecycle, clean supported-Mac evidence, sanitized committed external artifacts, and human review.
-- G7 remains blocked. T15.3 does not turn residual unrestricted-agent risks into mitigations and does not grant production certification.
-
-## Files changed
-
+- `.github/workflows/ci.yml`
 - `CHANGELOG.md`
-- `EXTERNAL_AUDIT.md`
 - `HANDOFF.md`
-- `README.md`
 - `REPO_MAP.md`
 - `SPEC.md`
-- `docs/DEVELOPMENT.md`
-- `docs/OPERATOR.md`
-- `docs/RELEASE_CERTIFICATION.md`
-- `docs/SECURITY.md`
 - `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
-- `docs/release-evidence/README.md`
-- `docs/release-evidence/t15.3-adversarial-review.md`
-- `src/child-wrapper.ts`
-- `src/dashboard.ts`
-- `src/limits.ts`
-- `src/mcp.ts`
-- `src/oauth.ts`
-- `src/paths.ts`
-- `src/process-manager.ts`
-- `src/runtime.ts`
-- `src/tools/browser.ts`
-- `src/tools/files.ts`
-- `src/tools/memory.ts`
-- `src/tools/terminal.ts`
-- `src/watchdog.ts`
-- `test/browser.test.ts`
-- `test/cloudflare.test.ts`
-- `test/dashboard.test.ts`
-- `test/docs.test.ts`
-- `test/files.test.ts`
-- `test/limits.test.ts`
-- `test/mcp.test.ts`
-- `test/memory.test.ts`
-- `test/oauth.test.ts`
-- `test/output.test.ts`
-- `test/paths.test.ts`
-- `test/terminal.test.ts`
-- `test/watchdog.test.ts`
+- `src/browser/backend.ts`
+- `src/cloudflare.ts`
 
-## Final dossier and integrity evidence
-
-```text
-EXTERNAL_AUDIT.md represented files: 74
-static test declarations: 214
-embedded canonical sources: 22
-missing mapped paths: none
-package files: 90
-package bytes: 194258
-supported secret findings: none
-Loom-owned process residue: none
-```
-
-## Exact next command
+## Next commands
 
 ```bash
-cd /Users/aashu/loom && npm run certify -- --output /private/tmp/loom-t16-certification-report.json
+cd /Users/aashu/loom
+npm ci
+npm run typecheck
+npm test
+npm run build
+npx -y -p node@22 -c 'node -v; npm run typecheck && npm test && npm run build'
+npm pack --dry-run --json
+git status --short
 ```
 
-## Next expected result
-
-The deterministic collector should remain blocked with exit code 2 until real G5/G6/T16 evidence is supplied and human-reviewed. The next implementation agent should not change the T15.3 security behavior unless new verified evidence requires it. No push, publication, public tunnel deployment, or production-certification claim is authorized.
+After those pass and the T15.4 commit is recorded, the next human action is a real local launch test followed by G5/G6 connector testing. Do not push, publish, deploy, or claim production certification until the user explicitly authorizes it and the external evidence exists.

@@ -49,7 +49,7 @@ Public access is provided through Cloudflare Tunnel. Quick Tunnel is temporary s
 
 Authentication is a single-owner OAuth authorization-code flow protected by a persistent owner password. New owner verifiers use scrypt N=32768, r=8, p=3 with explicit memory bounds, and a successful authorization transparently upgrades the earlier N=16384, r=8, p=1 format. The password is generated once, stored only as a verifier, and reprinted only when first created or explicitly changed with `loom auth reset`. Public password authorization is limited to ten attempts per monotonic 60-second foreground-process window. OAuth clients, server-side authorization transactions, authorization codes, access tokens, and refresh tokens are bound to the exact canonical public `/mcp` resource and endpoint generation. Refresh tokens rotate on use but retain one absolute 30-day family expiration. Endpoint changes invalidate endpoint-bound OAuth state while preserving the owner password.
 
-The repository has deterministic local coverage across process supervision, auditing, OAuth, MCP, file safety, catalogs, browser lifecycle, Cloudflared acquisition, Quick and Named tunnel managers, runtime orchestration, package boundaries, and certification logic. T15.3 completed typecheck, all `214/214` tests, build, a ten-run transient-EPERM stress check, package inspection, and an isolated installed-package smoke test. The hardened candidate remains 90 public files, is 194,258 bytes, and has SHA-256 `31c0f309a0bb94d3b974a852f0510282898ec5087c98f1229fe94c8203f1a491`.
+The repository has deterministic local coverage across process supervision, auditing, OAuth, MCP, file safety, catalogs, browser lifecycle, Cloudflared acquisition, Quick and Named tunnel managers, runtime orchestration, package boundaries, and certification logic. T15.4 reproduced the declared Node.js 22 floor, fixed awaited lifecycle timers that allowed Node 22 to exit with pending promises, and completed typecheck, all `214/214` tests, and build on Node v22.23.1. A public macOS CI matrix now runs Node 22 and Node 26. The package surface remains unchanged at 90 public files; a fresh tarball hash is recorded by the final T15.4 package gate.
 
 Loom is not yet externally certified. G5, G6, T16’s external/manual portions, and G7 remain blocked until a human reviews real Named Tunnel routing, eligible ChatGPT custom-MCP support, OAuth authorization and refresh, representative calls to all seven tools, public-access termination, process tables for every required shutdown path, manual sleep/wake behavior, and connector persistence. T15.3 also established explicit residual risks: prompt injection from tool content, provider disclosure of returned data, persistent browser/memory state, login-shell secrets, localhost/LAN pivoting, macOS TCC, local-only containment, non-forensic audit, and deliberate process-session escape. The packaged `loom-certify` command is designed to remain blocked in the absence of human review and an independently checked artifact hash; it cannot establish its own integrity.
 
@@ -749,6 +749,10 @@ This task creates one repository-root Markdown dossier, adds an executable docum
 
 Five externally supplied audits were verified claim by claim against source, the pinned SDK, tests, and controlled local experiments. T15.3 fixed the pre-schema MCP body bound, owner-password throttling, scrypt migration, absolute refresh-family lifetime, bounded/locale-pinned watchdog commands, wrapper probe overlap, macOS system aliases, special-file read blocking, capability-reducing audit exceptions, monotonic in-process deadlines, tombstone identity recheck, and explicit runtime-lock flags. It also added OSC/Quick-parser regressions and documented residual risks that an unrestricted tool cannot honestly eliminate. The complete classification is embedded from `docs/release-evidence/t15.3-adversarial-review.md`.
 
+### T15.4: supported-runtime compatibility and public CI
+
+A fresh run on Node v22.23.1 exposed 29 cancelled tests even though Node 26 passed. The root cause was awaited browser and tunnel lifecycle/deadline promises whose only completion timers had been unreferenced, plus Cloudflared acquisition relying on `AbortSignal.timeout()`. T15.4 kept those awaited timers referenced, replaced the acquisition deadline with an explicit referenced abort timer, preserved all existing behavior and limits, and added a minimal `macos-14` GitHub Actions matrix for Node 22 and Node 26. Browser stabilization scope was not expanded. The targeted Node 22 browser and Cloudflare suites pass 19/19 and 30/30, and the complete Node 22 suite passes 214/214.
+
 ### T16 and G5–G7: remaining production certification
 
 Local clean-clone, package, clean-HOME browser, profile-persistence, and fail-closed report exercises have been performed in prior work, but the canonical release state remains blocked. The remaining required evidence includes real stable Named Tunnel routing, an eligible ChatGPT workspace/account, real OAuth and refresh/reconnect, all seven real tool calls, all required shutdown paths with process tables, owner-password lifecycle observation, manual sleep/wake, connector persistence, committed sanitized evidence, human review, and a clean repository. G7 cannot pass until all of those conditions are met.
@@ -783,7 +787,7 @@ external audit dossier is self-contained and represents every mapped tracked fil
 FAIL — ENOENT: EXTERNAL_AUDIT.md did not exist
 ```
 
-T15.2's final GREEN remains historical. T15.3 subsequently raised the suite to 214/214, regenerated this dossier, produced the current 90-file tarball, and preserved all external/manual certification blockers.
+T15.2's final GREEN remains historical. T15.3 raised the suite to 214/214 and hardened the security boundaries. T15.4 then proved that same 214/214 suite on the declared Node.js 22 floor and added Node 22/26 public CI while preserving all external/manual certification blockers.
 
 ### Deterministic evidence already recorded
 
@@ -874,6 +878,14 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ## Tracked files
 
+### `.github/workflows/ci.yml`
+- **Purpose:** Public macOS CI for the declared Node.js support range.
+- **Success check:** GitHub Actions runs `npm ci`, typecheck, the complete test suite, and build on Node 22 and Node 26 for pushes and pull requests.
+- **Current assessment:** PASS
+- **Evidence:** Minimal `macos-14` matrix added after reproducing and fixing the Node 22 lifecycle-timer regression locally.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T15.4 / G4.
+
 ### `.gitignore`
 - **Purpose:** Excludes dependencies, build output, packages, macOS metadata, coverage, and local skill-observation state.
 - **Success check:** `git status --short` does not show ignored runtime/generated directories.
@@ -902,25 +914,25 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records the completed T15.3 implementation commit `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean post-commit state, and the governance-only finalization for T16 handoff.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, and the complete 214/214 Node 22 gate.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated after the T15.3 implementation commit so the embedded changelog, handoff, repository map, 74-file inventory, 214-test inventory, and all 22 canonical-source hashes reflect the committed hardening state.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** T15.2 and T15.3.
+- **Evidence:** Regenerated for T15.4 so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the Node 22 compatibility state.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T15.2, T15.3, and T15.4.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the completed T15.3 implementation SHA `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean state, exact evidence, remaining external blockers, and the next T16 certification command.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Records the T15.4 Node 22 compatibility fix, CI matrix, exact local gates, current commit state, remaining external blockers, and the next live-test command.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
 - **Success check:** Valid MIT license text with copyright attribution.
@@ -940,22 +952,22 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Remains exhaustive for all 74 tracked files and records the T15.3 implementation SHA plus governance-only finalization state.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records the T15.4 compatibility state.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
 - **Success check:** Matches the canonical plan and prevents deterministic tooling or self-reported manifests from substituting for real external certification.
 - **Current assessment:** PASS
-- **Evidence:** Locks the body limit, authorization throttling, scrypt migration, refresh-family lifetime, monotonic/bounded watchdog behavior, macOS alias/nonblocking read policy, safety-action audit exception, tombstone/OSC checks, and explicit residual risks.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
-- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.3.
+- **Evidence:** Locks the existing security boundaries and now requires the complete 214-test suite on Node 22, referenced awaited lifecycle timers, an explicit Cloudflared abort timer, and Node 22/26 public CI.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.4.
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, explicit recovery subtasks, governance gates, and external-evidence boundaries.
 - **Current assessment:** PASS
-- **Evidence:** Adds T15.3 for code-grounded adversarial verification, concrete hardening, residual-risk disclosure, deterministic regressions, dossier regeneration, and unchanged external certification blockers.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Adds T15.4 for the declared Node 22 floor, referenced awaited timers, explicit Cloudflared download abort timing, and a Node 22/26 macOS CI matrix while leaving G5–G7 external blockers unchanged.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 ### `NOTICE`
 - **Purpose:** Distribution notice for Loom and third-party software/trademarks.
@@ -1065,9 +1077,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Wrapper-owned persistent Chromium/CDP lifecycle, tabs/actions, browser lock recovery, bounded page operations, downloads, screenshots, permissions, geolocation, and graceful shutdown.
 - **Success check:** Uses direct ProcessManager executable/argv launch, guarded Playwright import, dedicated profile, PID-reuse-safe lock recovery, twelve-tab bound, per-tab timeout recovery, private no-overwrite artifacts, CDP `Browser.close`, and bounded cancellation fallback.
 - **Current assessment:** PASS
-- **Evidence:** Deterministic browser tests cover lock identity, false positives, downloads, shutdown, snapshot/evaluate recovery, and dispatcher boundaries; real Chrome restored localStorage across two controlled restarts with no process or lock residue.
-- **Last meaningful change:** T9 managed Chromium backend and profile-persistence repair, 2026-07-08.
-- **Owning task or gate:** T9 / G4; composed by T14 runtime.
+- **Evidence:** Browser tests pass 19/19 on Node 22 after keeping awaited evaluation and graceful-shutdown deadline timers referenced until settlement; browser behavior and scope are otherwise unchanged.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T9 / G4, T14, and T15.4.
 
 ### `src/browser/setup.ts`
 - **Purpose:** Explicit architecture-pinned Chromium acquisition, exact executable verification, wrapper-owned launch proof, private manifest, atomic promotion, and pinned metadata export.
@@ -1111,9 +1123,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Pinned Cloudflared acquisition/verification plus Quick and Named Tunnel validation, direct launch, bounded readiness, retry, audit, status, and cleanup.
 - **Success check:** Retains T10/T12 guarantees; named mode validates private stable certificate/current credentials and exact name/account/hostname, launches explicit ephemeral origin argv, exposes production status only after registration, revalidates every attempt, retries only transient failures five times with capped backoff, never falls back to Quick, fails closed on audit/auth/config/cleanup uncertainty, and aborts startup waits on stop without recreation.
 - **Current assessment:** PASS
-- **Evidence:** Cloudflared target passes 30/30. Thirteen named tests prove static validation, exact argv/status, endpoint/password persistence, retry classification/limits, auth/config fail-fast, audit secrecy/order, timeout cleanup, per-attempt revalidation, cleanup failure, benign config notices, option-like rejection, and prompt startup cancellation. T10 real official binary/network evidence remains valid; G5 real named certification remains pending.
-- **Last meaningful change:** T13 Named Tunnel manager and validation, 2026-07-08.
-- **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, and T13 Named Tunnel; consumed by T14.
+- **Evidence:** Cloudflared target passes 30/30 on Node 22. Quick/Named polling sleeps remain referenced until awaited settlement, and acquisition uses an explicit referenced abort timer instead of `AbortSignal.timeout()` so the declared runtime floor cannot exit with pending work. G5 real named certification remains pending.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, T13 Named Tunnel, T14, and T15.4.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, private atomic next-launch replacement, invalid-config preservation, runtime-lock persistence, and PID-reuse identity comparison.
@@ -1453,35 +1465,36 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ## Exact tracked-tree and repository statistics
 
-- Audit baseline parent commit: `7b64064ea01de77ab0876f3eb68977277d9b930c`
+- Audit baseline parent commit: `440978bc15a17f6c0233d93a88648ae3bcd8a167`
 - Branch: `planning/loom-v1-cavekit`
-- Files represented in this dossier assembly: `74`
+- Files represented in this dossier assembly: `75`
 - TypeScript production modules: `26`
 - TypeScript test modules: `22`
-- Total repository bytes represented, excluding generated dossier self-bytes: `1108428`
-- Total repository lines represented, excluding generated dossier self-lines: `27767`
+- Total repository bytes represented, excluding generated dossier self-bytes: `1106174`
+- Total repository lines represented, excluding generated dossier self-lines: `27742`
 
 The dossier’s own final SHA-256 cannot be embedded inside itself without creating a recursive change. All other rows record the bytes present at assembly time.
 
 | Path | Bytes | Lines | SHA-256 |
 |---|---:|---:|---|
+| `.github/workflows/ci.yml` | 439 | 26 | `d05dd87df2e55f59ac0f93537e79b696cf9a3c86593f5eb9d6789a401168ceae` |
 | `.gitignore` | 66 | 6 | `844fc62152e4f94e2438711eedd8f2c37b1e99999adbc408451a9b3bc521e055` |
 | `AGENTS.md` | 2010 | 33 | `fac305e7f7ab4f2e4521f5fcd5b75152bfbe880ca49dba2c8a9896aa49dd052d` |
 | `ALGORITHM.md` | 887 | 17 | `a51c91e490dbdd2e56b345a59bfa8b7dae571172a9d170ee47188361b212e4fb` |
-| `CHANGELOG.md` | 62278 | 856 | `1bb468256f3f819e1f75563ee12e28a357a7e893c072769f294f0dba1e0c6d86` |
+| `CHANGELOG.md` | 63566 | 886 | `1bc612a1f8b470512b1cadd90792190110dad1fab13a76ea6659c9b377383d2f` |
 | `EXTERNAL_AUDIT.md` | generated | generated | self-referential; compute after generation |
-| `HANDOFF.md` | 9665 | 202 | `7ba8d02ffe15b27b57a44689ee441535d40aaee2e4507577865a93cabac69ebc` |
+| `HANDOFF.md` | 4187 | 103 | `a23f16b1d768ba913515ad0f032e16f90f2687b596fe06afdbfaa52615877365` |
 | `LICENSE` | 1071 | 21 | `2d69eab09385ed19112c2338c5e1ab27d5f4dbff3a04569df38201e03c2cd26a` |
 | `NOTICE` | 1103 | 19 | `406e2befe8ef0d8493f4309922e7303b2ef030074b91a300e551aa3b9f37666d` |
 | `README.md` | 8766 | 211 | `48d9cedb8f6bb831f45f35cdba15796dcb258b251338b5f89fa1be5495a977bc` |
-| `REPO_MAP.md` | 53213 | 583 | `190b903d973b71bd597c78d7fad9730fe3c0e431f810c5125e719bb3cef326a2` |
-| `SPEC.md` | 15230 | 78 | `73d63297a4fd69b17a4d0169f458947eb01bfc9ffa3f2f1b787ce6f4dd367a52` |
+| `REPO_MAP.md` | 53395 | 591 | `52d06b3cfe90a6ef221a5e813999c059940609a28d11d7a0788d38a318617941` |
+| `SPEC.md` | 15622 | 79 | `73b0428a170363e96330aceda2e7300add93c6f67a888d9db35314b25a4af4e0` |
 | `docs/DEVELOPMENT.md` | 7427 | 201 | `7f5326ade05681754572f79a27ad17b1ed5257c3c3e0071dc5d2955ecb0759ff` |
 | `docs/OPERATOR.md` | 9911 | 251 | `f86eafb19a47d6a6782a9c5867dc0fa46c566789f12b8c57357b07b3c4c5ad89` |
 | `docs/RELEASE_CERTIFICATION.md` | 7029 | 132 | `b4f5de628cb1fa33772cfc33d88fceac26d51de22e998f59161bcc2922dc0da0` |
 | `docs/SECURITY.md` | 15132 | 203 | `a2b1657980676b2fc41166b37ebeefb3caa9be65781c81aca38a03d8aaba3a3b` |
 | `docs/certification-evidence.example.json` | 2751 | 90 | `43145e54b1013e7556304f92cf64676a2b81f546472ed2b7981ec9421c20e32e` |
-| `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt` | 51389 | 656 | `b3397f473cce0f6f20a25ecd5dbb12ca9b61a9393695dc8cccc58ea3a98288b2` |
+| `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt` | 52181 | 660 | `4733a643a4c370d1678b117b1c89889d1504bebef8c6f96d78d651a9170d35d7` |
 | `docs/release-evidence/README.md` | 3240 | 67 | `798b4d743a977de48adb8502328291ddf77a32164e25d84d2753d19f9f24ec82` |
 | `docs/release-evidence/t15-local-package.md` | 2561 | 90 | `267f01b8955256749368afc89c72db66017473fbf94493b3cb548f3a829df271` |
 | `docs/release-evidence/t15.3-adversarial-review.md` | 18840 | 279 | `3bb5e05a5de5c336df2d77e272e853cb37b6181810540beff4779ae4db3e2d80` |
@@ -1493,13 +1506,13 @@ The dossier’s own final SHA-256 cannot be embedded inside itself without creat
 | `src/atomic-file.ts` | 5840 | 203 | `e280fd08d0e7974ffe807f0b535add18f0164fe42f0406a46af4f9fe8ca9a2c4` |
 | `src/audit.ts` | 15745 | 525 | `db2aaf92ce270229a47c7ae22493ca6f94c4a5915c21b8b9006b21b994e04001` |
 | `src/browser.ts` | 2900 | 113 | `2ef31ff6fc029a430d8ef2d46d6da116d3491f3a8ebf1a6407ea2482f3fc0aa5` |
-| `src/browser/backend.ts` | 36988 | 817 | `dcea217e19205c4a299b6fbc31db34d59d00d8f6edeb343e2720be12bf49ac27` |
+| `src/browser/backend.ts` | 36928 | 815 | `95cd68e338625d12c2a1ffe08645dbaf102f2f42fdb540a008ed33e0d7776a88` |
 | `src/browser/setup.ts` | 17436 | 373 | `9eb0b00f03d8ae991402fdd51698b332072ef5c0da65405d3315e83db4772fdf` |
 | `src/certification-cli.ts` | 5965 | 171 | `6b0b7c434c7b9be99a2c7aa7b49832a8a0e133cdc01fdbb198a93bf1957ff5c9` |
 | `src/certification.ts` | 28068 | 779 | `7287fc344615fd6322db54d6d5e3da662ddf4aa0860fb8f31756a0e28422e659` |
 | `src/child-wrapper.ts` | 6158 | 226 | `fb42217787d9c29713f278d26b86618ab46910acffedb823638b3b8be6033c68` |
 | `src/cli.ts` | 11427 | 355 | `a8065e4ce5c17d5ed147ea2cbbc08f96933013d3fc7e22ae6ef6250f1abdd589` |
-| `src/cloudflare.ts` | 57008 | 1568 | `49c7c2c9d2fd4549b9d5531f565f2433ceb80c30d192d498e8be0473c1ef0cd9` |
+| `src/cloudflare.ts` | 57199 | 1575 | `a61bfbdf12a5f31df090f830dda439f716e831823304394a3b5391e0b5fdc5d9` |
 | `src/config.ts` | 12900 | 404 | `75746f33450e7df50fc72d7c93460ebbd10ab762a463c6c1303a7dca75fdc883` |
 | `src/dashboard.ts` | 13328 | 395 | `6413fa5b48fed011c6cbf7a7ad4a753729608947559b6a2ecfa9c24154503a87` |
 | `src/limits.ts` | 2005 | 40 | `c251dfd215e1c8125e5677ef66d0f3a5ed4718652af7827b1008b2dd6d7a000d` |
@@ -1543,6 +1556,7 @@ The dossier’s own final SHA-256 cannot be embedded inside itself without creat
 ### Exact represented path list
 
 ```text
+.github/workflows/ci.yml
 .gitignore
 AGENTS.md
 ALGORITHM.md
@@ -2097,9 +2111,9 @@ These snapshots are verbatim. Each heading records the source path, byte count, 
 
 ### Embedded source: `SPEC.md`
 
-- Bytes: `15230`
-- Lines: `78`
-- SHA-256: `73d63297a4fd69b17a4d0169f458947eb01bfc9ffa3f2f1b787ce6f4dd367a52`
+- Bytes: `15622`
+- Lines: `79`
+- SHA-256: `73b0428a170363e96330aceda2e7300add93c6f67a888d9db35314b25a4af4e0`
 
 ~~~~~markdown
 # Loom v1 Specification
@@ -2149,6 +2163,7 @@ Loom exposes exactly seven tools: `loom_terminal`, `loom_read`, `loom_write`, `l
 - MCP JSON requests are bounded before parsing, with a 9 MiB server limit that accommodates the 8 MiB write contract plus protocol overhead. Oversized requests return a structured 413 response before SDK or tool-schema handling.
 - Owner-password authorization POSTs are globally limited in-process to ten attempts per monotonic 60-second window. New owner verifiers use scrypt N=32768, r=8, p=3; a successfully verified legacy N=16384, r=8, p=1 credential is transparently upgraded. Refresh-token rotation preserves one absolute 30-day family expiration and cannot renew access indefinitely.
 - Watchdog `ps` and `lsof` probes run with a fixed C locale, bounded output, and a two-second hard timeout. Wrapper identity probes are serialized; transient inspection failure is distinct from confirmed parent mismatch, and a healthy monotonic heartbeat prevents false orphan cleanup. Runtime, ProcessManager, MCP session, dashboard, and wrapper heartbeat safety deadlines use monotonic clocks; persisted OAuth expirations and human-readable timestamps remain wall-clock values.
+- The declared Node.js 22 floor is verified by the complete 214-test suite. Timers that are the sole completion source for awaited browser and tunnel lifecycle/deadline promises remain referenced until settlement; Cloudflared download deadlines use an explicit referenced abort timer rather than `AbortSignal.timeout()` on Node 22. Public CI runs the full macOS suite on Node 22 and Node 26.
 - On macOS only, exact root-owned compatibility aliases `/tmp` and `/var` are canonicalized to `/private/tmp` and `/private/var` before mutation symlink checks. Other mutation symlinks remain forbidden. Reads open the canonical target nonblocking before regular-file verification, so a FIFO/device replacement cannot hang the server.
 - Audit failure continues to block capability-increasing mutations. Terminal cancellation and browser-tab closure remain available without durable audit admission because they reduce active capability; their audit records are best effort when audit is degraded.
 - Tombstone recovery rechecks the exact verified file identity immediately before removal. Terminal output stripping is required to remove OSC sequences including OSC 52 clipboard controls.
@@ -2252,9 +2267,9 @@ Never claim ChatGPT, named-tunnel, process-cleanup, browser-persistence, clean-m
 
 ### Embedded source: `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 
-- Bytes: `51389`
-- Lines: `656`
-- SHA-256: `b3397f473cce0f6f20a25ecd5dbb12ca9b61a9393695dc8cccc58ea3a98288b2`
+- Bytes: `52181`
+- Lines: `660`
+- SHA-256: `4733a643a4c370d1678b117b1c89889d1504bebef8c6f96d78d651a9170d35d7`
 
 ~~~~~text
 LOOM V1 — CAVEKIT IMPLEMENTATION PLAN
@@ -2844,6 +2859,10 @@ T15.3 — Adversarial security verification and hardening
 Treat the externally supplied audit claims as hypotheses and verify each against the actual implementation before changing code. Record false positives and intentional scope decisions separately from verified defects. For verified release blockers: cap MCP JSON bodies before SDK parsing and return structured 413 errors; throttle public owner-password authorization attempts with monotonic in-process accounting; raise new owner-password scrypt work factors to the current documented minimum while transparently upgrading a successfully verified legacy hash; keep an absolute refresh-token family lifetime across rotation; bound and locale-pin every watchdog `ps`/`lsof` subprocess; make reads of FIFO/device replacements nonblocking before regular-file verification; canonicalize only the root-owned macOS `/tmp` and `/var` compatibility aliases before mutation symlink checks; preserve terminal cancellation as a safety operation when audit storage is degraded while keeping terminal start fail-closed; use monotonic time for in-process watchdog, shutdown, session, and dashboard deadlines; recheck tombstone identity immediately before removal; and prove OSC/clipboard terminal controls are stripped. Do not weaken unrestricted-tool warnings, endpoint-bound OAuth, executable verification, or cleanup ownership.
 
 Update the security, operator, development, README, specification, and audit dossier to state the residual risks that cannot honestly be removed inside Loom v1: indirect prompt injection from browser/file/skill/memory content; persistence of browser cookies and Loom memory across restart/auth reset; unrestricted data return to the authorized remote MCP client/provider; inherited and login-shell secrets; localhost/private-network pivoting; macOS TCC and Full Disk Access behavior; local-only incident containment; privacy-oriented rather than forensic/tamper-evident audit; deliberate process/session escape by unrestricted commands; local-filesystem-only crash-durability assumptions; indefinite user-managed download/screenshot retention; terminal scrollback exposure of the owner password; and the lack of an out-of-band signing root for the packaged certification tool. These disclosures must not be phrased as implemented mitigations. Keep Quick Tunnel non-production and G5–G7 blocked. Add deterministic RED/GREEN tests for each code change, update every affected tracked-file ledger entry, regenerate the complete audit dossier, rerun package/secret/residue/map gates, and do not publish.
+
+T15.4 — Supported-runtime compatibility and public CI
+
+Before external certification, reproduce the complete suite on the declared Node.js 22 floor. Awaited lifecycle and deadline promises must keep the event loop alive until they settle; do not unref timers that are the only completion source. Replace `AbortSignal.timeout()` where its unreferenced implementation can strand an awaited operation on Node 22. Preserve all existing browser and Cloudflare behavior, error contracts, security boundaries, and limits. Add a minimal macOS GitHub Actions matrix for Node 22 and Node 26 running clean install, typecheck, full tests, and build. Record the original RED cancellation counts and the final 214/214 Node 22 result. Do not expand browser scope or claim external G5–G7 certification.
 
 T16 — Production certification on a clean supported Mac
 
@@ -3960,9 +3979,9 @@ Store sanitized evidence under `docs/release-evidence/` and index it in `docs/re
 
 ### Embedded source: `REPO_MAP.md`
 
-- Bytes: `53213`
-- Lines: `583`
-- SHA-256: `190b903d973b71bd597c78d7fad9730fe3c0e431f810c5125e719bb3cef326a2`
+- Bytes: `53395`
+- Lines: `591`
+- SHA-256: `52d06b3cfe90a6ef221a5e813999c059940609a28d11d7a0788d38a318617941`
 
 ~~~~~markdown
 # Loom Repository Map
@@ -3972,6 +3991,14 @@ Assessment key: `PASS` = present and validated for its current gate; `PARTIAL` =
 This map is exhaustive for the tracked governance baseline. Validate it against `git ls-files | sort` before every gate/commit that changes tracked files.
 
 ## Tracked files
+
+### `.github/workflows/ci.yml`
+- **Purpose:** Public macOS CI for the declared Node.js support range.
+- **Success check:** GitHub Actions runs `npm ci`, typecheck, the complete test suite, and build on Node 22 and Node 26 for pushes and pull requests.
+- **Current assessment:** PASS
+- **Evidence:** Minimal `macos-14` matrix added after reproducing and fixing the Node 22 lifecycle-timer regression locally.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T15.4 / G4.
 
 ### `.gitignore`
 - **Purpose:** Excludes dependencies, build output, packages, macOS metadata, coverage, and local skill-observation state.
@@ -4001,25 +4028,25 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records the completed T15.3 implementation commit `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean post-commit state, and the governance-only finalization for T16 handoff.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, and the complete 214/214 Node 22 gate.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated after the T15.3 implementation commit so the embedded changelog, handoff, repository map, 74-file inventory, 214-test inventory, and all 22 canonical-source hashes reflect the committed hardening state.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** T15.2 and T15.3.
+- **Evidence:** Regenerated for T15.4 so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the Node 22 compatibility state.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T15.2, T15.3, and T15.4.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the completed T15.3 implementation SHA `7b64064ea01de77ab0876f3eb68977277d9b930c`, clean state, exact evidence, remaining external blockers, and the next T16 certification command.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Records the T15.4 Node 22 compatibility fix, CI matrix, exact local gates, current commit state, remaining external blockers, and the next live-test command.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
 - **Success check:** Valid MIT license text with copyright attribution.
@@ -4039,22 +4066,22 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Remains exhaustive for all 74 tracked files and records the T15.3 implementation SHA plus governance-only finalization state.
-- **Last meaningful change:** T15.3 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.3.
+- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records the T15.4 compatibility state.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** All tasks; current T15.4.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
 - **Success check:** Matches the canonical plan and prevents deterministic tooling or self-reported manifests from substituting for real external certification.
 - **Current assessment:** PASS
-- **Evidence:** Locks the body limit, authorization throttling, scrypt migration, refresh-family lifetime, monotonic/bounded watchdog behavior, macOS alias/nonblocking read policy, safety-action audit exception, tombstone/OSC checks, and explicit residual risks.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
-- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.3.
+- **Evidence:** Locks the existing security boundaries and now requires the complete 214-test suite on Node 22, referenced awaited lifecycle timers, an explicit Cloudflared abort timer, and Node 22/26 public CI.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.4.
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, explicit recovery subtasks, governance gates, and external-evidence boundaries.
 - **Current assessment:** PASS
-- **Evidence:** Adds T15.3 for code-grounded adversarial verification, concrete hardening, residual-risk disclosure, deterministic regressions, dossier regeneration, and unchanged external certification blockers.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
+- **Evidence:** Adds T15.4 for the declared Node 22 floor, referenced awaited timers, explicit Cloudflared download abort timing, and a Node 22/26 macOS CI matrix while leaving G5–G7 external blockers unchanged.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 ### `NOTICE`
 - **Purpose:** Distribution notice for Loom and third-party software/trademarks.
@@ -4164,9 +4191,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Wrapper-owned persistent Chromium/CDP lifecycle, tabs/actions, browser lock recovery, bounded page operations, downloads, screenshots, permissions, geolocation, and graceful shutdown.
 - **Success check:** Uses direct ProcessManager executable/argv launch, guarded Playwright import, dedicated profile, PID-reuse-safe lock recovery, twelve-tab bound, per-tab timeout recovery, private no-overwrite artifacts, CDP `Browser.close`, and bounded cancellation fallback.
 - **Current assessment:** PASS
-- **Evidence:** Deterministic browser tests cover lock identity, false positives, downloads, shutdown, snapshot/evaluate recovery, and dispatcher boundaries; real Chrome restored localStorage across two controlled restarts with no process or lock residue.
-- **Last meaningful change:** T9 managed Chromium backend and profile-persistence repair, 2026-07-08.
-- **Owning task or gate:** T9 / G4; composed by T14 runtime.
+- **Evidence:** Browser tests pass 19/19 on Node 22 after keeping awaited evaluation and graceful-shutdown deadline timers referenced until settlement; browser behavior and scope are otherwise unchanged.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T9 / G4, T14, and T15.4.
 
 ### `src/browser/setup.ts`
 - **Purpose:** Explicit architecture-pinned Chromium acquisition, exact executable verification, wrapper-owned launch proof, private manifest, atomic promotion, and pinned metadata export.
@@ -4210,9 +4237,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Pinned Cloudflared acquisition/verification plus Quick and Named Tunnel validation, direct launch, bounded readiness, retry, audit, status, and cleanup.
 - **Success check:** Retains T10/T12 guarantees; named mode validates private stable certificate/current credentials and exact name/account/hostname, launches explicit ephemeral origin argv, exposes production status only after registration, revalidates every attempt, retries only transient failures five times with capped backoff, never falls back to Quick, fails closed on audit/auth/config/cleanup uncertainty, and aborts startup waits on stop without recreation.
 - **Current assessment:** PASS
-- **Evidence:** Cloudflared target passes 30/30. Thirteen named tests prove static validation, exact argv/status, endpoint/password persistence, retry classification/limits, auth/config fail-fast, audit secrecy/order, timeout cleanup, per-attempt revalidation, cleanup failure, benign config notices, option-like rejection, and prompt startup cancellation. T10 real official binary/network evidence remains valid; G5 real named certification remains pending.
-- **Last meaningful change:** T13 Named Tunnel manager and validation, 2026-07-08.
-- **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, and T13 Named Tunnel; consumed by T14.
+- **Evidence:** Cloudflared target passes 30/30 on Node 22. Quick/Named polling sleeps remain referenced until awaited settlement, and acquisition uses an explicit referenced abort timer instead of `AbortSignal.timeout()` so the declared runtime floor cannot exit with pending work. G5 real named certification remains pending.
+- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, T13 Named Tunnel, T14, and T15.4.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, private atomic next-launch replacement, invalid-config preservation, runtime-lock persistence, and PID-reuse identity comparison.
@@ -4552,9 +4579,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### Embedded source: `CHANGELOG.md`
 
-- Bytes: `62278`
-- Lines: `856`
-- SHA-256: `1bb468256f3f819e1f75563ee12e28a357a7e893c072769f294f0dba1e0c6d86`
+- Bytes: `63566`
+- Lines: `886`
+- SHA-256: `1bc612a1f8b470512b1cadd90792190110dad1fab13a76ea6659c9b377383d2f`
 
 ~~~~~markdown
 # Changelog
@@ -5413,24 +5440,52 @@ state created: no
 - Committed the verified adversarial security hardening, tests, evidence, public threat-model updates, regenerated audit dossier, and synchronized governance at `7b64064ea01de77ab0876f3eb68977277d9b930c`.
 - The repository was clean immediately after that implementation commit.
 - This follow-up changes only the resumable handoff, changelog/map bookkeeping, and regenerated dossier so the next agent receives the completed implementation SHA and the exact T16 certification command.
+
+### T15.4 — Node 22 compatibility and public CI
+
+- Reproduced the declared Node.js 22 floor on v22.23.1. The first full run completed 185/214 and cancelled 29 tests because awaited timeout/lifecycle promises were backed only by unreferenced timers; Node 26 had masked the issue by keeping unrelated handles alive longer.
+- Kept awaited browser evaluation/shutdown deadlines and Quick/Named Tunnel polling sleeps referenced until settlement. This is a lifecycle correctness fix only; no browser feature or recovery scope changed.
+- Replaced Cloudflared acquisition's `AbortSignal.timeout()` with an explicit referenced `AbortController` timer while preserving the bounded timeout and existing error contract.
+- Added minimal macOS GitHub Actions CI on Node 22 and Node 26 with clean install, typecheck, full tests, and build.
+- Node 22 targeted browser tests now pass 19/19, Cloudflare tests pass 30/30, and the full repository passes 214/214 with typecheck and build.
+
+Evidence:
+
+```text
+RED — Node v22.23.1 full suite
+pass 185
+cancelled 29
+exit 1
+
+GREEN — Node v22.23.1 browser target
+pass 19
+cancelled 0
+
+GREEN — Node v22.23.1 Cloudflare target
+pass 30
+cancelled 0
+
+GREEN — Node v22.23.1 complete gate
+npm run typecheck: PASS
+npm test: PASS (214/214)
+npm run build: PASS
+```
 ~~~~~
 
 ### Embedded source: `HANDOFF.md`
 
-- Bytes: `9665`
-- Lines: `202`
-- SHA-256: `7ba8d02ffe15b27b57a44689ee441535d40aaee2e4507577865a93cabac69ebc`
+- Bytes: `4187`
+- Lines: `103`
+- SHA-256: `a23f16b1d768ba913515ad0f032e16f90f2687b596fe06afdbfaa52615877365`
 
 ~~~~~markdown
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 22:07 PDT
+**Date and local time:** 2026-07-08 22:54 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**Completed T15.3 implementation SHA:** `7b64064ea01de77ab0876f3eb68977277d9b930c`
-**Repository state before this governance-finalization commit:** clean at the completed T15.3 implementation SHA
-**Current task:** T15.3 complete and locally committed; next task is the remaining T16 external/manual certification work
-**Last completed gate:** typecheck, 214/214 tests, build, ten-run transient-EPERM stress, exact 74-file map/dossier coverage, 22 embedded-source hash checks, 90-file package inspection, isolated tarball installation, supported secret scan, and empty Loom-owned residue scan
+**Base SHA before T15.4:** `440978bc15a17f6c0233d93a88648ae3bcd8a167`
+**Current task:** T15.4 supported-runtime compatibility and public CI
 **Pushed or published:** no
 
 ## Required startup command
@@ -5439,191 +5494,94 @@ state created: no
 cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build && git status --short
 ```
 
-## T15.3 completed work
+## Why T15.4 was required
 
-- Treated all five supplied adversarial reviews as hypotheses and verified consolidated claims against source, the pinned MCP SDK, tests, or controlled local experiments.
-- Added `docs/release-evidence/t15.3-adversarial-review.md` with verified/fixed, verified/residual, false-positive/already-mitigated, and intentional-scope classifications.
-- Replaced the SDK helper's unbounded JSON parser with explicit localhost Host validation, a pre-SDK 9 MiB MCP body limit, 64 KiB OAuth metadata parsers, and structured 413/400 responses.
-- Added monotonic owner-password authorization throttling: ten attempts per 60-second foreground-process window with 429 and `Retry-After`.
-- Changed new owner verifiers to scrypt N=32768, r=8, p=3 with explicit memory bounds and transparent atomic migration after successful legacy N=16384, r=8, p=1 verification.
-- Added one absolute 30-day refresh-token family expiration across rotation.
-- Added fixed C locale, bounded output, and two-second hard timeout to all watchdog `ps`/`lsof` probes.
-- Serialized wrapper identity probes, converted wrapper heartbeat age to monotonic time, and distinguished confirmed parent mismatch from temporary process-table unavailability.
-- Converted runtime, ProcessManager, dashboard, and MCP session in-process deadlines to monotonic time.
-- Canonicalized only macOS `/tmp` and `/var` aliases to `/private/tmp` and `/private/var`.
-- Opened final read targets with `O_NONBLOCK | O_NOFOLLOW` before regular-file verification to prevent FIFO/device hangs.
-- Rechecked exact memory-tombstone identity immediately before removal.
-- Made runtime-lock creation explicitly `O_CREAT | O_EXCL | O_NOFOLLOW`.
-- Kept terminal start and capability-increasing browser work audit-fail-closed, while preserving terminal cancellation and browser-tab close as best-effort-audited containment actions.
-- Added OSC 52 stripping coverage, a bounded 256 KiB hostile Quick Tunnel parser case, wall-clock-jump dashboard coverage, body-limit/rate-limit/scrypt/refresh/FIFO/tombstone/watchdog regressions, and updated exact limits.
-- Controlled output-flood experiment: 64 MiB terminal output completed normally in about 323 ms without false watchdog termination or residue.
-- Controlled deliberate-session-escape experiment: a child launched with `start_new_session=True` survived owned-PGID cancellation, was explicitly killed, and is now documented as outside the cleanup guarantee.
-- Expanded README, SPEC, security, operator, development, release-certification, release-evidence, and external-audit guidance for prompt injection, provider disclosure, persistent state, login-shell secrets, TCC, LAN pivoting, local-only containment, non-forensic audit, process escape, storage durability, retention, password scrollback, and artifact trust.
+The package and public documentation declare Node.js 22+ support, but the previous agent had only run the complete suite on Node 26. A fresh Node v22.23.1 run completed 185/214 tests and cancelled 29 because several awaited deadline/lifecycle promises relied only on unreferenced timers. Node 22 allowed the event loop to exit before those promises settled.
+
+This was a real supported-runtime release blocker. It did not indicate a missing browser feature.
+
+## T15.4 implementation
+
+- Kept browser evaluation and graceful-shutdown deadline timers referenced until their awaited promises settle.
+- Kept Quick and Named Tunnel polling sleeps referenced until their awaited operations settle.
+- Replaced Cloudflared download use of `AbortSignal.timeout()` with an explicit referenced `AbortController` timer while preserving the bounded timeout and error behavior.
+- Added `.github/workflows/ci.yml` with a `macos-14` matrix for Node 22 and Node 26 running `npm ci`, typecheck, full tests, and build.
+- Added T15.4 to the canonical plan and synchronized SPEC, CHANGELOG, repository map, and this handoff.
+- No browser feature, public tool schema, security boundary, dependency, package command, tunnel policy, or certification claim was expanded.
 
 ## RED/GREEN evidence
 
 ```text
-MCP body limit RED
-new test failed before the explicit pre-SDK parser existed
-GREEN: structured 413 and zero sessions
+RED — Node v22.23.1 complete suite before correction
+pass 185
+cancelled 29
+exit 1
 
-authorization throttle RED
-new setup options/behavior absent
-GREEN: two attempts accepted in test window, third 429, accepted after monotonic expiry
+RED isolation
+browser: pass 14/19, cancelled 5
+cloudflare: pass 6/30, cancelled 24
 
-owner scrypt migration / refresh family RED
-new parameters and family expiration absent
-GREEN: legacy hash upgraded after correct owner authorization; refresh at day 29 cannot rotate after day 30
+GREEN — Node v22.23.1 targeted browser suite
+pass 19/19
+cancelled 0
 
-watchdog RED
-runWatchdogCommand export absent
-GREEN: fixed C locale and SIGKILL timeout
+GREEN — Node v22.23.1 targeted Cloudflare suite
+pass 30/30
+cancelled 0
 
-FIFO read / macOS aliases / safety cancellation / tombstone identity
-new expectations failed or were absent before production changes
-GREEN in focused suite
-
-documentation RED
-security/operator residual-risk test failed first on missing prompt-injection disclosure
-GREEN: docs target passes
+GREEN — Node v22.23.1 complete gate
+npm run typecheck: PASS
+npm test: PASS — 214/214
+npm run build: PASS
 ```
 
-## Exact final commands and results so far
+## Core MCP status
 
-```text
-mandatory startup gate at 82412ef
-npm ci
-PASS — 106 packages, 0 vulnerabilities
-npm run typecheck
-PASS
-npm test
-PASS — 205/205 baseline
-npm run build
-PASS
-repository map
-PASS — 73/73 before T15.3 edits
+The core release path remains implemented and covered:
 
-focused hardening target
-PASS — 68/68
+- endpoint-bound Streamable HTTP MCP and OAuth
+- exactly seven public Loom tools
+- unrestricted noninteractive terminal jobs and process-group cleanup
+- text/image read, atomic write, and exact edit
+- skills catalog and Loom-owned memory
+- owner-password persistence and explicit reset
+- loopback dashboard and foreground runtime lifecycle
+- Quick Tunnel testing path and Named Tunnel production path
 
-dashboard/runtime/process monotonic target
-PASS — 31/31
+Browser behavior was not expanded during T15.4. The existing browser implementation remains in place and its deterministic suite also passes on Node 22.
 
-browser/terminal containment target
-PASS — 27/27
+## Remaining real blockers
 
-transient EPERM isolated stress after wrapper fix
-PASS — 10/10
+- G5: real stable Named Tunnel, DNS/public `/mcp`, eligible ChatGPT account/workspace, and public OAuth discovery.
+- G6: real ChatGPT authorization, representative calls across all seven tool categories, refresh/reconnect, public-access termination, and process-table cleanup evidence.
+- T16: clean supported-Mac package install, real browser profile persistence, owner-password lifecycle, sleep/wake, connector persistence, sanitized committed evidence, and human review.
+- G7 remains blocked until those external/manual gates pass. Deterministic local success is not production certification.
 
-complete current gate
-npm run typecheck
-PASS
-npm test
-PASS — 214/214
-npm run build
-PASS
+## Files changed in T15.4
 
-npm pack --dry-run --json
-PASS — 90 files, 194258 bytes
-forbidden internal paths: none
-
-actual hardened tarball
-loom-mcp-0.1.0.tgz
-bytes: 194258
-SHA-256: 31c0f309a0bb94d3b974a852f0510282898ec5087c98f1229fe94c8203f1a491
-
-isolated prefix/HOME install
-loom --version: 0.1.0
-loom --help: PASS
-loom-certify --help: PASS
-plain launch: exit 2
-sessionless YOLO launch: exit 2
-state created: no
-```
-
-## Review classification highlights
-
-Already mitigated or false-positive claims include loopback CDP binding, cryptographic OAuth transaction and job IDs, 0600 config backup, launch-time Cloudflared re-verification, absence of public `z.coerce`, exact environment-key grammar, OSC 52 passage, Quick-parser ReDoS, `--` tunnel-name injection, active-request decrement without `finally`, and hard-link overwrite through atomic rename.
-
-Verified residual risks now disclosed include indirect prompt injection/cross-tool escalation, authorized-client/provider data exposure, persistent browser/memory/artifacts, login-shell/inherited secrets, macOS TCC, localhost/private-network pivoting, local-only incident containment, privacy-oriented non-forensic audit, deliberate `setsid()` escape, finite process-identity precision, local-filesystem/power-loss assumptions, operator-managed retention, terminal scrollback, and no out-of-band package-signing root.
-
-## Known failures and corrections
-
-- The first T15.3 full suite reached 213/214. The transient-EPERM escalation test intermittently observed no SIGKILL retry because overlapping wrapper fallback probes and transient bounded `lsof` failure could trigger false orphan cleanup while heartbeats were healthy.
-- Root correction serialized wrapper identity probes, used monotonic heartbeat age, and distinguished `unknown` observation from `mismatch`. The isolated test then passed ten consecutive runs and the full suite passed 214/214.
-- The deliberate process-session escape is not a failed test or claimed fix; it is an experimentally verified residual limitation.
-
-## Real blockers
-
-- G5 requires an eligible current ChatGPT workspace/account, a real stable Named Tunnel, real DNS/public `/mcp` routing, and public OAuth discovery.
-- G6 requires real ChatGPT authorization, all seven real tool categories, access-token refresh/reconnect, public-access termination, and process tables for Ctrl+C, SIGTERM, terminal close, and forced parent death.
-- T16 still requires remaining manual sleep/wake, connector persistence, real owner-password lifecycle, clean supported-Mac evidence, sanitized committed external artifacts, and human review.
-- G7 remains blocked. T15.3 does not turn residual unrestricted-agent risks into mitigations and does not grant production certification.
-
-## Files changed
-
+- `.github/workflows/ci.yml`
 - `CHANGELOG.md`
-- `EXTERNAL_AUDIT.md`
 - `HANDOFF.md`
-- `README.md`
 - `REPO_MAP.md`
 - `SPEC.md`
-- `docs/DEVELOPMENT.md`
-- `docs/OPERATOR.md`
-- `docs/RELEASE_CERTIFICATION.md`
-- `docs/SECURITY.md`
 - `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
-- `docs/release-evidence/README.md`
-- `docs/release-evidence/t15.3-adversarial-review.md`
-- `src/child-wrapper.ts`
-- `src/dashboard.ts`
-- `src/limits.ts`
-- `src/mcp.ts`
-- `src/oauth.ts`
-- `src/paths.ts`
-- `src/process-manager.ts`
-- `src/runtime.ts`
-- `src/tools/browser.ts`
-- `src/tools/files.ts`
-- `src/tools/memory.ts`
-- `src/tools/terminal.ts`
-- `src/watchdog.ts`
-- `test/browser.test.ts`
-- `test/cloudflare.test.ts`
-- `test/dashboard.test.ts`
-- `test/docs.test.ts`
-- `test/files.test.ts`
-- `test/limits.test.ts`
-- `test/mcp.test.ts`
-- `test/memory.test.ts`
-- `test/oauth.test.ts`
-- `test/output.test.ts`
-- `test/paths.test.ts`
-- `test/terminal.test.ts`
-- `test/watchdog.test.ts`
+- `src/browser/backend.ts`
+- `src/cloudflare.ts`
 
-## Final dossier and integrity evidence
-
-```text
-EXTERNAL_AUDIT.md represented files: 74
-static test declarations: 214
-embedded canonical sources: 22
-missing mapped paths: none
-package files: 90
-package bytes: 194258
-supported secret findings: none
-Loom-owned process residue: none
-```
-
-## Exact next command
+## Next commands
 
 ```bash
-cd /Users/aashu/loom && npm run certify -- --output /private/tmp/loom-t16-certification-report.json
+cd /Users/aashu/loom
+npm ci
+npm run typecheck
+npm test
+npm run build
+npx -y -p node@22 -c 'node -v; npm run typecheck && npm test && npm run build'
+npm pack --dry-run --json
+git status --short
 ```
 
-## Next expected result
-
-The deterministic collector should remain blocked with exit code 2 until real G5/G6/T16 evidence is supplied and human-reviewed. The next implementation agent should not change the T15.3 security behavior unless new verified evidence requires it. No push, publication, public tunnel deployment, or production-certification claim is authorized.
+After those pass and the T15.4 commit is recorded, the next human action is a real local launch test followed by G5/G6 connector testing. Do not push, publish, deploy, or claim production certification until the user explicitly authorizes it and the external evidence exists.
 ~~~~~
 
 ### Embedded source: `docs/release-evidence/README.md`
