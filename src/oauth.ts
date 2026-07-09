@@ -31,10 +31,13 @@ export interface OpenAuthStoreResult {
   ownerPassword: string | null;
 }
 
+export type TokenEndpointAuthMethod = 'client_secret_post' | 'none';
+
 export interface RegisterClientInput {
   clientName?: string;
   redirectUris: string[];
   scopes?: string[];
+  tokenEndpointAuthMethod?: TokenEndpointAuthMethod;
 }
 
 export interface RegisteredClient {
@@ -43,6 +46,7 @@ export interface RegisteredClient {
   clientName: string | null;
   redirectUris: string[];
   scopes: string[];
+  tokenEndpointAuthMethod: TokenEndpointAuthMethod;
 }
 
 export interface IssueAuthorizationCodeInput {
@@ -88,7 +92,7 @@ export interface ConsumedAuthorizationTransaction extends IssuedAuthorizationCod
 export interface ExchangeAuthorizationCodeInput {
   code: string;
   clientId: string;
-  clientSecret: string;
+  clientSecret?: string;
   redirectUri: string;
   resource: string;
   codeVerifier: string;
@@ -97,7 +101,7 @@ export interface ExchangeAuthorizationCodeInput {
 export interface RefreshAccessTokenInput {
   refreshToken: string;
   clientId: string;
-  clientSecret: string;
+  clientSecret?: string;
   resource: string;
   scopes?: string[];
 }
@@ -138,7 +142,7 @@ export interface ResetOwnerCredentialResult {
 export interface RevokeClientTokenInput {
   token: string;
   clientId: string;
-  clientSecret: string;
+  clientSecret?: string;
 }
 
 const ownerSchema = z.object({
@@ -154,6 +158,7 @@ const ownerSchema = z.object({
 
 const clientSchema = z.object({
   clientName: z.string().nullable(),
+  tokenEndpointAuthMethod: z.enum(['client_secret_post', 'none']).default('client_secret_post'),
   secretHash: z.string().regex(/^[a-f0-9]{64}$/),
   redirectUris: z.array(z.string()).min(1),
   scopes: z.array(z.string()).min(1),
@@ -514,10 +519,12 @@ export class AuthStore {
       const redirectUris = [...new Set(input.redirectUris.map(canonicalRedirectUri))];
       const scopes = normalizeScopes(input.scopes);
       const clientId = `loom_${randomSecret(18)}`;
-      const clientSecret = randomSecret(32);
+      const tokenEndpointAuthMethod = input.tokenEndpointAuthMethod ?? 'client_secret_post';
+      const clientSecret = tokenEndpointAuthMethod === 'client_secret_post' ? randomSecret(32) : '';
       const clientName = input.clientName?.trim().slice(0, 128) || null;
       state.clients[clientId] = {
         clientName,
+        tokenEndpointAuthMethod,
         secretHash: sha256(clientSecret),
         redirectUris,
         scopes,
@@ -525,7 +532,14 @@ export class AuthStore {
         generation: state.endpoint.generation,
         createdAt: this.now().getTime(),
       };
-      return { clientId, clientSecret, clientName, redirectUris, scopes };
+      return {
+        clientId,
+        clientSecret,
+        clientName,
+        redirectUris,
+        scopes,
+        tokenEndpointAuthMethod,
+      };
     }));
   }
 
@@ -662,7 +676,7 @@ export class AuthStore {
   exchangeAuthorizationCode(input: ExchangeAuthorizationCodeInput): Promise<OAuthTokenResponse> {
     return this.exclusive(() => this.mutate(async (state) => {
       const resource = this.requireExactResource(state, input.resource);
-      this.requireClientSecret(state, input.clientId, input.clientSecret);
+      this.requireClientAuthentication(state, input.clientId, input.clientSecret);
       const codeHash = sha256(input.code);
       const code = state.authorizationCodes[codeHash];
       if (code === undefined) {
@@ -677,7 +691,7 @@ export class AuthStore {
   refreshAccessToken(input: RefreshAccessTokenInput): Promise<OAuthTokenResponse> {
     return this.exclusive(() => this.mutate(async (state) => {
       const resource = this.requireExactResource(state, input.resource);
-      this.requireClientSecret(state, input.clientId, input.clientSecret);
+      this.requireClientAuthentication(state, input.clientId, input.clientSecret);
       const refreshHash = sha256(input.refreshToken);
       const refresh = state.refreshTokens[refreshHash];
       if (refresh === undefined) {
@@ -744,7 +758,7 @@ export class AuthStore {
 
   revokeClientToken(input: RevokeClientTokenInput): Promise<boolean> {
     return this.exclusive(async () => {
-      this.requireClientSecret(this.state, input.clientId, input.clientSecret);
+      this.requireClientAuthentication(this.state, input.clientId, input.clientSecret);
       const tokenHash = sha256(input.token);
       const access = this.state.accessTokens[tokenHash];
       const refresh = this.state.refreshTokens[tokenHash];
@@ -807,7 +821,7 @@ export class AuthStore {
       response_types_supported: ['code'],
       grant_types_supported: ['authorization_code', 'refresh_token'],
       code_challenge_methods_supported: ['S256'],
-      token_endpoint_auth_methods_supported: ['client_secret_post'],
+      token_endpoint_auth_methods_supported: ['client_secret_post', 'none'],
       scopes_supported: [...ALLOWED_SCOPES],
     };
   }
@@ -862,9 +876,16 @@ export class AuthStore {
     return client;
   }
 
-  private requireClientSecret(state: AuthState, clientId: string, clientSecret: string): ClientRecord {
+  private requireClientAuthentication(
+    state: AuthState,
+    clientId: string,
+    clientSecret: string | undefined,
+  ): ClientRecord {
     const client = this.requireCurrentClient(state, clientId);
-    if (!safeHashEquals(client.secretHash, clientSecret)) {
+    if (client.tokenEndpointAuthMethod === 'none') {
+      return client;
+    }
+    if (clientSecret === undefined || !safeHashEquals(client.secretHash, clientSecret)) {
       throw new OAuthError('OAuth client authentication failed.', 'invalid_client');
     }
     return client;

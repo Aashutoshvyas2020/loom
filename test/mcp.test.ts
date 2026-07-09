@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { request as httpRequest } from 'node:http';
 import { mkdtemp, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -85,6 +86,21 @@ async function issueTokens(
     codeVerifier: verifier,
   });
   return { client, tokens };
+}
+
+async function rawGetWithHost(url: string, host: string): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(url, { method: 'GET', headers: { host } }, (response) => {
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk: Buffer) => chunks.push(chunk));
+      response.on('end', () => resolve({
+        status: response.statusCode ?? 0,
+        body: Buffer.concat(chunks).toString('utf8'),
+      }));
+    });
+    request.once('error', reject);
+    request.end();
+  });
 }
 
 function initializeBody() {
@@ -176,7 +192,7 @@ test('bound server publishes exact metadata and an unauthenticated MCP challenge
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     code_challenge_methods_supported: ['S256'],
-    token_endpoint_auth_methods_supported: ['client_secret_post'],
+    token_endpoint_auth_methods_supported: ['client_secret_post', 'none'],
     scopes_supported: ['loom:tools'],
   });
 
@@ -193,6 +209,29 @@ test('bound server publishes exact metadata and an unauthenticated MCP challenge
     response.headers.get('www-authenticate'),
     'Bearer error="invalid_token", error_description="Missing Authorization header", scope="loom:tools", resource_metadata="https://loom.example.com/.well-known/oauth-protected-resource/mcp"',
   );
+
+});
+
+test('public OAuth discovery accepts only the bound public hostname and loopback hosts', async (t) => {
+  const { server } = await setupServer();
+  t.after(() => server.close());
+  await server.bindPublicEndpoint('https://loom.example.com/mcp');
+
+  const publicHost = await rawGetWithHost(
+    `${server.origin}/.well-known/oauth-protected-resource/mcp`,
+    'loom.example.com',
+  );
+  assert.equal(publicHost.status, 200);
+  assert.equal(
+    (JSON.parse(publicHost.body) as { resource: string }).resource,
+    'https://loom.example.com/mcp',
+  );
+
+  const rejectedHost = await rawGetWithHost(
+    `${server.origin}/.well-known/oauth-protected-resource/mcp`,
+    'attacker.example',
+  );
+  assert.equal(rejectedHost.status, 403);
 });
 
 test('owner-password authorization attempts are globally bounded by a monotonic window', async (t) => {
@@ -409,6 +448,83 @@ test('standard HTTP OAuth registration, authorization, exchange, refresh, and re
     body: JSON.stringify(initializeBody()),
   });
   assert.equal(revokedMcp.status, 401);
+});
+
+test('dynamic registration supports DevSpace-compatible public clients without a secret', async (t) => {
+  const { server, authStore, ownerPassword } = await setupServer();
+  t.after(() => server.close());
+  const resource = 'https://loom.example.com/mcp';
+  await server.bindPublicEndpoint(resource);
+
+  const registrationResponse = await fetch(`${server.origin}/oauth/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      client_name: 'ChatGPT',
+      redirect_uris: ['https://client.example/callback'],
+      scope: 'loom:tools',
+      token_endpoint_auth_method: 'none',
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+    }),
+  });
+  assert.equal(registrationResponse.status, 201);
+  const registration = await registrationResponse.json() as {
+    client_id: string;
+    client_secret?: string;
+    redirect_uris: string[];
+    token_endpoint_auth_method: string;
+  };
+  assert.equal(registration.token_endpoint_auth_method, 'none');
+  assert.equal(registration.client_secret, undefined);
+
+  const verifier = 'q'.repeat(64);
+  const issued = await authStore.issueAuthorizationCode({
+    clientId: registration.client_id,
+    redirectUri: registration.redirect_uris[0]!,
+    scopes: ['loom:tools'],
+    resource,
+    ownerPassword,
+    codeChallenge: AuthStore.pkceChallenge(verifier),
+    codeChallengeMethod: 'S256',
+  });
+  const tokenResponse = await fetch(`${server.origin}/oauth/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: issued.code,
+      client_id: registration.client_id,
+      redirect_uri: registration.redirect_uris[0]!,
+      code_verifier: verifier,
+      resource,
+    }),
+  });
+  assert.equal(tokenResponse.status, 200);
+  const tokens = await tokenResponse.json() as { access_token: string; refresh_token: string };
+
+  const refreshResponse = await fetch(`${server.origin}/oauth/token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: tokens.refresh_token,
+      client_id: registration.client_id,
+      resource,
+    }),
+  });
+  assert.equal(refreshResponse.status, 200);
+  const refreshed = await refreshResponse.json() as { access_token: string };
+
+  const revokeResponse = await fetch(`${server.origin}/oauth/revoke`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      token: refreshed.access_token,
+      client_id: registration.client_id,
+    }),
+  });
+  assert.equal(revokeResponse.status, 200);
 });
 
 test('a real SDK client sees exactly seven Loom tools and can call the injected dispatcher', async (t) => {

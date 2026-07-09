@@ -1,12 +1,10 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 22:58 PDT
+**Date and local time:** 2026-07-08 23:26 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**Completed T15.4 implementation SHA:** `5ee5dd9524940fd87432f4727178fbfdbeecb08e`
-**Repository state after implementation commit:** clean
-**Current task:** T15.4 complete; next action is the owner's real foreground launch and connector test
-**Last completed gate:** Node 22 and active-runtime typecheck, 214/214 tests, build, exact 75-file map, 90-file package inspection, staged secret scan, and empty Loom-owned residue scan
+**Base SHA before T15.5:** `d8261ba48133b77b5fdb6b87bffe7dafa4ac20f4`
+**Current task:** T15.5 real ChatGPT OAuth interoperability
 **Pushed or published:** no
 
 ## Required startup command
@@ -15,84 +13,59 @@
 cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build && git status --short
 ```
 
-## Why T15.4 was required
+## Failure reproduced
 
-The package and public documentation declare Node.js 22+ support, but the previous agent had only run the complete suite on Node 26. A fresh Node v22.23.1 run completed 185/214 tests and cancelled 29 because several awaited deadline/lifecycle promises relied only on unreferenced timers. Node 22 allowed the event loop to exit before those promises settled.
+The named tunnel registered and Loom printed `Connector: ready`, but ChatGPT rejected the public MCP URL as not implementing OAuth. Comparing Loom with the already working DevSpace server identified three compatibility problems:
 
-This was a real supported-runtime release blocker. It did not indicate a missing browser feature.
+1. Loom applied localhost-only Host validation globally, so Cloudflare-forwarded requests using the public hostname were rejected before OAuth discovery routes ran.
+2. DevSpace and the pinned MCP SDK support public OAuth clients using `token_endpoint_auth_method=none`; Loom supported only `client_secret_post`.
+3. Loom required a nonstandard `TunnelName` field in Cloudflare credentials and rejected Cloudflare's standard optional `Endpoint` field.
 
-## T15.4 implementation
+## T15.5 implementation
 
-- Kept browser evaluation and graceful-shutdown deadline timers referenced until their awaited promises settle.
-- Kept Quick and Named Tunnel polling sleeps referenced until their awaited operations settle.
-- Replaced Cloudflared download use of `AbortSignal.timeout()` with an explicit referenced `AbortController` timer while preserving the bounded timeout and error behavior.
-- Added `.github/workflows/ci.yml` with a `macos-14` matrix for Node 22 and Node 26 running `npm ci`, typecheck, full tests, and build.
-- Added T15.4 to the canonical plan and synchronized SPEC, CHANGELOG, repository map, and this handoff.
-- No browser feature, public tool schema, security boundary, dependency, package command, tunnel policy, or certification claim was expanded.
+- Host validation now allows loopback and, after endpoint binding, only the exact canonical public resource hostname. Other hosts remain 403.
+- OAuth metadata and DCR now support both `client_secret_post` and public-client `none`.
+- Authorization-code exchange, refresh, and revocation work for both methods.
+- Endpoint/resource binding, PKCE S256, rotating refresh tokens, authorization throttling, and the server-side authorization transaction remain unchanged.
+- Named-tunnel credentials now accept Cloudflare's standard fields: `AccountTag`, `TunnelSecret`, `TunnelID`, and optional string `Endpoint`; the file must be named `<TunnelID>.json` and match the origin-certificate account.
+- The canonical plan, specification, changelog, repository map, and tests are synchronized.
 
 ## RED/GREEN evidence
 
 ```text
-RED — Node v22.23.1 complete suite before correction
-pass 185
-cancelled 29
-exit 1
-
-RED isolation
-browser: pass 14/19, cancelled 5
-cloudflare: pass 6/30, cancelled 24
-
-GREEN — Node v22.23.1 targeted browser suite
-pass 19/19
-cancelled 0
-
-GREEN — Node v22.23.1 targeted Cloudflare suite
-pass 30/30
-cancelled 0
-
-GREEN — Node v22.23.1 complete gate
-npm run typecheck: PASS
-npm test: PASS — 214/214
-npm run build: PASS
+RED — raw public Host discovery: expected 200, received 403
+RED — authorization metadata omitted token method none
+RED — public-client DCR: expected 201, received 400
+GREEN — public Host / hostile Host / metadata / public DCR: 3/3
+GREEN — integrated OAuth + MCP + Cloudflare: 52/52
 ```
 
-## Core MCP status
+## Current external state
 
-The core release path remains implemented and covered:
+- DevSpace is running at `devspace.aashutoshvyas.com` and provides the current control channel.
+- Loom should use a dedicated named tunnel and `loom.aashutoshvyas.com`; sharing one tunnel between DevSpace and Loom can split traffic.
+- Rotate the local owner credential before final authorization because an earlier value was exposed in conversation.
 
-- endpoint-bound Streamable HTTP MCP and OAuth
-- exactly seven public Loom tools
-- unrestricted noninteractive terminal jobs and process-group cleanup
-- text/image read, atomic write, and exact edit
-- skills catalog and Loom-owned memory
-- owner-password persistence and explicit reset
-- loopback dashboard and foreground runtime lifecycle
-- Quick Tunnel testing path and Named Tunnel production path
+## Completed local gates
 
-Browser behavior was not expanded during T15.4. The existing browser implementation remains in place and its deterministic suite also passes on Node 22.
+- Exact repository-map equality: PASS for all 75 tracked files.
+- Active runtime: typecheck PASS, tests 216/216, build PASS.
+- Node v22.23.1: typecheck PASS, tests 216/216, build PASS.
+- Package dry run: 90 approved files, 195236 bytes.
+- Diff check: PASS.
+- Loom-owned process residue: none.
 
-## Remaining real blockers
+## Remaining gates
 
-- G5: real stable Named Tunnel, DNS/public `/mcp`, eligible ChatGPT account/workspace, and public OAuth discovery.
-- G6: real ChatGPT authorization, representative calls across all seven tool categories, refresh/reconnect, public-access termination, and process-table cleanup evidence.
-- T16: clean supported-Mac package install, real browser profile persistence, owner-password lifecycle, sleep/wake, connector persistence, sanitized committed evidence, and human review.
-- G7 remains blocked until those external/manual gates pass. Deterministic local success is not production certification.
+- Commit T15.5 and record the exact implementation SHA.
+- Create the dedicated `loom` named tunnel and DNS route, update `~/.loom/config.json`, rotate the owner credential locally, and launch Loom in a visible terminal.
+- Verify public OAuth discovery, complete the real ChatGPT connector flow, refresh/reconnect, and representative core tool calls.
+- G6/G7 remain blocked until that real evidence exists.
 
-## Files changed in T15.4
-
-- `.github/workflows/ci.yml`
-- `CHANGELOG.md`
-- `HANDOFF.md`
-- `REPO_MAP.md`
-- `SPEC.md`
-- `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
-- `src/browser/backend.ts`
-- `src/cloudflare.ts`
-
-## Exact next command: owner live test
+## Exact next command
 
 ```bash
-cd /Users/aashu/loom && npm run build && node dist/src/cli.js launch --yolo
+cd /Users/aashu/loom && git add CHANGELOG.md EXTERNAL_AUDIT.md HANDOFF.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt src/cloudflare.ts src/mcp.ts src/oauth.ts test/cloudflare.test.ts test/mcp.test.ts test/oauth.test.ts
 ```
 
-The owner should now exercise the foreground launch, copy the printed public `/mcp` endpoint, authorize through the owner-password flow, and call the core MCP tools. G5/G6 evidence must still be collected before a production-certification claim. Do not push, publish, or deploy until the user explicitly authorizes it.
+Do not push, publish, or claim production certification before the real ChatGPT evidence is complete and publication is explicitly authorized.

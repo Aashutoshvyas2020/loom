@@ -493,8 +493,8 @@ function validateNamedTunnelHostname(value: string): string {
 
 function parseNamedTunnelCredentials(
   bytes: Buffer,
-  tunnelName: string,
   certificateAccountId: string,
+  credentialsFile: string,
 ): { tunnelId: string } {
   let parsed: unknown;
   try {
@@ -508,11 +508,15 @@ function parseNamedTunnelCredentials(
     throw new NamedTunnelConfigError('Named tunnel credentials must be an object.');
   }
   const record = parsed as Record<string, unknown>;
-  const expectedKeys = ['AccountTag', 'TunnelID', 'TunnelName', 'TunnelSecret'];
-  const actualKeys = Object.keys(record).sort();
-  if (actualKeys.length !== expectedKeys.length
-    || actualKeys.some((key, index) => key !== expectedKeys[index])) {
+  const requiredKeys = ['AccountTag', 'TunnelID', 'TunnelSecret'];
+  const allowedKeys = new Set([...requiredKeys, 'Endpoint']);
+  const actualKeys = Object.keys(record);
+  if (requiredKeys.some((key) => !(key in record))
+    || actualKeys.some((key) => !allowedKeys.has(key))) {
     throw new NamedTunnelConfigError('Named tunnel credentials have an unexpected schema.');
+  }
+  if (record.Endpoint !== undefined && typeof record.Endpoint !== 'string') {
+    throw new NamedTunnelConfigError('Named tunnel credentials contain an invalid Endpoint.');
   }
   if (typeof record.AccountTag !== 'string' || record.AccountTag.trim() === '') {
     throw new NamedTunnelConfigError('Named tunnel credentials are missing AccountTag.');
@@ -522,20 +526,21 @@ function parseNamedTunnelCredentials(
       'Named tunnel credentials do not match the origin certificate account.',
     );
   }
-  if (typeof record.TunnelName !== 'string' || record.TunnelName !== tunnelName) {
-    throw new NamedTunnelConfigError(
-      'Named tunnel credentials do not match configured tunnel name.',
-    );
-  }
   if (typeof record.TunnelID !== 'string'
     || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(record.TunnelID)) {
     throw new NamedTunnelConfigError('Named tunnel credentials contain an invalid TunnelID.');
+  }
+  const tunnelId = record.TunnelID.toLowerCase();
+  if (path.basename(credentialsFile).toLowerCase() !== `${tunnelId}.json`) {
+    throw new NamedTunnelConfigError(
+      'Named tunnel credentials filename does not match TunnelID.',
+    );
   }
   if (typeof record.TunnelSecret !== 'string'
     || decodeStrictBase64(record.TunnelSecret, 'TunnelSecret').byteLength !== 32) {
     throw new NamedTunnelConfigError('Named tunnel credentials contain an invalid TunnelSecret.');
   }
-  return { tunnelId: record.TunnelID.toLowerCase() };
+  return { tunnelId };
 }
 
 export async function validateNamedTunnelConfiguration(
@@ -548,8 +553,8 @@ export async function validateNamedTunnelConfiguration(
   const certificate = parseOriginCertificate(originCert.bytes);
   const parsedCredentials = parseNamedTunnelCredentials(
     credentials.bytes,
-    tunnelName,
     certificate.accountId,
+    credentials.filePath,
   );
   const publicOrigin = `https://${hostname}`;
   return {

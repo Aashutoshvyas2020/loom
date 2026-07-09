@@ -42,25 +42,25 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, the complete 214/214 Node 22 gate, and implementation commit `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
-- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.4.
+- **Evidence:** Records the T15.5 public-Host 403 root cause, DevSpace/MCP SDK comparison, public-client DCR compatibility, standard Cloudflare credential support, RED/GREEN results, and remaining real ChatGPT gate.
+- **Last meaningful change:** T15.5 OAuth interoperability, 2026-07-09.
+- **Owning task or gate:** All tasks; current T15.5.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated after T15.4 implementation commit `5ee5dd9524940fd87432f4727178fbfdbeecb08e` so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the finalized compatibility state.
-- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** T15.2, T15.3, and T15.4.
+- **Evidence:** Regenerated for T15.5 so the embedded plan, specification, changelog, handoff, repository map, source/test inventory, and canonical-source hashes reflect the OAuth and Cloudflare interoperability fix.
+- **Last meaningful change:** T15.5 OAuth interoperability, 2026-07-09.
+- **Owning task or gate:** T15.2 through T15.5.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records completed T15.4 implementation SHA `5ee5dd9524940fd87432f4727178fbfdbeecb08e`, clean post-commit state, exact local gates, remaining external blockers, and the owner's next live-test command.
-- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.4.
+- **Evidence:** Records the T15.5 root cause, exact copied DevSpace behaviors, local verification, dedicated Loom hostname plan, remaining real connector step, and exact next command.
+- **Last meaningful change:** T15.5 OAuth interoperability, 2026-07-09.
+- **Owning task or gate:** All tasks; current T15.5.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
 - **Success check:** Valid MIT license text with copyright attribution.
@@ -80,22 +80,22 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records completed implementation SHA `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
-- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
-- **Owning task or gate:** All tasks; current T15.4.
+- **Evidence:** Remains exhaustive for all 75 tracked files and records every T15.5 source, test, plan, and governance change.
+- **Last meaningful change:** T15.5 OAuth interoperability, 2026-07-09.
+- **Owning task or gate:** All tasks; current T15.5.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
 - **Success check:** Matches the canonical plan and prevents deterministic tooling or self-reported manifests from substituting for real external certification.
 - **Current assessment:** PASS
-- **Evidence:** Locks the existing security boundaries and now requires the complete 214-test suite on Node 22, referenced awaited lifecycle timers, an explicit Cloudflared abort timer, and Node 22/26 public CI.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
-- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.4.
+- **Evidence:** Locks exact public-host validation, DevSpace-compatible confidential/public OAuth client methods, standard Cloudflare credentials, and unchanged endpoint/PKCE/owner-password security boundaries.
+- **Last meaningful change:** T15.5 OAuth interoperability, 2026-07-09.
+- **Owning task or gate:** T0 / G0 and every behavior-changing task; current T15.5.
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, explicit recovery subtasks, governance gates, and external-evidence boundaries.
 - **Current assessment:** PASS
-- **Evidence:** Adds T15.4 for the declared Node 22 floor, referenced awaited timers, explicit Cloudflared download abort timing, and a Node 22/26 macOS CI matrix while leaving G5–G7 external blockers unchanged.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Adds T15.5 for real ChatGPT discovery reproduction, exact public-host validation, DevSpace-compatible public DCR, standard Cloudflare credentials, and real named-tunnel retesting while leaving G6/G7 blocked until external proof.
+- **Last meaningful change:** T15.5 OAuth interoperability, 2026-07-09.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 ### `NOTICE`
 - **Purpose:** Distribution notice for Loom and third-party software/trademarks.
@@ -249,11 +249,11 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `src/cloudflare.ts`
 - **Purpose:** Pinned Cloudflared acquisition/verification plus Quick and Named Tunnel validation, direct launch, bounded readiness, retry, audit, status, and cleanup.
-- **Success check:** Retains T10/T12 guarantees; named mode validates private stable certificate/current credentials and exact name/account/hostname, launches explicit ephemeral origin argv, exposes production status only after registration, revalidates every attempt, retries only transient failures five times with capped backoff, never falls back to Quick, fails closed on audit/auth/config/cleanup uncertainty, and aborts startup waits on stop without recreation.
+- **Success check:** Retains T10/T12 guarantees; named mode validates the private origin certificate and standard Cloudflare credentials, matches account and `<TunnelID>.json` filename, launches explicit ephemeral origin argv, exposes production status only after registration, revalidates every attempt, retries only transient failures, never falls back to Quick, and fails closed on uncertainty.
 - **Current assessment:** PASS
-- **Evidence:** Cloudflared target passes 30/30 on Node 22. Quick/Named polling sleeps remain referenced until awaited settlement, and acquisition uses an explicit referenced abort timer instead of `AbortSignal.timeout()` so the declared runtime floor cannot exit with pending work. G5 real named certification remains pending.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
-- **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, T13 Named Tunnel, T14, and T15.4.
+- **Evidence:** Real Cloudflare's credential shape no longer fails the parser; the full Cloudflare target passes 30/30 and the integrated OAuth/MCP/Cloudflare target passes 52/52.
+- **Last meaningful change:** T15.5 standard named-tunnel credentials, 2026-07-09.
+- **Owning task or gate:** T10, T12, T13, T14, T15.4, and T15.5.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, private atomic next-launch replacement, invalid-config preservation, runtime-lock persistence, and PID-reuse identity comparison.
@@ -289,19 +289,19 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `src/mcp.ts`
 - **Purpose:** Loopback-only Streamable HTTP MCP and OAuth HTTP server with deterministic readiness, endpoint-bound bearer authentication, server-bound authorization transactions, token routes, and bounded client-bound sessions.
-- **Success check:** Authorization GET stores the request server-side; POST accepts only transaction ID and owner password; replay/substitution fail; strict CSP/frame/no-store headers apply; SDK metadata strings are normalized without `any`; sessions and readiness remain bounded.
+- **Success check:** Authorization GET stores the request server-side; POST accepts only transaction ID and owner password; replay/substitution fail; exact loopback/bound-public Host validation remains fail-closed; metadata/DCR support both confidential and public clients; sessions and readiness remain bounded.
 - **Current assessment:** PASS
-- **Evidence:** Bounds MCP JSON before SDK parsing, preserves SDK localhost Host validation, limits OAuth metadata bodies, returns structured 413/parse errors, rate-limits owner authorization monotonically, and tracks session idleness monotonically. MCP target passes.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
-- **Owning task or gate:** T5 and T15.3.
+- **Evidence:** Raw HTTP proves the bound public hostname returns metadata while an unrelated hostname remains 403; public-client DCR/code/refresh/revoke and confidential-client flows both pass.
+- **Last meaningful change:** T15.5 ChatGPT OAuth interoperability, 2026-07-09.
+- **Owning task or gate:** T5, T15.3, and T15.5.
 
 ### `src/oauth.ts`
 - **Purpose:** Persistent single-owner credentials and endpoint-bound OAuth clients, authorization transactions/codes, access/refresh tokens, revocation, metadata, and endpoint-generation state.
-- **Success check:** Exact endpoint/generation bindings remain atomic; `revokeAllOAuth` increments generation and clears clients/codes/tokens while preserving the canonical endpoint and owner credential; owner reset remains the only password rotation path.
+- **Success check:** Exact endpoint/generation bindings remain atomic; confidential clients require their secret; public clients use PKCE without a secret; revoke-all and owner reset preserve their existing lifecycle contracts.
 - **Current assessment:** PASS
-- **Evidence:** New owner hashes use scrypt N=32768/r8/p3 with explicit memory, successful legacy verification upgrades atomically, and refresh rotation preserves one absolute 30-day family expiration. OAuth/MCP suites pass.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
-- **Owning task or gate:** T4, T5, T14, and T15.3.
+- **Evidence:** Metadata advertises `client_secret_post` and `none`; state defaults legacy clients to confidential mode; integrated OAuth/MCP/Cloudflare tests pass 52/52.
+- **Last meaningful change:** T15.5 public-client OAuth support, 2026-07-09.
+- **Owning task or gate:** T4, T5, T14, T15.3, and T15.5.
 
 ### `src/output.ts`
 - **Purpose:** Ordered bounded terminal-output storage with sanitization, binary suppression, head/tail retention, cursor pagination, gap detection, and terminal state.
@@ -370,9 +370,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Deterministic acquisition/verification plus Quick and Named Tunnel parser, trust, lifecycle, retry, audit, OAuth, status, and cleanup tests.
 - **Success check:** Retains T10/T12 checks and proves named certificate/credential validation, exact direct argv, registration gating, hidden pre-ready status, bounded transient-only retries, no fallback, per-attempt revalidation, cleanup fail-closed behavior, prompt stop cancellation, audit secrecy/order, stable endpoint generation, and owner-password persistence.
 - **Current assessment:** PASS
-- **Evidence:** Adds a bounded 256 KiB hostile Quick Tunnel parser case while retaining all acquisition, Quick, Named, retry, OAuth, and cleanup coverage.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
-- **Owning task or gate:** T10, T12, T13, and T15.3.
+- **Evidence:** Uses Cloudflare's real standard credential shape, verifies `<TunnelID>.json` binding, and retains all acquisition, Quick, Named, retry, OAuth, and cleanup coverage; target passes 30/30.
+- **Last meaningful change:** T15.5 standard credential regression, 2026-07-09.
+- **Owning task or gate:** T10, T12, T13, T15.3, and T15.5.
 
 ### `test/config.test.ts`
 - **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, full identity matching, and named-tunnel config canonicalization.
@@ -528,19 +528,19 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `test/mcp.test.ts`
 - **Purpose:** End-to-end loopback HTTP and pinned-SDK tests for readiness, metadata, bearer challenges, server-bound OAuth authorization, revocation, seven tools, session ownership/capacity/expiry, endpoint lifecycle, and clean shutdown.
-- **Success check:** The authorization page contains only a transaction ID, has CSP and frame denial, ignores attacker-supplied POST parameters, rejects replay, and all existing transport/session behaviors remain green.
+- **Success check:** The authorization page remains server-bound and hardened; raw public Host discovery succeeds only for the bound hostname; confidential and public DCR flows both complete; all transport/session behaviors remain green.
 - **Current assessment:** PASS
-- **Evidence:** Adds structured pre-SDK 413 and monotonic owner-password throttling regressions while retaining full OAuth/session/seven-tool behavior.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
-- **Owning task or gate:** T5 and T15.3.
+- **Evidence:** RED captured public-host 403, missing `none`, and DCR 400; GREEN covers exact public/hostile Host behavior and secretless registration, token, refresh, and revocation.
+- **Last meaningful change:** T15.5 real ChatGPT OAuth regression, 2026-07-09.
+- **Owning task or gate:** T5, T15.3, and T15.5.
 
 ### `test/oauth.test.ts`
 - **Purpose:** State-level security tests for owner credentials, endpoint-bound OAuth, rotation/replay/expiry, reset, metadata, and owner-preserving revoke-all behavior.
-- **Success check:** Existing tokens fail after revoke-all, endpoint/password remain unchanged, fresh registration succeeds, and all prior exact binding/secret-at-rest checks remain.
+- **Success check:** Existing tokens fail after revoke-all, endpoint/password remain unchanged, confidential-client secret checks remain strict, metadata advertises both supported methods, and all binding/secret-at-rest checks remain.
 - **Current assessment:** PASS
-- **Evidence:** Proves N=32768/r8/p3 creation, successful legacy-hash migration, and absolute refresh-family expiration in addition to all endpoint/token/reset behavior.
-- **Last meaningful change:** T15.3 adversarial verification and hardening, 2026-07-08.
-- **Owning task or gate:** T4 and T15.3.
+- **Evidence:** Exact metadata now includes `client_secret_post` and `none` while all prior owner, endpoint, replay, expiry, refresh-family, reset, and revocation tests remain green.
+- **Last meaningful change:** T15.5 OAuth metadata compatibility, 2026-07-09.
+- **Owning task or gate:** T4, T15.3, and T15.5.
 
 ### `test/output.test.ts`
 - **Purpose:** Boundary tests for terminal stream ordering, sanitization, deterministic binary markers, exact truncation, cursor pagination, UTF-8 boundaries, and lifecycle states.

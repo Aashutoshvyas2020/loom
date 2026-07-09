@@ -172,7 +172,7 @@ async function makeNamedTunnelArtifacts(
     AccountTag: 'account-id',
     TunnelSecret: tunnelSecret,
     TunnelID: tunnelId,
-    TunnelName: tunnelName,
+    Endpoint: '',
   })}\n`, { mode: 0o600 });
   return { cloudflareDirectory, originCertFile, credentialsFile, tunnelId, tunnelSecret };
 }
@@ -603,7 +603,7 @@ test('Named Tunnel validates a stable hostname and matching private Cloudflare a
     AccountTag: 'account-id',
     TunnelSecret: Buffer.alloc(32, 7).toString('base64'),
     TunnelID: '6f4f721c-22f2-41c7-a77d-41e5b09e4fc2',
-    TunnelName: 'loom-prod',
+    Endpoint: '',
   })}\n`, { mode: 0o600 });
 
   const validated = await validateNamedTunnelConfiguration({
@@ -622,20 +622,19 @@ test('Named Tunnel validates a stable hostname and matching private Cloudflare a
     credentialsFile,
   });
 
-  await writeFile(credentialsFile, `${JSON.stringify({
-    AccountTag: 'account-id',
-    TunnelSecret: Buffer.alloc(32, 7).toString('base64'),
-    TunnelID: '6f4f721c-22f2-41c7-a77d-41e5b09e4fc2',
-    TunnelName: 'other-tunnel',
-  })}\n`, { mode: 0o600 });
+  const mismatchedCredentialsFile = path.join(
+    cloudflareDirectory,
+    'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.json',
+  );
+  await writeFile(mismatchedCredentialsFile, await readFile(credentialsFile), { mode: 0o600 });
   await assert.rejects(
     validateNamedTunnelConfiguration({
       tunnelName: 'loom-prod',
       hostname: 'loom.example.com',
       originCertFile,
-      credentialsFile,
+      credentialsFile: mismatchedCredentialsFile,
     }),
-    /do not match configured tunnel name/,
+    /filename does not match TunnelID/,
   );
 
   await assert.rejects(
@@ -1268,7 +1267,7 @@ test('Named Tunnel static validation rejects option-like names and malformed cre
     AccountTag: 'wrong-account',
     TunnelSecret: artifacts.tunnelSecret,
     TunnelID: artifacts.tunnelId,
-    TunnelName: 'loom-prod',
+    Endpoint: '',
   })}\n`, { mode: 0o600 });
   await assert.rejects(
     validateNamedTunnelConfiguration({
@@ -1284,7 +1283,7 @@ test('Named Tunnel static validation rejects option-like names and malformed cre
     AccountTag: 'account-id',
     TunnelSecret: 'not-base64',
     TunnelID: 'not-a-uuid',
-    TunnelName: 'loom-prod',
+    Endpoint: '',
   })}\n`, { mode: 0o600 });
   await assert.rejects(
     validateNamedTunnelConfiguration({

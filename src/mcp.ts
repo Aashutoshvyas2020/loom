@@ -4,7 +4,6 @@ import { once } from 'node:events';
 import { performance } from 'node:perf_hooks';
 
 import { getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/sdk/server/auth/router.js';
-import { localhostHostValidation } from '@modelcontextprotocol/sdk/server/middleware/hostHeaderValidation.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
@@ -375,7 +374,36 @@ export class LoomMcpHttpServer {
   }
 
   private configureRoutes(): void {
-    this.app.use(localhostHostValidation());
+    this.app.use((request, response, next) => {
+      const hostHeader = request.headers.host;
+      let hostname: string;
+      try {
+        if (hostHeader === undefined) throw new Error('missing host');
+        hostname = new URL(`http://${hostHeader}`).hostname;
+      } catch {
+        response.status(403).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Missing or invalid Host header' },
+          id: null,
+        });
+        return;
+      }
+      const publicHostname = this.publicResource === undefined
+        ? undefined
+        : new URL(this.publicResource).hostname;
+      if (hostname !== 'localhost'
+        && hostname !== '127.0.0.1'
+        && hostname !== '[::1]'
+        && hostname !== publicHostname) {
+        response.status(403).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: `Invalid Host: ${hostname}` },
+          id: null,
+        });
+        return;
+      }
+      next();
+    });
     this.app.use(MCP_PATH, express.json({
       limit: this.options.maxRequestBytes,
       strict: true,
@@ -406,10 +434,12 @@ export class LoomMcpHttpServer {
       }
       try {
         const body = request.body as Record<string, unknown>;
-        if (body.token_endpoint_auth_method !== undefined
-          && body.token_endpoint_auth_method !== 'client_secret_post') {
+        const tokenEndpointAuthMethod = body.token_endpoint_auth_method === undefined
+          ? 'none'
+          : requiredString(body.token_endpoint_auth_method, 'token_endpoint_auth_method');
+        if (tokenEndpointAuthMethod !== 'client_secret_post' && tokenEndpointAuthMethod !== 'none') {
           throw new OAuthError(
-            'Only client_secret_post is supported.',
+            'Only client_secret_post and none are supported.',
             'invalid_client_metadata',
           );
         }
@@ -430,20 +460,23 @@ export class LoomMcpHttpServer {
         const scopes = scopeList(body.scope);
         const registered = await this.authStore.registerClient({
           redirectUris: stringArray(body.redirect_uris, 'redirect_uris'),
+          tokenEndpointAuthMethod,
           ...(clientName === undefined ? {} : { clientName }),
           ...(scopes === undefined ? {} : { scopes }),
         });
         response.status(201).json({
           client_id: registered.clientId,
-          client_secret: registered.clientSecret,
+          ...(registered.tokenEndpointAuthMethod === 'client_secret_post' ? {
+            client_secret: registered.clientSecret,
+            client_secret_expires_at: 0,
+          } : {}),
           client_name: registered.clientName,
           redirect_uris: registered.redirectUris,
           scope: registered.scopes.join(' '),
-          token_endpoint_auth_method: 'client_secret_post',
+          token_endpoint_auth_method: registered.tokenEndpointAuthMethod,
           grant_types: ['authorization_code', 'refresh_token'],
           response_types: ['code'],
           client_id_issued_at: Math.floor(Date.now() / 1_000),
-          client_secret_expires_at: 0,
         });
       } catch (error) {
         oauthFailure(response, error);
@@ -512,10 +545,11 @@ export class LoomMcpHttpServer {
         const body = request.body as Record<string, unknown>;
         const grantType = requiredString(body.grant_type, 'grant_type');
         if (grantType === 'authorization_code') {
+          const clientSecret = optionalString(body.client_secret);
           const tokens = await this.authStore.exchangeAuthorizationCode({
             code: requiredString(body.code, 'code'),
             clientId: requiredString(body.client_id, 'client_id'),
-            clientSecret: requiredString(body.client_secret, 'client_secret'),
+            ...(clientSecret === undefined ? {} : { clientSecret }),
             redirectUri: requiredString(body.redirect_uri, 'redirect_uri'),
             resource: requiredString(body.resource, 'resource'),
             codeVerifier: requiredString(body.code_verifier, 'code_verifier'),
@@ -525,10 +559,11 @@ export class LoomMcpHttpServer {
         }
         if (grantType === 'refresh_token') {
           const scopes = scopeList(body.scope);
+          const clientSecret = optionalString(body.client_secret);
           const tokens = await this.authStore.refreshAccessToken({
             refreshToken: requiredString(body.refresh_token, 'refresh_token'),
             clientId: requiredString(body.client_id, 'client_id'),
-            clientSecret: requiredString(body.client_secret, 'client_secret'),
+            ...(clientSecret === undefined ? {} : { clientSecret }),
             resource: requiredString(body.resource, 'resource'),
             ...(scopes === undefined ? {} : { scopes }),
           });
@@ -547,10 +582,11 @@ export class LoomMcpHttpServer {
       }
       try {
         const body = request.body as Record<string, unknown>;
+        const clientSecret = optionalString(body.client_secret);
         await this.authStore.revokeClientToken({
           token: requiredString(body.token, 'token'),
           clientId: requiredString(body.client_id, 'client_id'),
-          clientSecret: requiredString(body.client_secret, 'client_secret'),
+          ...(clientSecret === undefined ? {} : { clientSecret }),
         });
         response.status(200).end();
       } catch (error) {

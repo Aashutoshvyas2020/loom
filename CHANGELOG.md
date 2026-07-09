@@ -890,3 +890,25 @@ npm run build: PASS
 - Committed the Node 22 lifecycle correction, explicit Cloudflared abort timing, Node 22/26 macOS CI, regenerated audit dossier, and synchronized governance at `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
 - The repository was clean immediately after the implementation commit.
 - The next action is the owner's real foreground launch and connector test; no push, publication, or deployment has occurred.
+
+### T15.5 — Real ChatGPT OAuth interoperability
+
+- Reproduced ChatGPT's public OAuth discovery failure and compared Loom against the working DevSpace OAuth server on the same Mac and hostname.
+- Root cause: Loom installed localhost-only Host validation globally, so Cloudflare-forwarded requests using the public hostname were rejected before protected-resource or authorization-server metadata could run.
+- Replaced that boundary with exact dynamic validation: loopback hosts are always allowed; after endpoint binding, only the canonical public resource hostname is additionally allowed; unrelated hosts remain 403.
+- Matched the pinned MCP SDK/DevSpace client contract by advertising and supporting both `client_secret_post` and public-client `none` across DCR, code exchange, refresh, and revocation while preserving endpoint binding, PKCE S256, server-side owner-password transactions, and rotating refresh tokens.
+- Accepted Cloudflare's real named-tunnel credential JSON (`AccountTag`, `TunnelSecret`, `TunnelID`, optional string `Endpoint`) and bound credentials to the exact `<TunnelID>.json` filename.
+
+Evidence:
+
+```text
+RED — public Host discovery: 403 instead of 200
+RED — authorization metadata omitted token method `none`
+RED — public-client DCR returned 400 instead of 201
+GREEN — public Host + hostile Host + metadata + public DCR target: 3/3
+GREEN — OAuth/MCP/Cloudflare integrated target: 52/52
+GREEN — active-runtime full gate: 216/216, typecheck PASS, build PASS
+GREEN — Node v22.23.1 full gate: 216/216, typecheck PASS, build PASS
+GREEN — package dry run: 90 files, 195236 bytes
+GREEN — Loom-owned process residue: none
+```
