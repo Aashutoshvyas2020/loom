@@ -16,7 +16,14 @@ import { promisify } from 'node:util';
 
 import { assertNoSymlinkComponents, resolveUserPath } from './paths.js';
 import { AuditLogger } from './audit.js';
-import { QUICK_TUNNEL_URL_DEADLINE_MS } from './limits.js';
+import {
+  MAX_FILE_BYTES_PER_ROOT,
+  NAMED_TUNNEL_BACKOFF_BASE_MS,
+  NAMED_TUNNEL_BACKOFF_MAX_MS,
+  NAMED_TUNNEL_MAX_RETRIES,
+  NAMED_TUNNEL_READY_DEADLINE_MS,
+  QUICK_TUNNEL_URL_DEADLINE_MS,
+} from './limits.js';
 import type { OutputRead } from './output.js';
 import { ProcessManager } from './process-manager.js';
 
@@ -47,6 +54,44 @@ export class CloudflaredLaunchError extends CloudflaredError {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = 'CloudflaredLaunchError';
+  }
+}
+
+export class NamedTunnelConfigError extends CloudflaredError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'NamedTunnelConfigError';
+  }
+}
+
+export class NamedTunnelAuthError extends CloudflaredError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'NamedTunnelAuthError';
+  }
+}
+
+export class NamedTunnelStartupError extends CloudflaredError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'NamedTunnelStartupError';
+  }
+}
+
+class NamedTunnelTransientError extends NamedTunnelStartupError {
+  readonly timedOut: boolean;
+
+  constructor(message: string, options?: ErrorOptions & { timedOut?: boolean }) {
+    super(message, options);
+    this.name = 'NamedTunnelTransientError';
+    this.timedOut = options?.timedOut ?? false;
+  }
+}
+
+class NamedTunnelStoppedError extends NamedTunnelStartupError {
+  constructor() {
+    super('Named Tunnel stopped during startup.');
+    this.name = 'NamedTunnelStoppedError';
   }
 }
 
@@ -129,6 +174,47 @@ export interface StartCloudflaredOptions extends VerifyCloudflaredExecutableInpu
   args: string[];
 }
 
+export interface ValidateNamedTunnelConfigurationInput {
+  tunnelName: string;
+  hostname: string;
+  originCertFile: string;
+  credentialsFile: string;
+}
+
+export interface ValidatedNamedTunnelConfiguration {
+  tunnelName: string;
+  tunnelId: string;
+  hostname: string;
+  publicOrigin: string;
+  publicEndpoint: string;
+  originCertFile: string;
+  credentialsFile: string;
+}
+
+export interface NamedTunnelReadyResult {
+  mode: 'named';
+  tunnelName: string;
+  tunnelId: string;
+  hostname: string;
+  publicOrigin: string;
+  publicEndpoint: string;
+  production: true;
+  retryCount: number;
+}
+
+export interface NamedTunnelStatus {
+  mode: 'named';
+  ready: boolean;
+  starting: boolean;
+  stopping: boolean;
+  tunnelName: string;
+  tunnelId: string | null;
+  hostname: string;
+  publicOrigin: string | null;
+  publicEndpoint: string | null;
+  production: boolean;
+  retryCount: number;
+}
 
 export interface QuickTunnelProcess {
   poll(cursor: number, maximumBytes?: number): OutputRead;
@@ -152,6 +238,20 @@ export interface QuickTunnelStatus {
   publicEndpoint: string | null;
   production: false;
   recreationCount: number;
+}
+
+export interface NamedTunnelManagerOptions extends VerifyCloudflaredExecutableInput {
+  audit: AuditLogger;
+  localOrigin: string;
+  tunnelName: string;
+  hostname: string;
+  credentialsFile: string;
+  originCertFile?: string;
+  cwd: string;
+  now?: () => number;
+  sleep?: (milliseconds: number) => Promise<void>;
+  pollIntervalMs?: number;
+  startProcess?: (args: string[]) => Promise<QuickTunnelProcess>;
 }
 
 export interface QuickTunnelManagerOptions extends VerifyCloudflaredExecutableInput {
@@ -236,6 +336,231 @@ function sameIdentity(left: FileIdentity, right: FileIdentity): boolean {
     && left.size === right.size
     && left.mtimeNs === right.mtimeNs
     && left.ctimeNs === right.ctimeNs;
+}
+
+async function readNamedTunnelAuthFile(
+  inputPath: string,
+  label: string,
+): Promise<{ filePath: string; bytes: Buffer }> {
+  let filePath: string;
+  try {
+    filePath = resolveUserPath(inputPath);
+    await assertNoSymlinkComponents(filePath);
+  } catch (error) {
+    throw new NamedTunnelConfigError(
+      `Unable to resolve named tunnel ${label}: ${String(error)}`,
+      { cause: error instanceof Error ? error : undefined },
+    );
+  }
+
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    const discovered = await lstat(filePath, { bigint: true });
+    if (discovered.isSymbolicLink() || !discovered.isFile()) {
+      throw new NamedTunnelConfigError(`Named tunnel ${label} must be a regular file.`);
+    }
+    if (discovered.uid !== BigInt(currentUserId())) {
+      throw new NamedTunnelConfigError(`Named tunnel ${label} is not owned by the current user.`);
+    }
+    const rawMode = Number(discovered.mode);
+    const mode = rawMode & 0o777;
+    if ((rawMode & 0o7000) !== 0
+      || (mode & 0o077) !== 0
+      || (mode & 0o400) === 0
+      || (mode & 0o111) !== 0) {
+      throw new NamedTunnelConfigError(
+        `Named tunnel ${label} must be private, owner-readable, and non-executable.`,
+      );
+    }
+    if (discovered.size <= 0n || discovered.size > BigInt(MAX_FILE_BYTES_PER_ROOT)) {
+      throw new NamedTunnelConfigError(`Named tunnel ${label} has an invalid size.`);
+    }
+
+    handle = await open(filePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const before = await handle.stat({ bigint: true });
+    if (!before.isFile() || before.dev !== discovered.dev || before.ino !== discovered.ino) {
+      throw new NamedTunnelConfigError(`Named tunnel ${label} changed before validation.`);
+    }
+    const bytes = await handle.readFile();
+    const after = await handle.stat({ bigint: true });
+    await assertNoSymlinkComponents(filePath);
+    const pathname = await lstat(filePath, { bigint: true });
+    if (!pathname.isFile()
+      || !sameIdentity(before, after)
+      || before.dev !== pathname.dev
+      || before.ino !== pathname.ino) {
+      throw new NamedTunnelConfigError(`Named tunnel ${label} changed during validation.`);
+    }
+    return { filePath, bytes };
+  } catch (error) {
+    if (error instanceof NamedTunnelConfigError) throw error;
+    throw new NamedTunnelConfigError(`Unable to validate named tunnel ${label}: ${String(error)}`, {
+      cause: error instanceof Error ? error : undefined,
+    });
+  } finally {
+    await handle?.close().catch(() => undefined);
+  }
+}
+
+function decodeStrictBase64(value: string, label: string): Buffer {
+  const normalized = value.replace(/\s+/g, '');
+  if (normalized.length === 0
+    || normalized.length % 4 !== 0
+    || !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+    throw new NamedTunnelConfigError(`${label} is not valid base64.`);
+  }
+  const decoded = Buffer.from(normalized, 'base64');
+  if (decoded.toString('base64') !== normalized) {
+    throw new NamedTunnelConfigError(`${label} is not canonical base64.`);
+  }
+  return decoded;
+}
+
+function parseOriginCertificate(bytes: Buffer): { accountId: string } {
+  const text = bytes.toString('utf8');
+  if (!Buffer.from(text, 'utf8').equals(bytes)) {
+    throw new NamedTunnelConfigError('Named tunnel origin certificate must be UTF-8 PEM.');
+  }
+  const blockPattern = /-----BEGIN ([A-Z0-9 ]+)-----\r?\n([\s\S]*?)-----END \1-----/g;
+  let cursor = 0;
+  let tokenPayload: Buffer | undefined;
+  for (const match of text.matchAll(blockPattern)) {
+    const index = match.index ?? 0;
+    if (text.slice(cursor, index).trim() !== '') {
+      throw new NamedTunnelConfigError('Named tunnel origin certificate contains invalid PEM data.');
+    }
+    cursor = index + match[0].length;
+    const blockType = match[1]!;
+    if (blockType === 'ARGO TUNNEL TOKEN') {
+      if (tokenPayload !== undefined) {
+        throw new NamedTunnelConfigError('Named tunnel origin certificate contains multiple tokens.');
+      }
+      tokenPayload = decodeStrictBase64(match[2]!, 'Origin certificate token');
+    } else if (blockType !== 'PRIVATE KEY' && blockType !== 'CERTIFICATE') {
+      throw new NamedTunnelConfigError(
+        `Named tunnel origin certificate contains unsupported PEM block ${blockType}.`,
+      );
+    }
+  }
+  if (text.slice(cursor).trim() !== '' || tokenPayload === undefined) {
+    throw new NamedTunnelConfigError('Named tunnel origin certificate is missing its tunnel token.');
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(tokenPayload.toString('utf8'));
+  } catch (error) {
+    throw new NamedTunnelConfigError('Named tunnel origin certificate token is invalid JSON.', {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new NamedTunnelConfigError('Named tunnel origin certificate token must be an object.');
+  }
+  const record = parsed as Record<string, unknown>;
+  for (const key of ['zoneID', 'accountID', 'apiToken'] as const) {
+    if (typeof record[key] !== 'string' || record[key].trim() === '') {
+      throw new NamedTunnelConfigError(`Named tunnel origin certificate is missing ${key}.`);
+    }
+  }
+  if (record.endpoint !== undefined && typeof record.endpoint !== 'string') {
+    throw new NamedTunnelConfigError('Named tunnel origin certificate endpoint must be a string.');
+  }
+  return { accountId: record.accountID as string };
+}
+
+function validateNamedTunnelName(value: string): string {
+  if (value.length === 0
+    || value.length > 128
+    || value !== value.trim()
+    || value.startsWith('-')
+    || /[\u0000-\u001f\u007f]/.test(value)) {
+    throw new NamedTunnelConfigError('Named tunnel name is invalid.');
+  }
+  return value;
+}
+
+function validateNamedTunnelHostname(value: string): string {
+  const hostname = value.toLowerCase();
+  const pattern = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+  if (!pattern.test(hostname)
+    || hostname === 'trycloudflare.com'
+    || hostname.endsWith('.trycloudflare.com')) {
+    throw new NamedTunnelConfigError('Named tunnel hostname must be a stable public DNS hostname.');
+  }
+  return hostname;
+}
+
+function parseNamedTunnelCredentials(
+  bytes: Buffer,
+  tunnelName: string,
+  certificateAccountId: string,
+): { tunnelId: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bytes.toString('utf8'));
+  } catch (error) {
+    throw new NamedTunnelConfigError('Named tunnel credentials are invalid JSON.', {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new NamedTunnelConfigError('Named tunnel credentials must be an object.');
+  }
+  const record = parsed as Record<string, unknown>;
+  const expectedKeys = ['AccountTag', 'TunnelID', 'TunnelName', 'TunnelSecret'];
+  const actualKeys = Object.keys(record).sort();
+  if (actualKeys.length !== expectedKeys.length
+    || actualKeys.some((key, index) => key !== expectedKeys[index])) {
+    throw new NamedTunnelConfigError('Named tunnel credentials have an unexpected schema.');
+  }
+  if (typeof record.AccountTag !== 'string' || record.AccountTag.trim() === '') {
+    throw new NamedTunnelConfigError('Named tunnel credentials are missing AccountTag.');
+  }
+  if (record.AccountTag !== certificateAccountId) {
+    throw new NamedTunnelConfigError(
+      'Named tunnel credentials do not match the origin certificate account.',
+    );
+  }
+  if (typeof record.TunnelName !== 'string' || record.TunnelName !== tunnelName) {
+    throw new NamedTunnelConfigError(
+      'Named tunnel credentials do not match configured tunnel name.',
+    );
+  }
+  if (typeof record.TunnelID !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(record.TunnelID)) {
+    throw new NamedTunnelConfigError('Named tunnel credentials contain an invalid TunnelID.');
+  }
+  if (typeof record.TunnelSecret !== 'string'
+    || decodeStrictBase64(record.TunnelSecret, 'TunnelSecret').byteLength !== 32) {
+    throw new NamedTunnelConfigError('Named tunnel credentials contain an invalid TunnelSecret.');
+  }
+  return { tunnelId: record.TunnelID.toLowerCase() };
+}
+
+export async function validateNamedTunnelConfiguration(
+  input: ValidateNamedTunnelConfigurationInput,
+): Promise<ValidatedNamedTunnelConfiguration> {
+  const tunnelName = validateNamedTunnelName(input.tunnelName);
+  const hostname = validateNamedTunnelHostname(input.hostname);
+  const originCert = await readNamedTunnelAuthFile(input.originCertFile, 'origin certificate');
+  const credentials = await readNamedTunnelAuthFile(input.credentialsFile, 'credentials file');
+  const certificate = parseOriginCertificate(originCert.bytes);
+  const parsedCredentials = parseNamedTunnelCredentials(
+    credentials.bytes,
+    tunnelName,
+    certificate.accountId,
+  );
+  const publicOrigin = `https://${hostname}`;
+  return {
+    tunnelName,
+    tunnelId: parsedCredentials.tunnelId,
+    hostname,
+    publicOrigin,
+    publicEndpoint: `${publicOrigin}/mcp`,
+    originCertFile: originCert.filePath,
+    credentialsFile: credentials.filePath,
+  };
 }
 
 async function inspectCloudflaredExecutable(inputPath: string): Promise<{
@@ -605,16 +930,16 @@ export async function installCloudflaredRelease(
 }
 
 
-const QUICK_TUNNEL_REGISTERED_PATTERN = /(?:registered tunnel connection|tunnel connection[^\n]*registered)/i;
-const QUICK_TUNNEL_POLL_BYTES = 64 * 1024;
-const QUICK_TUNNEL_MAX_LOG_BYTES = 256 * 1024;
-const QUICK_TUNNEL_DEFAULT_POLL_MS = 25;
+const TUNNEL_REGISTERED_PATTERN = /(?:registered tunnel connection|tunnel connection[^\n]*registered)/i;
+const TUNNEL_POLL_BYTES = 64 * 1024;
+const TUNNEL_MAX_LOG_BYTES = 256 * 1024;
+const TUNNEL_DEFAULT_POLL_MS = 25;
 
-function appendBoundedQuickLog(current: string, next: string): string {
+function appendBoundedTunnelLog(current: string, next: string): string {
   const combined = `${current}${next}`;
   const bytes = Buffer.from(combined);
-  if (bytes.byteLength <= QUICK_TUNNEL_MAX_LOG_BYTES) return combined;
-  return bytes.subarray(bytes.byteLength - QUICK_TUNNEL_MAX_LOG_BYTES).toString('utf8');
+  if (bytes.byteLength <= TUNNEL_MAX_LOG_BYTES) return combined;
+  return bytes.subarray(bytes.byteLength - TUNNEL_MAX_LOG_BYTES).toString('utf8');
 }
 
 function validateQuickLocalOrigin(value: string): string {
@@ -645,6 +970,366 @@ function validateQuickLocalOrigin(value: string): string {
   return origin.origin;
 }
 
+const NAMED_TUNNEL_AUTH_FAILURE_PATTERN = /(?:authentication failed|unauthorized|invalid tunnel secret|failed to find[^\n]*origin cert|cannot determine default origin certificate|client didn't specify origincert|origin certificate[^\n]*(?:invalid|missing))/i;
+const NAMED_TUNNEL_CONFIG_FAILURE_PATTERN = /(?:error parsing tunnel id|tunnel[^\n]*(?:not found|does not exist)|credentials(?: file)?[^\n]*(?:not found|invalid|failed to (?:parse|read|load))|unknown flag|requires the id or name|invalid[^\n]*url|(?:failed|unable) to (?:load|read|parse)(?: the)? configuration|configuration (?:error|invalid)|error parsing config)/i;
+
+function validateNamedLocalOrigin(value: string): string {
+  let origin: URL;
+  try {
+    origin = new URL(value);
+  } catch (error) {
+    throw new NamedTunnelConfigError('Named Tunnel local origin is invalid.', {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+  const loopback = origin.hostname === '127.0.0.1'
+    || origin.hostname === 'localhost'
+    || origin.hostname === '[::1]';
+  if (origin.protocol !== 'http:'
+    || !loopback
+    || origin.port === ''
+    || origin.pathname !== '/'
+    || origin.search !== ''
+    || origin.hash !== ''
+    || origin.username !== ''
+    || origin.password !== ''
+    || value !== origin.origin) {
+    throw new NamedTunnelConfigError(
+      'Named Tunnel local origin must be a bare HTTP loopback origin with an explicit port.',
+    );
+  }
+  return origin.origin;
+}
+
+function namedTunnelBackoffMs(retryNumber: number): number {
+  return Math.min(
+    NAMED_TUNNEL_BACKOFF_BASE_MS * (2 ** (retryNumber - 1)),
+    NAMED_TUNNEL_BACKOFF_MAX_MS,
+  );
+}
+
+function classifyNamedTunnelOutput(output: string): CloudflaredError | null {
+  if (NAMED_TUNNEL_AUTH_FAILURE_PATTERN.test(output)) {
+    return new NamedTunnelAuthError('Cloudflared reported a named-tunnel authentication failure.');
+  }
+  if (NAMED_TUNNEL_CONFIG_FAILURE_PATTERN.test(output)) {
+    return new NamedTunnelConfigError('Cloudflared reported a named-tunnel configuration failure.');
+  }
+  return null;
+}
+
+function classifyNamedTunnelStartError(error: unknown): CloudflaredError {
+  if (error instanceof CloudflaredError) {
+    return error;
+  }
+  const code = nestedErrorCode(error);
+  if (code === 'ENOENT' || code === 'EACCES' || code === 'EPERM' || code === 'EINVAL') {
+    return new NamedTunnelConfigError('Cloudflared could not start with the named-tunnel configuration.', {
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
+  return new NamedTunnelTransientError('Cloudflared process failed to start transiently.', {
+    cause: error instanceof Error ? error : undefined,
+  });
+}
+
+export class NamedTunnelManager {
+  private readonly audit: AuditLogger;
+  private readonly localOrigin: string;
+  private readonly tunnelName: string;
+  private readonly hostname: string;
+  private readonly originCertFile: string;
+  private readonly credentialsFile: string;
+  private readonly now: () => number;
+  private readonly sleep: (milliseconds: number) => Promise<void>;
+  private readonly pollIntervalMs: number;
+  private readonly startProcess: (args: string[]) => Promise<QuickTunnelProcess>;
+  private activeProcess: QuickTunnelProcess | undefined;
+  private readyResult: NamedTunnelReadyResult | undefined;
+  private startPromise: Promise<NamedTunnelReadyResult> | undefined;
+  private stopPromise: Promise<void> | undefined;
+  private lifecycleVersion = 0;
+  private startAbortController: AbortController | undefined;
+
+  constructor(options: NamedTunnelManagerOptions) {
+    this.audit = options.audit;
+    this.localOrigin = validateNamedLocalOrigin(options.localOrigin);
+    this.tunnelName = validateNamedTunnelName(options.tunnelName);
+    this.hostname = validateNamedTunnelHostname(options.hostname);
+    this.originCertFile = options.originCertFile ?? path.join(homedir(), '.cloudflared', 'cert.pem');
+    this.credentialsFile = options.credentialsFile;
+    this.now = options.now ?? Date.now;
+    this.sleep = options.sleep ?? ((milliseconds) => new Promise((resolve) => {
+      const timer = setTimeout(resolve, milliseconds);
+      timer.unref?.();
+    }));
+    this.pollIntervalMs = options.pollIntervalMs ?? TUNNEL_DEFAULT_POLL_MS;
+    if (!Number.isSafeInteger(this.pollIntervalMs)
+      || this.pollIntervalMs <= 0
+      || this.pollIntervalMs > 1_000) {
+      throw new NamedTunnelConfigError('pollIntervalMs must be an integer from 1 to 1000.');
+    }
+    this.startProcess = options.startProcess ?? ((args) => startCloudflared({
+      processManager: options.processManager,
+      executablePath: options.executablePath,
+      expectedSha256: options.expectedSha256,
+      expectedVersion: options.expectedVersion,
+      cwd: options.cwd,
+      args,
+    }));
+  }
+
+  get status(): NamedTunnelStatus {
+    return {
+      mode: 'named',
+      ready: this.readyResult !== undefined,
+      starting: this.startPromise !== undefined,
+      stopping: this.stopPromise !== undefined,
+      tunnelName: this.tunnelName,
+      tunnelId: this.readyResult?.tunnelId ?? null,
+      hostname: this.hostname,
+      publicOrigin: this.readyResult?.publicOrigin ?? null,
+      publicEndpoint: this.readyResult?.publicEndpoint ?? null,
+      production: this.readyResult !== undefined,
+      retryCount: this.readyResult?.retryCount ?? 0,
+    };
+  }
+
+  start(): Promise<NamedTunnelReadyResult> {
+    if (this.readyResult !== undefined) return Promise.resolve({ ...this.readyResult });
+    if (this.startPromise !== undefined) return this.startPromise;
+    if (this.stopPromise !== undefined) {
+      return Promise.reject(new NamedTunnelStartupError('Named Tunnel is stopping.'));
+    }
+    if (this.activeProcess !== undefined) {
+      return Promise.reject(new NamedTunnelStartupError(
+        'Named Tunnel has an uncleaned named-tunnel process; stop must succeed before restart.',
+      ));
+    }
+    const lifecycleVersion = this.lifecycleVersion;
+    const abortController = new AbortController();
+    this.startAbortController = abortController;
+    this.startPromise = this.startInternal(lifecycleVersion, abortController.signal).finally(() => {
+      if (this.startAbortController === abortController) this.startAbortController = undefined;
+      this.startPromise = undefined;
+    });
+    return this.startPromise;
+  }
+
+  stop(): Promise<void> {
+    if (this.stopPromise !== undefined) return this.stopPromise;
+    this.lifecycleVersion += 1;
+    this.startAbortController?.abort();
+    this.stopPromise = (async () => {
+      const process = this.activeProcess;
+      if (process !== undefined) {
+        await process.cancel();
+        if (this.activeProcess === process) this.activeProcess = undefined;
+      }
+      this.readyResult = undefined;
+    })().finally(() => {
+      this.stopPromise = undefined;
+    });
+    return this.stopPromise;
+  }
+
+  private async cleanAttempt(process: QuickTunnelProcess): Promise<void> {
+    try {
+      await process.cancel();
+    } catch (error) {
+      throw new NamedTunnelStartupError('Unable to clean up named-tunnel process before retry.', {
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+    if (this.activeProcess === process) this.activeProcess = undefined;
+  }
+
+  private async validateConfiguration(): Promise<ValidatedNamedTunnelConfiguration> {
+    return validateNamedTunnelConfiguration({
+      tunnelName: this.tunnelName,
+      hostname: this.hostname,
+      originCertFile: this.originCertFile,
+      credentialsFile: this.credentialsFile,
+    });
+  }
+
+  private assertStartActive(lifecycleVersion: number): void {
+    if (lifecycleVersion !== this.lifecycleVersion) {
+      throw new NamedTunnelStoppedError();
+    }
+  }
+
+  private async sleepWhileActive(
+    milliseconds: number,
+    lifecycleVersion: number,
+    signal: AbortSignal,
+  ): Promise<void> {
+    this.assertStartActive(lifecycleVersion);
+    if (signal.aborted) throw new NamedTunnelStoppedError();
+    let resolveAbort!: () => void;
+    const aborted = new Promise<void>((resolve) => {
+      resolveAbort = resolve;
+      signal.addEventListener('abort', resolveAbort, { once: true });
+    });
+    try {
+      await Promise.race([this.sleep(milliseconds), aborted]);
+    } finally {
+      signal.removeEventListener('abort', resolveAbort);
+    }
+    this.assertStartActive(lifecycleVersion);
+  }
+
+  private async startInternal(
+    lifecycleVersion: number,
+    signal: AbortSignal,
+  ): Promise<NamedTunnelReadyResult> {
+    await this.validateConfiguration();
+    this.assertStartActive(lifecycleVersion);
+    const receipt = await this.audit.recordMutationStart('tunnel.named.start', {
+      mode: 'named',
+      retryLimit: NAMED_TUNNEL_MAX_RETRIES,
+    });
+    let finishStatus: 'ok' | 'error' | 'timed-out' | 'cancelled' = 'error';
+    try {
+      this.assertStartActive(lifecycleVersion);
+      for (let retryCount = 0; retryCount <= NAMED_TUNNEL_MAX_RETRIES; retryCount += 1) {
+        this.assertStartActive(lifecycleVersion);
+        const validated = await this.validateConfiguration();
+        this.assertStartActive(lifecycleVersion);
+        const args = [
+          '--origincert',
+          validated.originCertFile,
+          'run',
+          '--url',
+          this.localOrigin,
+          '--credentials-file',
+          validated.credentialsFile,
+          validated.tunnelName,
+        ];
+        let process: QuickTunnelProcess;
+        try {
+          process = await this.startProcess(args);
+          if (lifecycleVersion !== this.lifecycleVersion) {
+            await this.cleanAttempt(process);
+            this.assertStartActive(lifecycleVersion);
+          }
+        } catch (error) {
+          this.assertStartActive(lifecycleVersion);
+          if (error instanceof NamedTunnelStoppedError) throw error;
+          const classified = classifyNamedTunnelStartError(error);
+          if (!(classified instanceof NamedTunnelTransientError)
+            || retryCount === NAMED_TUNNEL_MAX_RETRIES) {
+            throw classified;
+          }
+          await this.sleepWhileActive(
+            namedTunnelBackoffMs(retryCount + 1),
+            lifecycleVersion,
+            signal,
+          );
+          continue;
+        }
+
+        this.activeProcess = process;
+        try {
+          const ready = await this.waitForReady(
+            process,
+            validated,
+            retryCount,
+            lifecycleVersion,
+            signal,
+          );
+          this.assertStartActive(lifecycleVersion);
+          this.readyResult = ready;
+          finishStatus = 'ok';
+          return { ...ready };
+        } catch (error) {
+          if (error instanceof NamedTunnelStoppedError && this.stopPromise !== undefined) {
+            await this.stopPromise;
+          }
+          if (this.activeProcess === process) {
+            await this.cleanAttempt(process);
+          }
+          if (error instanceof NamedTunnelStoppedError) throw error;
+          if (!(error instanceof NamedTunnelTransientError)
+            || retryCount === NAMED_TUNNEL_MAX_RETRIES) {
+            if (error instanceof NamedTunnelTransientError && error.timedOut) {
+              finishStatus = 'timed-out';
+            }
+            throw error;
+          }
+          await this.sleepWhileActive(
+            namedTunnelBackoffMs(retryCount + 1),
+            lifecycleVersion,
+            signal,
+          );
+        }
+      }
+      throw new NamedTunnelStartupError('Named Tunnel exhausted its retry limit.');
+    } catch (error) {
+      if (error instanceof NamedTunnelStoppedError) finishStatus = 'cancelled';
+      throw error;
+    } finally {
+      await this.audit.recordFinish(receipt, finishStatus);
+    }
+  }
+
+  private async waitForReady(
+    process: QuickTunnelProcess,
+    validated: ValidatedNamedTunnelConfiguration,
+    retryCount: number,
+    lifecycleVersion: number,
+    signal: AbortSignal,
+  ): Promise<NamedTunnelReadyResult> {
+    const deadline = this.now() + NAMED_TUNNEL_READY_DEADLINE_MS;
+    let cursor = 0;
+    let startupLog = '';
+
+    while (this.now() < deadline) {
+      this.assertStartActive(lifecycleVersion);
+      const polled = process.poll(cursor, TUNNEL_POLL_BYTES);
+      if (polled.requestedCursor !== cursor || polled.gap) {
+        throw new NamedTunnelStartupError('Named Tunnel output cursor became inconsistent.');
+      }
+      cursor = polled.nextCursor;
+      const chunk = polled.segments.map((segment) => segment.text).join('');
+      startupLog = appendBoundedTunnelLog(startupLog, chunk);
+      const classified = classifyNamedTunnelOutput(startupLog);
+      if (classified !== null) throw classified;
+
+      if (TUNNEL_REGISTERED_PATTERN.test(startupLog)) {
+        this.assertStartActive(lifecycleVersion);
+        return {
+          mode: 'named',
+          tunnelName: validated.tunnelName,
+          tunnelId: validated.tunnelId,
+          hostname: validated.hostname,
+          publicOrigin: validated.publicOrigin,
+          publicEndpoint: validated.publicEndpoint,
+          production: true,
+          retryCount,
+        };
+      }
+      if (polled.state !== 'running') {
+        throw new NamedTunnelTransientError(
+          `Cloudflared exited before Named Tunnel readiness with state ${polled.state}.`,
+        );
+      }
+      const remaining = deadline - this.now();
+      if (remaining <= 0) break;
+      await this.sleepWhileActive(
+        Math.min(this.pollIntervalMs, remaining),
+        lifecycleVersion,
+        signal,
+      );
+    }
+    this.assertStartActive(lifecycleVersion);
+    throw new NamedTunnelTransientError(
+      `Named Tunnel did not become ready within ${NAMED_TUNNEL_READY_DEADLINE_MS} ms.`,
+      { timedOut: true },
+    );
+  }
+}
+
 export class QuickTunnelManager {
   private readonly audit: AuditLogger;
   private readonly localOrigin: string;
@@ -667,7 +1352,7 @@ export class QuickTunnelManager {
       const timer = setTimeout(resolve, milliseconds);
       timer.unref?.();
     }));
-    this.pollIntervalMs = options.pollIntervalMs ?? QUICK_TUNNEL_DEFAULT_POLL_MS;
+    this.pollIntervalMs = options.pollIntervalMs ?? TUNNEL_DEFAULT_POLL_MS;
     if (!Number.isSafeInteger(this.pollIntervalMs)
       || this.pollIntervalMs <= 0
       || this.pollIntervalMs > 1_000) {
@@ -777,15 +1462,15 @@ export class QuickTunnelManager {
     let registered = false;
 
     while (this.now() < deadline) {
-      const polled = process.poll(cursor, QUICK_TUNNEL_POLL_BYTES);
+      const polled = process.poll(cursor, TUNNEL_POLL_BYTES);
       if (polled.requestedCursor !== cursor || polled.gap) {
         throw new QuickTunnelStartupError('Quick Tunnel output cursor became inconsistent.');
       }
       cursor = polled.nextCursor;
       const chunk = polled.segments.map((segment) => segment.text).join('');
-      startupLog = appendBoundedQuickLog(startupLog, chunk);
+      startupLog = appendBoundedTunnelLog(startupLog, chunk);
       origin ??= quickTunnelOriginFromOutput(startupLog);
-      registered ||= QUICK_TUNNEL_REGISTERED_PATTERN.test(startupLog);
+      registered ||= TUNNEL_REGISTERED_PATTERN.test(startupLog);
 
       if (origin === null
         && /trycloudflare\.com/i.test(startupLog)

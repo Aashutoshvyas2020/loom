@@ -55,6 +55,22 @@ export const DEFAULT_CONFIG: LoomConfig = {
 };
 
 const hostnamePattern = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i;
+const controlCharacterPattern = /[\u0000-\u001f\u007f]/;
+
+const namedTunnelName = z.string()
+  .min(1)
+  .max(128)
+  .refine((value) => value === value.trim(), 'Tunnel name must not have surrounding whitespace.')
+  .refine((value) => !value.startsWith('-'), 'Tunnel name must not be option-like.')
+  .refine((value) => !controlCharacterPattern.test(value), 'Tunnel name contains control characters.');
+
+const stableHostname = z.string()
+  .regex(hostnamePattern)
+  .transform((value) => value.toLowerCase())
+  .refine(
+    (value) => value !== 'trycloudflare.com' && !value.endsWith('.trycloudflare.com'),
+    'Named tunnel hostname must not use trycloudflare.com.',
+  );
 
 const supportedPath = z.string().min(1).superRefine((value, context) => {
   try {
@@ -81,8 +97,8 @@ const configSchema = z.object({
     z.object({ type: z.literal('quick') }).strict(),
     z.object({
       type: z.literal('named'),
-      name: z.string().trim().min(1),
-      hostname: z.string().regex(hostnamePattern),
+      name: namedTunnelName,
+      hostname: stableHostname,
       credentialsFile: supportedPath,
     }).strict(),
   ]),

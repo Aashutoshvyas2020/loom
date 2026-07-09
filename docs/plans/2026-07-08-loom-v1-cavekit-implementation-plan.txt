@@ -232,6 +232,10 @@ Define once in src/limits.ts and test boundary values:
 - AUDIT_RETENTION_DAYS = 30
 - AUDIT_START_DEADLINE_MS = 2,000
 - QUICK_TUNNEL_URL_DEADLINE_MS = 15,000
+- NAMED_TUNNEL_READY_DEADLINE_MS = 15,000
+- NAMED_TUNNEL_MAX_RETRIES = 5
+- NAMED_TUNNEL_BACKOFF_BASE_MS = 1,000
+- NAMED_TUNNEL_BACKOFF_MAX_MS = 60,000
 - WATCHDOG_HEARTBEAT_INTERVAL_MS = 1,000
 - WATCHDOG_MISSED_HEARTBEAT_LIMIT = 3
 - WATCHDOG_PROCESS_SCAN_FALLBACK_MS = 2,000
@@ -377,11 +381,19 @@ Do not claim stale-subdomain takeover resistance or connector persistence from a
 
 19.2 Named Tunnel
 
-Named tunnel is the production path. Require configured tunnel name and stable public HTTPS hostname. Validate Cloudflare authentication/certificate and the matching tunnel credential JSON before launch. Use an explicit ephemeral origin mapping equivalent to:
+Named tunnel is the production path. Require a configured nonempty, non-option-like tunnel name and a canonical stable public DNS hostname; reject `trycloudflare.com` and its subdomains. The configuration check lowercases the hostname without modifying the source file and rejects surrounding whitespace, control characters, and names longer than 128 characters.
 
-`cloudflared tunnel --no-autoupdate --metrics 127.0.0.1:0 run --url http://127.0.0.1:<mcp-port> <tunnel-name>`
+Before audit or process launch, read the configured credentials JSON and the origin certificate (default `~/.cloudflared/cert.pem`) through stable current-user private regular-file handles with no symbolic-link components. Reject group/other access, executable or special mode bits, oversized/empty files, identity changes, malformed PEM/JSON/base64, unexpected credential fields, invalid UUID/secret length, account mismatch between certificate and credentials, or a credential `TunnelName` that does not exactly match configuration. Current credentials must contain exactly `AccountTag`, `TunnelSecret`, `TunnelID`, and `TunnelName`.
 
-The public connector URL is `https://<hostname>/mcp`. Do not rely on a persistent ingress config that may target a stale ephemeral port. Never fall back to Quick Tunnel. Retry transient failures at most five times with exponential backoff capped at 60 seconds; stop immediately on auth or configuration failures.
+Use the verified direct Cloudflared boundary with explicit arguments equivalent to:
+
+`cloudflared tunnel --no-autoupdate --metrics 127.0.0.1:0 --origincert <cert.pem> run --url http://127.0.0.1:<mcp-port> --credentials-file <credentials.json> <tunnel-name>`
+
+The public connector URL is `https://<hostname>/mcp`, but status and production eligibility remain unavailable until bounded output reports a registered tunnel connection within 15 seconds. Do not rely on a persistent ingress mapping that may target a stale ephemeral port; a benign missing-config notice is not an error. Never fall back to Quick Tunnel.
+
+Static validation, audit-start failure, authentication failure, Cloudflared configuration failure, uncertain cleanup, and stop-during-startup all fail closed. Revalidate both authentication files before every process attempt. Retry only transient spawn/edge/readiness failures at most five times, with one-second exponential backoff capped at 60 seconds and complete cleanup between attempts. Stop aborts readiness/backoff waits immediately and cannot permit process recreation. Audit records contain only secret-free mode/retry metadata and never the hostname, endpoint, file paths, certificate fields, credentials, or Cloudflared output.
+
+Binding the same stable hostname after restart preserves endpoint generation and the persistent owner password. A configured hostname change rebinds the canonical `/mcp` resource and invalidates endpoint-bound OAuth state without rotating the owner password.
 
 20. DASHBOARD
 
@@ -524,7 +536,7 @@ Before T13, add deterministic coverage for a transient negative-PGID `SIGKILL` `
 
 T13 — Named Tunnel
 
-Implement stable hostname config, credentials validation, explicit ephemeral origin mapping, no fallback, transient retry classification, capped backoff, and auth/config fail-fast behavior.
+Implement canonical stable-hostname config; stable private origin-certificate and current credential validation with exact account/name matching; explicit ephemeral origin argv; registration-gated production status; audit secrecy/fail-closed ordering; no Quick fallback; transient-only retries with five-retry/60-second caps, per-attempt revalidation, and cleanup; prompt stop-during-startup cancellation; and stable endpoint/OAuth-generation plus owner-password persistence behavior.
 
 T14 — Full runtime orchestration and signal cleanup
 

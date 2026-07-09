@@ -24,6 +24,10 @@ import {
   CLOUDFLARED_DOWNLOAD_TIMEOUT_MS,
   CLOUDFLARED_VERSION,
   CloudflaredExecutableError,
+  NamedTunnelAuthError,
+  NamedTunnelConfigError,
+  NamedTunnelManager,
+  NamedTunnelStartupError,
   QuickTunnelConfigError,
   QuickTunnelManager,
   QuickTunnelStartupError,
@@ -36,13 +40,20 @@ import {
   hashCloudflaredExecutable,
   installCloudflaredRelease,
   startCloudflared,
+  validateNamedTunnelConfiguration,
   verifyCloudflaredExecutable,
 } from '../src/cloudflare.js';
 import { AuditLogger } from '../src/audit.js';
 import { initializeState } from '../src/config.js';
 import { AuthStore } from '../src/oauth.js';
 import { RuntimeReadiness } from '../src/runtime.js';
-import { QUICK_TUNNEL_URL_DEADLINE_MS } from '../src/limits.js';
+import {
+  NAMED_TUNNEL_BACKOFF_BASE_MS,
+  NAMED_TUNNEL_BACKOFF_MAX_MS,
+  NAMED_TUNNEL_MAX_RETRIES,
+  NAMED_TUNNEL_READY_DEADLINE_MS,
+  QUICK_TUNNEL_URL_DEADLINE_MS,
+} from '../src/limits.js';
 import { ProcessManager } from '../src/process-manager.js';
 import type { OutputRead } from '../src/output.js';
 
@@ -128,6 +139,42 @@ exit 3
 `);
   await chmod(executable, 0o700);
   return executable;
+}
+
+async function makeNamedTunnelArtifacts(
+  root: string,
+  tunnelName = 'loom-prod',
+): Promise<{
+  cloudflareDirectory: string;
+  originCertFile: string;
+  credentialsFile: string;
+  tunnelId: string;
+  tunnelSecret: string;
+}> {
+  const cloudflareDirectory = path.join(root, '.cloudflared');
+  await mkdir(cloudflareDirectory, { recursive: true, mode: 0o700 });
+  const tunnelId = '6f4f721c-22f2-41c7-a77d-41e5b09e4fc2';
+  const tunnelSecret = Buffer.alloc(32, 7).toString('base64');
+  const originCertFile = path.join(cloudflareDirectory, 'cert.pem');
+  const credentialsFile = path.join(cloudflareDirectory, `${tunnelId}.json`);
+  const originToken = Buffer.from(JSON.stringify({
+    zoneID: 'zone-id',
+    accountID: 'account-id',
+    apiToken: 'api-token',
+  })).toString('base64');
+  await writeFile(originCertFile, [
+    '-----BEGIN ARGO TUNNEL TOKEN-----',
+    originToken,
+    '-----END ARGO TUNNEL TOKEN-----',
+    '',
+  ].join('\n'), { mode: 0o600 });
+  await writeFile(credentialsFile, `${JSON.stringify({
+    AccountTag: 'account-id',
+    TunnelSecret: tunnelSecret,
+    TunnelID: tunnelId,
+    TunnelName: tunnelName,
+  })}\n`, { mode: 0o600 });
+  return { cloudflareDirectory, originCertFile, credentialsFile, tunnelId, tunnelSecret };
 }
 
 test('pinned Cloudflared release metadata is architecture-specific and exact', () => {
@@ -527,6 +574,722 @@ test('Quick Tunnel parser accepts only strict trycloudflare origins and config c
   await assert.rejects(
     assertQuickTunnelConfigCompatible(configDirectory),
     /config\.yml/,
+  );
+});
+
+
+test('Named Tunnel validates a stable hostname and matching private Cloudflare authentication files', async () => {
+  const root = await tempRoot('loom-named-validation-');
+  const cloudflareDirectory = path.join(root, '.cloudflared');
+  await mkdir(cloudflareDirectory, { mode: 0o700 });
+  const originCertFile = path.join(cloudflareDirectory, 'cert.pem');
+  const credentialsFile = path.join(cloudflareDirectory, '6f4f721c-22f2-41c7-a77d-41e5b09e4fc2.json');
+  const originToken = Buffer.from(JSON.stringify({
+    zoneID: 'zone-id',
+    accountID: 'account-id',
+    apiToken: 'api-token',
+  })).toString('base64');
+  await writeFile(originCertFile, [
+    '-----BEGIN ARGO TUNNEL TOKEN-----',
+    originToken,
+    '-----END ARGO TUNNEL TOKEN-----',
+    '',
+  ].join('\n'), { mode: 0o600 });
+  await writeFile(credentialsFile, `${JSON.stringify({
+    AccountTag: 'account-id',
+    TunnelSecret: Buffer.alloc(32, 7).toString('base64'),
+    TunnelID: '6f4f721c-22f2-41c7-a77d-41e5b09e4fc2',
+    TunnelName: 'loom-prod',
+  })}\n`, { mode: 0o600 });
+
+  const validated = await validateNamedTunnelConfiguration({
+    tunnelName: 'loom-prod',
+    hostname: 'LOOM.Example.COM',
+    originCertFile,
+    credentialsFile,
+  });
+  assert.deepEqual(validated, {
+    tunnelName: 'loom-prod',
+    tunnelId: '6f4f721c-22f2-41c7-a77d-41e5b09e4fc2',
+    hostname: 'loom.example.com',
+    publicOrigin: 'https://loom.example.com',
+    publicEndpoint: 'https://loom.example.com/mcp',
+    originCertFile,
+    credentialsFile,
+  });
+
+  await writeFile(credentialsFile, `${JSON.stringify({
+    AccountTag: 'account-id',
+    TunnelSecret: Buffer.alloc(32, 7).toString('base64'),
+    TunnelID: '6f4f721c-22f2-41c7-a77d-41e5b09e4fc2',
+    TunnelName: 'other-tunnel',
+  })}\n`, { mode: 0o600 });
+  await assert.rejects(
+    validateNamedTunnelConfiguration({
+      tunnelName: 'loom-prod',
+      hostname: 'loom.example.com',
+      originCertFile,
+      credentialsFile,
+    }),
+    /do not match configured tunnel name/,
+  );
+
+  await assert.rejects(
+    validateNamedTunnelConfiguration({
+      tunnelName: 'loom-prod',
+      hostname: 'unsafe.trycloudflare.com',
+      originCertFile,
+      credentialsFile,
+    }),
+    NamedTunnelConfigError,
+  );
+
+  const symlinkedCredentials = path.join(root, 'credentials-link.json');
+  await symlink(credentialsFile, symlinkedCredentials);
+  await assert.rejects(
+    validateNamedTunnelConfiguration({
+      tunnelName: 'loom-prod',
+      hostname: 'loom.example.com',
+      originCertFile,
+      credentialsFile: symlinkedCredentials,
+    }),
+    /symbolic/i,
+  );
+});
+
+
+test('Named Tunnel manager launches exact ephemeral-origin argv and publishes stable production status', async () => {
+  const root = await tempRoot('loom-named-manager-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const auditDirectory = path.join(root, 'audit');
+  const audit = await AuditLogger.create({ auditDirectory });
+  const process = new ScriptedQuickProcess([
+    { text: 'INF Initial protocol quic\n' },
+    { text: 'INF Registered tunnel connection connIndex=0\n' },
+  ]);
+  const starts: string[][] = [];
+  let clock = 0;
+  const manager = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used-by-injected-start',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'LOOM.Example.COM',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    now: () => clock,
+    sleep: async (milliseconds) => { clock += milliseconds; },
+    startProcess: async (args) => {
+      starts.push(args);
+      return process;
+    },
+  });
+
+  const initialStatus = manager.status;
+  assert.deepEqual(initialStatus, {
+    mode: 'named',
+    ready: false,
+    starting: false,
+    stopping: false,
+    tunnelName: 'loom-prod',
+    tunnelId: null,
+    hostname: 'loom.example.com',
+    publicOrigin: null,
+    publicEndpoint: null,
+    production: false,
+    retryCount: 0,
+  });
+
+  try {
+    const ready = await manager.start();
+    assert.deepEqual(ready, {
+      mode: 'named',
+      tunnelName: 'loom-prod',
+      tunnelId: artifacts.tunnelId,
+      hostname: 'loom.example.com',
+      publicOrigin: 'https://loom.example.com',
+      publicEndpoint: 'https://loom.example.com/mcp',
+      production: true,
+      retryCount: 0,
+    });
+    assert.deepEqual(starts, [[
+      '--origincert',
+      artifacts.originCertFile,
+      'run',
+      '--url',
+      'http://127.0.0.1:43123',
+      '--credentials-file',
+      artifacts.credentialsFile,
+      'loom-prod',
+    ]]);
+    assert.deepEqual(manager.status, {
+      mode: 'named',
+      ready: true,
+      starting: false,
+      stopping: false,
+      tunnelName: 'loom-prod',
+      tunnelId: artifacts.tunnelId,
+      hostname: 'loom.example.com',
+      publicOrigin: 'https://loom.example.com',
+      publicEndpoint: 'https://loom.example.com/mcp',
+      production: true,
+      retryCount: 0,
+    });
+    const persistedAudit = JSON.stringify(await auditRecords(auditDirectory));
+    for (const forbidden of [
+      'loom-prod',
+      'loom.example.com',
+      'https://loom.example.com/mcp',
+      artifacts.originCertFile,
+      artifacts.credentialsFile,
+      artifacts.tunnelSecret,
+      'account-id',
+      'api-token',
+      'Registered tunnel connection',
+      'Initial protocol quic',
+    ]) {
+      assert.equal(persistedAudit.includes(forbidden), false);
+    }
+  } finally {
+    await manager.stop();
+    await manager.stop();
+    assert.equal(manager.status.production, false);
+    assert.equal(manager.status.publicEndpoint, null);
+    await audit.close();
+  }
+  assert.equal(process.cancelCount, 1);
+});
+
+test('Named Tunnel stable endpoints preserve OAuth generation and owner password across restart', async () => {
+  const root = await tempRoot('loom-named-endpoint-');
+  const stateRoot = path.join(root, '.loom');
+  await initializeState(stateRoot);
+  const opened = await AuthStore.open(stateRoot);
+  assert.ok(opened.ownerPassword);
+  const ownerPassword = opened.ownerPassword;
+  const bindings: string[] = [];
+  const readiness = new RuntimeReadiness({
+    stateRoot,
+    mcp: {
+      origin: 'http://127.0.0.1:43123',
+      mcpUrl: 'http://127.0.0.1:43123/mcp',
+      bindPublicEndpoint: async (resource) => {
+        bindings.push(resource);
+        await opened.store.bindEndpoint(resource);
+      },
+    },
+  });
+  await readiness.persistNotReady();
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(stateRoot, 'audit') });
+
+  async function run(hostname: string) {
+    const process = new ScriptedQuickProcess([{
+      text: 'INF Registered tunnel connection connIndex=0\n',
+    }]);
+    const manager = new NamedTunnelManager({
+      audit,
+      processManager: new ProcessManager({ statePath: stateRoot }),
+      executablePath: '/private/tmp/not-used',
+      expectedSha256: 'a'.repeat(64),
+      expectedVersion: CLOUDFLARED_VERSION,
+      localOrigin: 'http://127.0.0.1:43123',
+      tunnelName: 'loom-prod',
+      hostname,
+      originCertFile: artifacts.originCertFile,
+      credentialsFile: artifacts.credentialsFile,
+      cwd: stateRoot,
+      now: () => 0,
+      sleep: async () => undefined,
+      startProcess: async () => process,
+    });
+    const ready = await manager.start();
+    const runtime = await readiness.bindPublicOrigin({
+      publicOrigin: ready.publicOrigin,
+      tunnelMode: 'named',
+    });
+    await manager.stop();
+    return runtime;
+  }
+
+  const first = await run('loom.example.com');
+  assert.equal(first.productionEligible, true);
+  assert.equal(opened.store.generation, 1);
+  const restarted = await run('LOOM.Example.COM');
+  assert.equal(restarted.publicMcpUrl, first.publicMcpUrl);
+  assert.equal(opened.store.generation, 1);
+  const changed = await run('new-loom.example.com');
+  assert.equal(changed.publicMcpUrl, 'https://new-loom.example.com/mcp');
+  assert.equal(opened.store.generation, 2);
+  assert.deepEqual(bindings, [
+    'https://loom.example.com/mcp',
+    'https://loom.example.com/mcp',
+    'https://new-loom.example.com/mcp',
+  ]);
+  assert.equal(await opened.store.verifyOwnerPassword(ownerPassword), true);
+
+  const reopened = await AuthStore.open(stateRoot);
+  assert.equal(reopened.ownerPassword, null);
+  assert.equal(await reopened.store.verifyOwnerPassword(ownerPassword), true);
+  assert.equal(reopened.store.generation, 2);
+  assert.equal(reopened.store.resourceUri, 'https://new-loom.example.com/mcp');
+  await audit.close();
+});
+
+test('Named Tunnel retries only transient failures with exponential backoff', async () => {
+  const root = await tempRoot('loom-named-retry-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+  const processes = [
+    new ScriptedQuickProcess([{ text: 'ERR edge connection failed\n', state: 'completed', exitCode: 1 }]),
+    new ScriptedQuickProcess([{ text: 'ERR temporary network failure\n', state: 'completed', exitCode: 1 }]),
+    new ScriptedQuickProcess([{ text: 'INF Registered tunnel connection\n' }]),
+  ];
+  const sleeps: number[] = [];
+  let clock = 0;
+  let starts = 0;
+  const manager = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    now: () => clock,
+    sleep: async (milliseconds) => {
+      sleeps.push(milliseconds);
+      clock += milliseconds;
+    },
+    startProcess: async () => processes[starts++]!,
+  });
+  try {
+    const ready = await manager.start();
+    assert.equal(ready.retryCount, 2);
+    assert.equal(starts, 3);
+    assert.deepEqual(sleeps, [
+      NAMED_TUNNEL_BACKOFF_BASE_MS,
+      NAMED_TUNNEL_BACKOFF_BASE_MS * 2,
+    ]);
+    assert.deepEqual(processes.slice(0, 2).map((item) => item.cancelCount), [1, 1]);
+  } finally {
+    await manager.stop();
+    await audit.close();
+  }
+  assert.equal(processes[2]!.cancelCount, 1);
+});
+
+test('Named Tunnel stops after five transient retries and caps exponential backoff', async () => {
+  const root = await tempRoot('loom-named-retry-limit-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+  const processes = Array.from(
+    { length: NAMED_TUNNEL_MAX_RETRIES + 1 },
+    () => new ScriptedQuickProcess([{ text: 'ERR temporary edge failure\n', state: 'completed', exitCode: 1 }]),
+  );
+  const sleeps: number[] = [];
+  let clock = 0;
+  let starts = 0;
+  const manager = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    now: () => clock,
+    sleep: async (milliseconds) => {
+      sleeps.push(milliseconds);
+      clock += milliseconds;
+    },
+    startProcess: async () => processes[starts++]!,
+  });
+  await assert.rejects(manager.start(), NamedTunnelStartupError);
+  assert.equal(starts, NAMED_TUNNEL_MAX_RETRIES + 1);
+  assert.deepEqual(sleeps, Array.from({ length: NAMED_TUNNEL_MAX_RETRIES }, (_, index) => (
+    Math.min(NAMED_TUNNEL_BACKOFF_BASE_MS * (2 ** index), NAMED_TUNNEL_BACKOFF_MAX_MS)
+  )));
+  assert.deepEqual(processes.map((item) => item.cancelCount), processes.map(() => 1));
+  await audit.close();
+});
+
+test('Named Tunnel authentication and configuration failures stop immediately without fallback', async () => {
+  const root = await tempRoot('loom-named-fail-fast-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+
+  for (const scenario of [
+    {
+      output: 'ERR authentication failed: unauthorized\n',
+      expected: NamedTunnelAuthError,
+    },
+    {
+      output: 'ERR error parsing tunnel ID: tunnel not found\n',
+      expected: NamedTunnelConfigError,
+    },
+  ]) {
+    const process = new ScriptedQuickProcess([{
+      text: scenario.output,
+      state: 'completed',
+      exitCode: 1,
+    }]);
+    const sleeps: number[] = [];
+    let starts = 0;
+    const manager = new NamedTunnelManager({
+      audit,
+      processManager: new ProcessManager({ statePath: root }),
+      executablePath: '/private/tmp/not-used',
+      expectedSha256: 'a'.repeat(64),
+      expectedVersion: CLOUDFLARED_VERSION,
+      localOrigin: 'http://127.0.0.1:43123',
+      tunnelName: 'loom-prod',
+      hostname: 'loom.example.com',
+      originCertFile: artifacts.originCertFile,
+      credentialsFile: artifacts.credentialsFile,
+      cwd: root,
+      now: () => 0,
+      sleep: async (milliseconds) => { sleeps.push(milliseconds); },
+      startProcess: async () => { starts += 1; return process; },
+    });
+    await assert.rejects(manager.start(), scenario.expected);
+    assert.equal(starts, 1);
+    assert.deepEqual(sleeps, []);
+    assert.equal(process.cancelCount, 1);
+  }
+  await audit.close();
+});
+
+test('Named Tunnel validates files before audit and audit failure blocks launch', async () => {
+  const root = await tempRoot('loom-named-audit-order-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+  await audit.close();
+  let starts = 0;
+
+  await writeFile(artifacts.credentialsFile, '{}\n', { mode: 0o600 });
+  const invalid = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    startProcess: async () => { starts += 1; return new ScriptedQuickProcess([]); },
+  });
+  await assert.rejects(invalid.start(), NamedTunnelConfigError);
+  assert.equal(starts, 0);
+
+  await makeNamedTunnelArtifacts(root);
+  const blocked = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    startProcess: async () => { starts += 1; return new ScriptedQuickProcess([]); },
+  });
+  await assert.rejects(blocked.start(), /Audit is unavailable/);
+  assert.equal(starts, 0);
+});
+
+test('Named Tunnel readiness timeout cleans every attempt and never falls back to Quick Tunnel', async () => {
+  const root = await tempRoot('loom-named-timeout-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+  const processes = Array.from(
+    { length: NAMED_TUNNEL_MAX_RETRIES + 1 },
+    () => new ScriptedQuickProcess([]),
+  );
+  let clock = 0;
+  let starts = 0;
+  const manager = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    now: () => clock,
+    sleep: async (milliseconds) => { clock += milliseconds; },
+    startProcess: async (args) => {
+      assert.equal(args.includes('trycloudflare.com'), false);
+      return processes[starts++]!;
+    },
+  });
+  await assert.rejects(manager.start(), new RegExp(String(NAMED_TUNNEL_READY_DEADLINE_MS)));
+  assert.equal(starts, NAMED_TUNNEL_MAX_RETRIES + 1);
+  assert.deepEqual(processes.map((item) => item.cancelCount), processes.map(() => 1));
+  await audit.close();
+});
+
+
+test('Named Tunnel stop during startup cancels the active attempt without retry', async () => {
+  const root = await tempRoot('loom-named-stop-starting-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+  const process = new ScriptedQuickProcess([]);
+  let starts = 0;
+  let clock = 0;
+  let releaseSleep!: () => void;
+  let enteredSleep!: () => void;
+  const sleepEntered = new Promise<void>((resolve) => { enteredSleep = resolve; });
+  const sleepRelease = new Promise<void>((resolve) => { releaseSleep = resolve; });
+  const manager = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    now: () => clock,
+    sleep: async (milliseconds) => {
+      enteredSleep();
+      await sleepRelease;
+      clock += milliseconds;
+    },
+    startProcess: async () => {
+      starts += 1;
+      return process;
+    },
+  });
+
+  const starting = manager.start();
+  await sleepEntered;
+  await manager.stop();
+  let startupOutcome: Error | 'pending';
+  try {
+    startupOutcome = await Promise.race([
+      starting.then(
+        () => new Error('Named Tunnel startup unexpectedly resolved.'),
+        (error: unknown) => error instanceof Error ? error : new Error(String(error)),
+      ),
+      new Promise<'pending'>((resolve) => setTimeout(() => resolve('pending'), 50)),
+    ]);
+  } finally {
+    releaseSleep();
+  }
+  assert.notEqual(startupOutcome, 'pending');
+  assert.match((startupOutcome as Error).message, /stopped during startup/i);
+  assert.equal(starts, 1);
+  assert.equal(process.cancelCount, 1);
+  assert.equal(manager.status.ready, false);
+  assert.equal(manager.status.publicEndpoint, null);
+  await audit.close();
+});
+
+test('Named Tunnel revalidates authentication files before every retry', async () => {
+  const root = await tempRoot('loom-named-revalidate-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+  const first = new ScriptedQuickProcess([{
+    text: 'ERR temporary edge failure\n',
+    state: 'completed',
+    exitCode: 1,
+  }]);
+  let starts = 0;
+  let mutated = false;
+  const manager = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    now: () => 0,
+    sleep: async () => {
+      if (!mutated) {
+        mutated = true;
+        await writeFile(artifacts.credentialsFile, '{}\n', { mode: 0o600 });
+      }
+    },
+    startProcess: async () => {
+      starts += 1;
+      return first;
+    },
+  });
+  await assert.rejects(manager.start(), NamedTunnelConfigError);
+  assert.equal(starts, 1);
+  assert.equal(first.cancelCount, 1);
+  await audit.close();
+});
+
+test('Named Tunnel cleanup failure blocks retry and remains fail closed', async () => {
+  const root = await tempRoot('loom-named-cleanup-fail-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+  const scripted = new ScriptedQuickProcess([{
+    text: 'ERR temporary edge failure\n',
+    state: 'completed',
+    exitCode: 1,
+  }]);
+  const brokenProcess: QuickTunnelProcess = {
+    poll: (cursor) => scripted.poll(cursor),
+    cancel: async () => {
+      throw new Error('cleanup failed');
+    },
+  };
+  let starts = 0;
+  const sleeps: number[] = [];
+  const manager = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    now: () => 0,
+    sleep: async (milliseconds) => { sleeps.push(milliseconds); },
+    startProcess: async () => {
+      starts += 1;
+      return brokenProcess;
+    },
+  });
+  await assert.rejects(manager.start(), /clean up named-tunnel process/i);
+  await assert.rejects(manager.start(), /uncleaned named-tunnel process/i);
+  assert.equal(starts, 1);
+  assert.deepEqual(sleeps, []);
+  await audit.close();
+});
+
+test('Named Tunnel ignores benign missing persistent-config notices', async () => {
+  const root = await tempRoot('loom-named-benign-config-log-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+  const audit = await AuditLogger.create({ auditDirectory: path.join(root, 'audit') });
+  const process = new ScriptedQuickProcess([{
+    text: 'INF No configuration file found; continuing with command-line arguments\n',
+  }, {
+    text: 'INF Registered tunnel connection\n',
+  }]);
+  let starts = 0;
+  const manager = new NamedTunnelManager({
+    audit,
+    processManager: new ProcessManager({ statePath: root }),
+    executablePath: '/private/tmp/not-used',
+    expectedSha256: 'a'.repeat(64),
+    expectedVersion: CLOUDFLARED_VERSION,
+    localOrigin: 'http://127.0.0.1:43123',
+    tunnelName: 'loom-prod',
+    hostname: 'loom.example.com',
+    originCertFile: artifacts.originCertFile,
+    credentialsFile: artifacts.credentialsFile,
+    cwd: root,
+    now: () => 0,
+    sleep: async () => undefined,
+    startProcess: async () => {
+      starts += 1;
+      return process;
+    },
+  });
+  try {
+    const ready = await manager.start();
+    assert.equal(ready.production, true);
+    assert.equal(starts, 1);
+  } finally {
+    await manager.stop();
+    await audit.close();
+  }
+});
+
+test('Named Tunnel static validation rejects option-like names and malformed credentials', async () => {
+  const root = await tempRoot('loom-named-static-reject-');
+  const artifacts = await makeNamedTunnelArtifacts(root);
+
+  await assert.rejects(
+    validateNamedTunnelConfiguration({
+      tunnelName: '--url',
+      hostname: 'loom.example.com',
+      originCertFile: artifacts.originCertFile,
+      credentialsFile: artifacts.credentialsFile,
+    }),
+    NamedTunnelConfigError,
+  );
+
+  await chmod(artifacts.credentialsFile, 0o644);
+  await assert.rejects(
+    validateNamedTunnelConfiguration({
+      tunnelName: 'loom-prod',
+      hostname: 'loom.example.com',
+      originCertFile: artifacts.originCertFile,
+      credentialsFile: artifacts.credentialsFile,
+    }),
+    /private/i,
+  );
+  await chmod(artifacts.credentialsFile, 0o600);
+
+  await writeFile(artifacts.credentialsFile, `${JSON.stringify({
+    AccountTag: 'wrong-account',
+    TunnelSecret: artifacts.tunnelSecret,
+    TunnelID: artifacts.tunnelId,
+    TunnelName: 'loom-prod',
+  })}\n`, { mode: 0o600 });
+  await assert.rejects(
+    validateNamedTunnelConfiguration({
+      tunnelName: 'loom-prod',
+      hostname: 'loom.example.com',
+      originCertFile: artifacts.originCertFile,
+      credentialsFile: artifacts.credentialsFile,
+    }),
+    /origin certificate account/,
+  );
+
+  await writeFile(artifacts.credentialsFile, `${JSON.stringify({
+    AccountTag: 'account-id',
+    TunnelSecret: 'not-base64',
+    TunnelID: 'not-a-uuid',
+    TunnelName: 'loom-prod',
+  })}\n`, { mode: 0o600 });
+  await assert.rejects(
+    validateNamedTunnelConfiguration({
+      tunnelName: 'loom-prod',
+      hostname: 'loom.example.com',
+      originCertFile: artifacts.originCertFile,
+      credentialsFile: artifacts.credentialsFile,
+    }),
+    /invalid TunnelID/,
   );
 });
 

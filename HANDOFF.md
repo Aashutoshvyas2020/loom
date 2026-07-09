@@ -1,12 +1,12 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 17:37:06 PDT
+**Date and local time:** 2026-07-08 17:56:03 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**HEAD SHA before pending amend:** `57cb57a62195758d9402702074333ec0dbd41f08`
-**Repository state:** dirty only with the reviewed T12.1 test-isolation follow-up and same-commit governance
-**Current task:** T12.1 — transient process-group signal hardening
-**Last completed gate:** process-manager/watchdog 12-test target and delayed process-residue scan are green after the concurrent refinement
+**HEAD SHA before pending commit:** `672ea96578cc3ebe7b42e29c9f7e700a631b317c`
+**Repository state:** dirty only with completed T13 implementation and same-commit governance
+**Current task:** T13 — Named Tunnel
+**Last completed gate:** final full typecheck, 158/158 tests, clean build, 38-test T13 target, and delayed Loom-owned process-residue scan are green
 **Pushed or published:** no
 
 ## Required startup command
@@ -17,68 +17,87 @@ cd /Users/aashu/loom && npm ci && npm run typecheck && npm test && npm run build
 
 ## Completed work
 
-- Promoted the repeated negative-PGID `SIGKILL` `EPERM` into an explicit release-blocking T12.1 plan amendment before T13.
-- Added deterministic transient and persistent `EPERM` real-process regressions while a managed target ignores `SIGTERM`.
-- Replaced the former single-attempt signal path with an owned-group signal helper.
-- Preserved `ESRCH` as already-gone.
-- On `EPERM`, revalidates the recorded wrapper PID/start-time/executable identity and current process-group membership before retrying.
-- Uses only the existing absolute shutdown deadline as the retry bound; persistent `EPERM` fails closed.
-- Preserved cancelled results and complete process-group cleanup after a transient error.
-- Reviewed concurrent agent work rather than overwriting it. Removed its unapproved fixed three-retry policy because the existing deadline is the canonical bound.
-- Preserved a later concurrent refinement that isolates signal-fault injection from global `process.kill`; simplified the draft system-call object/interface to one optional constructor function.
-- Updated the specification, canonical plan, changelog, repository map, and handoff.
+- Added strict named-tunnel config validation and canonical lowercase stable hostnames; rejects `trycloudflare.com`, option-like/trimmed/control-containing names, and names over 128 characters.
+- Added stable current-user private regular-file reads for the origin certificate and current credentials JSON, including no-symlink/TOCTOU checks, permission/mode/size bounds, and identity rechecks.
+- Validates the origin-certificate `ARGO TUNNEL TOKEN` and exactly `AccountTag`, `TunnelSecret`, `TunnelID`, and `TunnelName`; enforces certificate-account and configured-name matching, canonical 32-byte secret base64, and UUID tunnel ID.
+- Added `NamedTunnelManager` on the existing verified direct Cloudflared boundary with explicit `--origincert`, `run --url <bare-loopback-origin>`, `--credentials-file`, and tunnel-name argv.
+- Withholds public endpoint and production eligibility until a registered connection is observed within the 15-second readiness deadline.
+- Fails immediately on static validation, audit-start, auth, or Cloudflared configuration errors. A benign missing-persistent-config notice remains allowed.
+- Retries only transient spawn/edge/readiness failures at most five times with one-second exponential backoff capped at 60 seconds, complete process cleanup, and fresh certificate/credential validation before every attempt.
+- Never falls back to Quick Tunnel and never uses persistent ingress as Loom's origin mapping.
+- Fails closed when process cleanup is uncertain; an uncleaned process blocks restart.
+- Added lifecycle-version plus `AbortController` cancellation so stop wakes readiness/backoff immediately, cancels exactly once, prevents recreation, and remains idempotent.
+- Keeps tunnel name, hostname, endpoint, auth paths/values, certificate fields, and Cloudflared output out of audit records.
+- Proved stable canonical-hostname restart preserves OAuth generation; a hostname change increments generation and invalidates endpoint-bound state without rotating the persistent owner password.
+- Cleanly reconciled concurrent-agent additions for per-attempt auth revalidation, cleanup-failure behavior, hidden pre-ready status, benign config notices, option-like names, and stop-during-startup. Removed a duplicate waiter cancellation path in favor of the single concurrent-agent `AbortController` implementation.
+- Updated `SPEC.md`, the canonical plan, central limits, changelog, repository map, and this handoff.
+
+## Required RED evidence
+
+- Initial named validation/manager tests failed because no named APIs, errors, manager, or central constants existed.
+- Config tests failed because `trycloudflare.com`, option-like names, and silent hostname casing were accepted.
+- Status regression failed because named mode reported production eligibility before registration.
+- Adversarial tests exposed missing per-retry credential revalidation and cleanup-failure fail-closed behavior.
+- Startup-stop regression first failed with a 15-second readiness timeout, proving stop did not prevent the pending startup loop from continuing.
+- Prompt-stop regression then failed as `pending`, proving the readiness/backoff sleep was not interruptible until `AbortController` cancellation was added.
 
 ## Exact commands and results
 
 ```text
-npm run build && node --test --test-name-pattern='EPERM' dist/test/process-manager.test.js
-PASS — 2/2
+node --test --test-name-pattern='Named Tunnel' dist/test/cloudflare.test.js
+PASS — 13/13 named tests
 
-npm run build && node --test dist/test/process-manager.test.js dist/test/watchdog.test.js
-PASS — 12/12 after isolated signal injection
+node --test dist/test/cloudflare.test.js dist/test/config.test.js dist/test/limits.test.js
+PASS — 38/38
 
 npm run typecheck
 PASS
 
 npm test
-PASS — 145/145 before the test-isolation amend
+PASS — 158/158
 
 npm run build
 PASS
 
-post-suite delayed process scan
-<no matching wrapper, target, or grandchild processes>
+post-suite delayed Loom-owned process scan
+<no matching child-wrapper, loom-process, loom-cloudflared, loom-named, loom-quick, repository Cloudflared, target, or grandchild processes>
 
-REPO_MAP tracked-path comparison
-<no output>
+unrelated pre-existing infrastructure (not touched)
+cloudflared tunnel run devspace
+parent: node /opt/homebrew/bin/devspace launch devspace
+executable: /opt/homebrew/Cellar/cloudflared/2026.6.1/bin/cloudflared
 ```
-
-## RED evidence
-
-The deterministic transient regression failed under the inherited implementation with raw `Error: kill EPERM` from the single-attempt negative-PGID signal call. The persistent regression also failed with the same unwrapped error. Intentional failing runs initially exposed test cleanup residue; the harness now forcibly removes only its known test group. The later test-isolation refinement changes no production behavior.
 
 ## Known failures
 
-None currently reproducible in T0–T12.1 deterministic validation.
+None currently reproducible in deterministic T0–T13 validation.
 
 ## Real blockers
 
-None for T12.1. T13 remains unimplemented and must add named-tunnel stable-hostname validation, origin-certificate and matching credential validation, explicit ephemeral origin mapping, no Quick fallback, transient retry classification, capped exponential backoff, and auth/config fail-fast behavior.
+- T14 full runtime orchestration is not implemented.
+- G5/G6 still require a real named Cloudflare tunnel, eligible ChatGPT custom-connector account/workspace, real OAuth/tool calls, and process/public-access cleanup evidence.
+- Deterministic T13 tests do not certify production by themselves.
 
-## Files changed since `57cb57a`
+## Files changed
 
 - `CHANGELOG.md`
 - `HANDOFF.md`
 - `REPO_MAP.md`
-- `src/process-manager.ts`
-- `test/process-manager.test.ts`
+- `SPEC.md`
+- `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
+- `src/cloudflare.ts`
+- `src/config.ts`
+- `src/limits.ts`
+- `test/cloudflare.test.ts`
+- `test/config.test.ts`
+- `test/limits.test.ts`
 
 ## Exact next command
 
 ```bash
-npm run typecheck && npm test && npm run build && git diff --check && git add CHANGELOG.md HANDOFF.md REPO_MAP.md src/process-manager.ts test/process-manager.test.ts && git diff --cached --check && git commit --amend --no-edit
+git add CHANGELOG.md HANDOFF.md REPO_MAP.md SPEC.md docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt src/cloudflare.ts src/config.ts src/limits.ts test/cloudflare.test.ts test/config.test.ts test/limits.test.ts && git diff --cached --check && git commit -m "feat: add named tunnel"
 ```
 
 ## Next expected result
 
-Amend the unpushed T12.1 commit with isolated deterministic signal injection, verify a clean tree, then begin T13 with a failing named-tunnel test for strict hostname, origin-certificate, and matching credential validation before process launch.
+Commit T13 as one clean implementation/governance unit. Then begin T14 by writing the first failing integrated runtime lifecycle test for exact startup order, reverse-order cleanup, runtime lock ownership, signal stop, and public-access termination.

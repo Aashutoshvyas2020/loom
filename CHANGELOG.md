@@ -564,3 +564,47 @@ PASS (90/90 test executions)
 post-suite process scan
 <no output>
 ```
+
+### T13 — Named Tunnel
+
+- Added strict named-tunnel configuration canonicalization: lowercase stable DNS hostnames, no `trycloudflare.com`, no surrounding whitespace/control characters, no option-like names, and a 128-character name ceiling.
+- Added stable private authentication-file reads for the origin certificate and credentials JSON. Both paths reject symbolic-link components, nonregular/wrong-owner files, group/other access, executable or special mode bits, invalid size, and identity changes before/during read.
+- Added strict origin-certificate PEM/token validation and current credential schema validation for exactly `AccountTag`, `TunnelSecret`, `TunnelID`, and `TunnelName`. Credentials must match the certificate account and configured tunnel name; the secret must be canonical 32-byte base64 and the ID must be a UUID.
+- Added `NamedTunnelManager` on the verified direct Cloudflared boundary. It launches only explicit `--origincert`, `run --url <bare-loopback-origin>`, `--credentials-file`, and tunnel-name arguments after the fixed T10 `tunnel --no-autoupdate --metrics 127.0.0.1:0` prefix.
+- Named status exposes no public endpoint and no production eligibility before a registered tunnel connection is observed within 15 seconds. A benign missing-persistent-config notice is accepted; Loom does not use persistent ingress as its origin mapping.
+- Static validation and audit-start failures block process launch. Authentication/configuration output fails immediately. Only transient spawn/edge/readiness failures retry, at most five times, with one-second exponential backoff bounded by 60 seconds.
+- Revalidates the certificate and credentials before every attempt, fully cancels each failed process before retry, and fails closed if cleanup is uncertain. No Quick Tunnel fallback exists.
+- Added lifecycle-version plus `AbortController` cancellation so `stop()` interrupts pending readiness/backoff waits, cancels the active attempt exactly once, prevents recreation, and remains idempotent. An uncleaned process blocks restart.
+- Audit records include only mode/retry metadata. Tests prove the tunnel name, hostname, endpoint, authentication paths/values, certificate fields, and Cloudflared output do not persist in audit bytes.
+- Added runtime/OAuth integration evidence: restarting the same canonical hostname preserves endpoint generation; changing the hostname increments generation and invalidates endpoint-bound state; the owner password remains valid across both and across store reopen.
+- Preserved and reviewed concurrent-agent adversarial additions for per-retry auth revalidation, cleanup-failure fail-closed behavior, benign config notices, option-like name rejection, hidden pre-ready status, and prompt stop-during-startup cancellation. Duplicate cancellation mechanisms were removed in favor of one `AbortController` path.
+- Required RED evidence covered missing named APIs/constants, permissive config names/hostnames, pre-ready production exposure, retry auth mutation, cleanup uncertainty, stop-triggered recreation, and startup sleeps that did not wake promptly.
+- T13 target passes 38/38. Full typecheck, 158/158 tests, clean build, and delayed Loom-owned process-residue scan pass. A pre-existing Homebrew Cloudflared process belongs to `node /opt/homebrew/bin/devspace launch devspace`, predates T13, and is explicitly excluded rather than touched. This is deterministic implementation evidence only; real named-tunnel and ChatGPT certification remain G5/G6 work.
+
+Evidence:
+
+```text
+node --test dist/test/cloudflare.test.js dist/test/config.test.js dist/test/limits.test.js
+PASS (38/38)
+
+npm run typecheck
+PASS
+npm test
+PASS (158/158)
+npm run build
+PASS
+
+Loom-owned post-suite process scan
+<no output>
+
+unrelated pre-existing infrastructure (not touched)
+cloudflared tunnel run devspace
+parent: node /opt/homebrew/bin/devspace launch devspace
+
+Named endpoint lifecycle
+same canonical hostname generation: 1 -> 1
+changed hostname generation: 1 -> 2
+owner password after restarts/change/reopen: valid
+production eligible before readiness/after stop: false
+production eligible while registered: true
+```

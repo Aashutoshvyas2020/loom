@@ -33,18 +33,18 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 ### `CHANGELOG.md`
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command/test evidence.
-- **Current assessment:** PARTIAL
-- **Evidence:** Records T0 initialization; must be updated before the G0 commit.
-- **Last meaningful change:** T0 initialization, 2026-07-07.
-- **Owning task or gate:** All tasks; current T0 / G0.
+- **Current assessment:** PASS
+- **Evidence:** Records T0–T13 implementation history, required RED/GREEN evidence, concurrent-agent reconciliation, exact target/full-suite counts, process-residue checks, and the remaining real G5/G6 certification boundary.
+- **Last meaningful change:** T13 Named Tunnel implementation evidence, 2026-07-08.
+- **Owning task or gate:** All tasks; current T13.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the T12.1 EPERM root cause, instance-local regression isolation, ten-run stress evidence, full 145-test gate, parent HEAD, exact dirty scope, and the next T13 command.
-- **Last meaningful change:** T12.1 process-group signal hardening handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T12.1.
+- **Evidence:** Records completed T13 named-tunnel validation/lifecycle evidence, concurrent-agent reconciliation, 38-test target, full 158-test gate, parent HEAD, exact dirty scope, and the next T14 command.
+- **Last meaningful change:** T13 Named Tunnel handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T13.
 
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -66,24 +66,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** T12.1 updates the process manager, regression-test, specification, plan, changelog, and handoff assessments while preserving an empty tracked-path diff against `git ls-files`.
-- **Last meaningful change:** T12.1 process-group signal hardening map update, 2026-07-08.
-- **Owning task or gate:** All tasks; current T12.1.
+- **Evidence:** T13 updates named Cloudflare, config, limit, test, specification, plan, changelog, and handoff assessments while preserving an empty tracked-path diff against `git ls-files`.
+- **Last meaningful change:** T13 Named Tunnel map update, 2026-07-08.
+- **Owning task or gate:** All tasks; current T13.
 
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
 - **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T12.1 requires fresh identity/group validation before retrying transient negative-PGID `EPERM`, bounds retries by the existing shutdown deadline, preserves `ESRCH`, and fails closed on persistent permission errors.
-- **Last meaningful change:** T12.1 process-group signal security contract, 2026-07-08.
+- **Evidence:** T13 locks stable-hostname/name validation, private certificate/current-credential matching, direct ephemeral origin argv, registration-gated production status, transient-only bounded retries, per-attempt revalidation, prompt stop cancellation, audit secrecy, and endpoint/password persistence.
+- **Last meaningful change:** T13 Named Tunnel security contract, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** Explicit T12.1 amendment blocks T13 until transient negative-PGID `EPERM` is safely revalidated/retried within the existing deadline and persistent failure remains fail-closed.
-- **Last meaningful change:** T12.1 blocker-task amendment, 2026-07-08.
+- **Evidence:** T13 records four central named-tunnel limits and the exact validation, argv, registration, retry, cleanup, audit, cancellation, and OAuth/password contract proven by implementation.
+- **Last meaningful change:** T13 Named Tunnel implementation clarification, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -159,28 +159,28 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T0 / G1, T1, T4, and T9; expanded by later runtime tasks.
 
 ### `src/cloudflare.ts`
-- **Purpose:** Pinned Cloudflared release acquisition/verification plus Quick Tunnel conflict checks, bounded readiness parsing, recreation, audit, status, and cleanup.
-- **Success check:** Retains all T10 acquisition/direct-launch guarantees; Quick mode rejects conflicting config before launch, validates a bare loopback origin, parses only a strict single-label trycloudflare origin plus registration within 15 seconds, retries only one transient attempt, rejects unsafe URLs without retry, cleans every failed/stopped process, never audits output/URL, and reports production false.
+- **Purpose:** Pinned Cloudflared acquisition/verification plus Quick and Named Tunnel validation, direct launch, bounded readiness, retry, audit, status, and cleanup.
+- **Success check:** Retains T10/T12 guarantees; named mode validates private stable certificate/current credentials and exact name/account/hostname, launches explicit ephemeral origin argv, exposes production status only after registration, revalidates every attempt, retries only transient failures five times with capped backoff, never falls back to Quick, fails closed on audit/auth/config/cleanup uncertainty, and aborts startup waits on stop without recreation.
 - **Current assessment:** PASS
-- **Evidence:** Cloudflared target passes 17/17. T12 tests prove split-chunk/end-boundary parsing, exact direct args, registration, one recreation for spawn/exit/timeout, unsafe URL no-retry, audit fail-closed/secrecy, endpoint-generation invalidation, and owner-password persistence. T10 real official binary/network evidence remains valid.
-- **Last meaningful change:** T12 Quick Tunnel manager, 2026-07-08.
-- **Owning task or gate:** T10 acquisition and T12 Quick Tunnel; consumed by T13–T14.
+- **Evidence:** Cloudflared target passes 30/30. Thirteen named tests prove static validation, exact argv/status, endpoint/password persistence, retry classification/limits, auth/config fail-fast, audit secrecy/order, timeout cleanup, per-attempt revalidation, cleanup failure, benign config notices, option-like rejection, and prompt startup cancellation. T10 real official binary/network evidence remains valid; G5 real named certification remains pending.
+- **Last meaningful change:** T13 Named Tunnel manager and validation, 2026-07-08.
+- **Owning task or gate:** T10 acquisition, T12 Quick Tunnel, and T13 Named Tunnel; consumed by T14.
 
 ### `src/config.ts`
 - **Purpose:** Secure Loom state initialization, strict versioned configuration, invalid-config reset/preservation, private runtime-lock persistence, and PID-reuse identity comparison.
-- **Success check:** Creates the exact 0700 state tree including `browser/` and `browser-profile/`, writes 0600 files atomically, repairs current-owner permissions, rejects symlink/wrong-shape state, validates config without mutation, preserves invalid bytes on reset, and requires all runtime identity fields to match.
+- **Success check:** Creates the exact private state tree, writes atomically, rejects unsafe state, validates without mutation, preserves invalid bytes, requires exact lock identity, and canonicalizes named hostnames while rejecting `trycloudflare.com`, surrounding/control characters, option-like names, and names over 128 characters.
 - **Current assessment:** PASS
-- **Evidence:** `test/config.test.ts` passes 7/7; T9 CLI setup test proves both browser directories are private 0700 state.
-- **Last meaningful change:** T9 browser-install state directory, 2026-07-08.
-- **Owning task or gate:** T1; reused by T4, T9, T11, and T14.
+- **Evidence:** `test/config.test.ts` passes 7/7 with named hostname canonicalization and invalid-name/Quick-host rejection; T9 CLI setup still proves private browser directories.
+- **Last meaningful change:** T13 named-tunnel configuration boundary, 2026-07-08.
+- **Owning task or gate:** T1 and T13; reused by T4, T9, T11, and T14.
 
 ### `src/limits.ts`
-- **Purpose:** Single source of truth for all fixed Loom v1 byte, time, count, and shutdown limits.
+- **Purpose:** Single source of truth for all fixed Loom v1 byte, time, count, retry, and shutdown limits.
 - **Success check:** Every exported value exactly matches plan Section 8 and boundary tests import the production constants.
 - **Current assessment:** PASS
-- **Evidence:** `test/limits.test.ts` passes and verifies all nineteen approved constants.
-- **Last meaningful change:** T1 limits foundation, 2026-07-08.
-- **Owning task or gate:** T1 / G2 and later consumers.
+- **Evidence:** `test/limits.test.ts` passes and verifies all 24 approved constants, including 15-second named readiness, five retries, one-second base backoff, and 60-second cap.
+- **Last meaningful change:** T13 named-tunnel limit additions, 2026-07-08.
+- **Owning task or gate:** T1 / G2, T13, and later consumers.
 
 ### `src/process-manager.ts`
 - **Purpose:** Launches wrapper-owned detached process groups, streams bounded output, sends heartbeats, validates ownership, manages timeout/cancellation, and enforces TERM-to-KILL shutdown deadlines.
@@ -263,28 +263,28 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T0 / G1, T1, T4, and T9.
 
 ### `test/cloudflare.test.ts`
-- **Purpose:** Deterministic acquisition/verification tests plus Quick Tunnel parser, conflict, lifecycle, retry, audit, OAuth, and status tests.
-- **Success check:** Retains all T10 checks and additionally proves strict config conflict rejection, split/end-boundary URL parsing, registration gating, exact 15-second attempts, at most one recreation, cleanup, malformed URL no-retry, audit secrecy/fail-closed behavior, production false, endpoint invalidation, and owner-password persistence.
+- **Purpose:** Deterministic acquisition/verification plus Quick and Named Tunnel parser, trust, lifecycle, retry, audit, OAuth, status, and cleanup tests.
+- **Success check:** Retains T10/T12 checks and proves named certificate/credential validation, exact direct argv, registration gating, hidden pre-ready status, bounded transient-only retries, no fallback, per-attempt revalidation, cleanup fail-closed behavior, prompt stop cancellation, audit secrecy/order, stable endpoint generation, and owner-password persistence.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite passes 17/17; full tracked suite passes 143/143 after an isolated nonreproducing process-manager EPERM rerun passed with no residue.
-- **Last meaningful change:** T12 Quick Tunnel RED/GREEN and endpoint-persistence proof, 2026-07-08.
-- **Owning task or gate:** T10 and T12.
+- **Evidence:** Targeted Cloudflared suite passes 30/30; combined T13 Cloudflare/config/limits target passes 38/38; full tracked suite passes 158/158 with no delayed Loom-owned process residue. The unrelated DevSpace Cloudflared tunnel is explicitly excluded.
+- **Last meaningful change:** T13 Named Tunnel adversarial RED/GREEN cycle, 2026-07-08.
+- **Owning task or gate:** T10, T12, and T13.
 
 ### `test/config.test.ts`
-- **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, and full identity matching.
-- **Success check:** Exercises 0700/0600 creation and repair, symlink rejection, schema failures, timestamped backup bytes, strict lock parsing, and every PID-reuse defense field.
+- **Purpose:** Real-filesystem tests for state permissions, strict config validation, non-mutating checks, invalid-config preservation, runtime-lock storage, full identity matching, and named-tunnel config canonicalization.
+- **Success check:** Exercises private creation/repair, symlink rejection, schema failures, named stable-hostname/name boundaries, timestamped backup bytes, strict lock parsing, and every PID-reuse defense field.
 - **Current assessment:** PASS
-- **Evidence:** Targeted suite reports 7 passed, 0 failed; full suite reports 23 passed, 0 failed.
-- **Last meaningful change:** T1 secure state/config RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T1.
+- **Evidence:** Targeted suite passes 7/7, including lowercase hostname output and rejection of Quick hostnames, option-like/trimmed/oversized names, relative roots, unknown keys, and incomplete named config.
+- **Last meaningful change:** T13 named configuration RED/GREEN extension, 2026-07-08.
+- **Owning task or gate:** T1 and T13.
 
 ### `test/limits.test.ts`
 - **Purpose:** Locks every centralized Loom v1 limit to the approved specification.
 - **Success check:** Exact value comparison passes without duplicating runtime logic.
 - **Current assessment:** PASS
-- **Evidence:** Targeted and full test suites pass.
-- **Last meaningful change:** T1 limits RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T1.
+- **Evidence:** One exact-object test verifies all 24 constants, including the four T13 named-tunnel readiness/retry/backoff values; full suite passes 158/158.
+- **Last meaningful change:** T13 named-tunnel limit contract, 2026-07-08.
+- **Owning task or gate:** T1 and T13.
 
 ### `public/dashboard.css`
 - **Purpose:** Minimal responsive styling for the authenticated loopback dashboard without inline CSS.

@@ -84,6 +84,25 @@ test('checkConfig validates strictly without modifying files', async () => {
   const afterStat = await stat(configPath);
   assert.equal(afterStat.mtimeMs, beforeStat.mtimeMs);
   assert.deepEqual(await readdir(stateRoot), beforeFiles);
+
+  const named = {
+    version: 1,
+    tunnel: {
+      type: 'named',
+      name: 'loom-prod',
+      hostname: 'LOOM.Example.COM',
+      credentialsFile: '~/.cloudflared/credentials.json',
+    },
+    extraRoots: [],
+  };
+  await writeFile(configPath, JSON.stringify(named), { mode: 0o600 });
+  assert.deepEqual(await checkConfig(stateRoot), {
+    ...named,
+    tunnel: {
+      ...named.tunnel,
+      hostname: 'loom.example.com',
+    },
+  });
 });
 
 test('checkConfig rejects unknown keys, relative roots, and incomplete named tunnels', async () => {
@@ -96,6 +115,46 @@ test('checkConfig rejects unknown keys, relative roots, and incomplete named tun
     { ...DEFAULT_CONFIG, unknown: true },
     { ...DEFAULT_CONFIG, extraRoots: ['relative/path'] },
     { version: 1, tunnel: { type: 'named', name: 'prod' }, extraRoots: [] },
+    {
+      version: 1,
+      tunnel: {
+        type: 'named',
+        name: 'prod',
+        hostname: 'unsafe.trycloudflare.com',
+        credentialsFile: '~/.cloudflared/credentials.json',
+      },
+      extraRoots: [],
+    },
+    {
+      version: 1,
+      tunnel: {
+        type: 'named',
+        name: ' prod ',
+        hostname: 'loom.example.com',
+        credentialsFile: '~/.cloudflared/credentials.json',
+      },
+      extraRoots: [],
+    },
+    {
+      version: 1,
+      tunnel: {
+        type: 'named',
+        name: '--url',
+        hostname: 'loom.example.com',
+        credentialsFile: '~/.cloudflared/credentials.json',
+      },
+      extraRoots: [],
+    },
+    {
+      version: 1,
+      tunnel: {
+        type: 'named',
+        name: `prod${'x'.repeat(125)}`,
+        hostname: 'loom.example.com',
+        credentialsFile: '~/.cloudflared/credentials.json',
+      },
+      extraRoots: [],
+    },
   ]) {
     await writeFile(configPath, JSON.stringify(invalid), { mode: 0o600 });
     await assert.rejects(checkConfig(stateRoot), ConfigError);
