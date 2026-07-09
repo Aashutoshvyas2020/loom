@@ -518,6 +518,10 @@ T12 — Quick Tunnel
 
 Implement pre-launch config conflict detection, strict bounded split-output parsing and registration within 15 seconds, unsafe-URL fail-closed behavior, exactly one cleaned transient recreation, endpoint invalidation through runtime/OAuth binding, owner-password persistence, audit secrecy/fail-closed behavior, and visible non-production status. Deterministic tests are the gate; one real Quick smoke test remains optional and cannot certify production behavior.
 
+T12.1 — Transient process-group signal hardening
+
+Before T13, add deterministic coverage for a transient negative-PGID `SIGKILL` `EPERM` while the managed target ignores `SIGTERM`. Revalidate the recorded wrapper identity and current group membership before every retry, retry only within the existing absolute shutdown deadline, preserve `ESRCH` as already-gone, fail closed on persistent `EPERM`, and prove cancellation still resolves as cancelled with zero group members. Commit this blocker fix with full governance and green repository gates before named-tunnel work resumes.
+
 T13 — Named Tunnel
 
 Implement stable hostname config, credentials validation, explicit ephemeral origin mapping, no fallback, transient retry classification, capped backoff, and auth/config fail-fast behavior.

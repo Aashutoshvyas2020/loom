@@ -42,9 +42,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records completed T12 Quick Tunnel parser/manager/OAuth evidence, parent HEAD, exact dirty scope, one nonreproducing unrelated process-test incident, and the T12 commit command.
-- **Last meaningful change:** T12 Quick Tunnel completion handoff, 2026-07-08.
-- **Owning task or gate:** All tasks; current T12.
+- **Evidence:** Records the T12.1 EPERM root cause, instance-local regression isolation, ten-run stress evidence, full 145-test gate, parent HEAD, exact dirty scope, and the next T13 command.
+- **Last meaningful change:** T12.1 process-group signal hardening handoff, 2026-07-08.
+- **Owning task or gate:** All tasks; current T12.1.
 
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -66,24 +66,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** T11 adds the readiness-only runtime source/test paths, removes their planned-only entry, and requires staged-index validation to remain empty before commit.
-- **Last meaningful change:** T11 runtime readiness map update, 2026-07-08.
-- **Owning task or gate:** All tasks; current T11.
+- **Evidence:** T12.1 updates the process manager, regression-test, specification, plan, changelog, and handoff assessments while preserving an empty tracked-path diff against `git ls-files`.
+- **Last meaningful change:** T12.1 process-group signal hardening map update, 2026-07-08.
+- **Owning task or gate:** All tasks; current T12.1.
 
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, and release contract.
 - **Success check:** Matches the canonical plan including server-bound authorization transactions, direct owned-binary spawning, canonical cwd/PATH symlink handling, browser install/recovery/shutdown boundaries, catalog diagnostics, and sole unrestricted command `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T12 records pre-launch config conflict rejection, strict bounded Quick URL/registration parsing, fixed 15-second attempts, exactly one transient recreation, unsafe-URL no-retry behavior, audit secrecy, explicit non-production status, and endpoint invalidation without password rotation.
-- **Last meaningful change:** T12 Quick Tunnel contract, 2026-07-08.
+- **Evidence:** T12.1 requires fresh identity/group validation before retrying transient negative-PGID `EPERM`, bounds retries by the existing shutdown deadline, preserves `ESRCH`, and fails closed on persistent permission errors.
+- **Last meaningful change:** T12.1 process-group signal security contract, 2026-07-08.
 - **Owning task or gate:** T0 / G0 and every behavior-changing task.
 
 ### `docs/plans/2026-07-08-loom-v1-cavekit-implementation-plan.txt`
 - **Purpose:** Full self-contained ordered implementation plan and certification contract.
 - **Success check:** Covers Sections 0–26, T0–T16, G0–G7, exact governance gates, accepted adversarial-audit hardening, and `loom launch --yolo`.
 - **Current assessment:** PASS
-- **Evidence:** T12 clarifies strict split-output parsing, pre-launch conflict checks, one cleaned recreation, OAuth endpoint invalidation, audit secrecy, and the optional/non-certifying status of real Quick smoke tests.
-- **Last meaningful change:** T12 Quick Tunnel implementation clarification, 2026-07-08.
+- **Evidence:** Explicit T12.1 amendment blocks T13 until transient negative-PGID `EPERM` is safely revalidated/retried within the existing deadline and persistent failure remains fail-closed.
+- **Last meaningful change:** T12.1 blocker-task amendment, 2026-07-08.
 - **Owning task or gate:** T0 / G0; source of truth for all later tasks.
 
 ### `package-lock.json`
@@ -184,11 +184,11 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### `src/process-manager.ts`
 - **Purpose:** Launches wrapper-owned detached process groups, streams bounded output, sends heartbeats, validates ownership, manages timeout/cancellation, and enforces TERM-to-KILL shutdown deadlines.
-- **Success check:** Real processes have no PTY/stdin, natural exit and cancellation clean descendants, SIGTERM-resistant targets receive SIGKILL, forced manager death is recovered, and no test descendants remain.
+- **Success check:** Real processes have no PTY/stdin, natural exit and cancellation clean descendants, SIGTERM-resistant targets receive SIGKILL, transient negative-PGID `EPERM` is revalidated before retry, persistent `EPERM` fails closed, forced manager death is recovered, and no test descendants remain.
 - **Current assessment:** PASS
-- **Evidence:** `test/process-manager.test.ts` passes 7/7; post-suite `ps` scan is empty.
-- **Last meaningful change:** T2 process manager completion, 2026-07-08.
-- **Owning task or gate:** T2 / G2; later used by terminal, Cloudflare, browser, and runtime orchestration.
+- **Evidence:** Process-manager/watchdog target passes 12/12; the deterministic signal fault is injected through one optional function rather than a process-global monkeypatch; full suite passes 145/145; delayed post-suite `ps` scan is empty.
+- **Last meaningful change:** T12.1 transient process-group signal hardening and isolated fault seam, 2026-07-08.
+- **Owning task or gate:** T2 / G2 and T12.1; later used by terminal, Cloudflare, browser, and runtime orchestration.
 
 ### `src/runtime.ts`
 - **Purpose:** T11 readiness-only runtime boundary for endpoint canonicalization, MCP binding delegation, immutable readiness/status data, and private atomic runtime-state persistence.
@@ -431,12 +431,12 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Owning task or gate:** T2 / G2.
 
 ### `test/process-manager.test.ts`
-- **Purpose:** Real-process proof for no PTY/stdin, dedicated groups, complete descendant cleanup, hard-kill escalation, parent-death watchdog recovery, natural exit, and timeouts.
-- **Success check:** Every test ends with an empty owned PGID and no leaked wrapper/target/grandchild process.
+- **Purpose:** Real-process proof for no PTY/stdin, dedicated groups, complete descendant cleanup, hard-kill escalation, parent-death watchdog recovery, natural exit, timeouts, and transient/persistent negative-PGID `EPERM` behavior.
+- **Success check:** Every success test ends with an empty owned PGID; transient `EPERM` retries after ownership validation, persistent `EPERM` rejects at the deadline, instance-local signal injection remains parallel-safe, and test cleanup leaves no wrapper/target/grandchild process.
 - **Current assessment:** PASS
-- **Evidence:** Seven tests pass in about two seconds; external post-suite `ps` scan found no matching processes.
-- **Last meaningful change:** T2 real-process RED/GREEN cycle, 2026-07-08.
-- **Owning task or gate:** T2 / G2.
+- **Evidence:** Nine process-manager tests pass, including deterministic transient and persistent `EPERM` through an isolated signal function; combined watchdog target passes 12/12 and external delayed `ps` scan is empty.
+- **Last meaningful change:** T12.1 EPERM RED/GREEN regression cycle and test-isolation follow-up, 2026-07-08.
+- **Owning task or gate:** T2 / G2 and T12.1.
 
 ### `test/paths.test.ts`
 - **Purpose:** Real-filesystem tests for user-path parsing and symbolic-link rejection.

@@ -86,6 +86,8 @@ interface OrphanedMessage {
 
 type WrapperMessage = ReadyMessage | ExitMessage | ErrorMessage | OrphanedMessage;
 
+type SignalProcessGroup = (pgid: number, signal: NodeJS.Signals) => void;
+
 interface RequiredManagerOptions {
   statePath: string;
   outputBytes: number;
@@ -95,6 +97,7 @@ interface RequiredManagerOptions {
   processScanFallbackMs: number;
   softGraceMs: number;
   absoluteDeadlineMs: number;
+  signalProcessGroup: SignalProcessGroup;
 }
 
 const DEFAULT_OUTPUT_BYTES = 1024 * 1024;
@@ -105,12 +108,36 @@ function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-function signalGroup(pgid: number, signal: NodeJS.Signals): void {
-  try {
-    process.kill(-pgid, signal);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
-      throw error;
+async function signalOwnedGroup(
+  metadata: ManagedProcessMetadata,
+  signal: NodeJS.Signals,
+  deadline: number,
+  signalProcessGroup: SignalProcessGroup,
+): Promise<void> {
+  while (true) {
+    try {
+      signalProcessGroup(metadata.pgid, signal);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ESRCH') {
+        return;
+      }
+      if (code !== 'EPERM') {
+        throw error;
+      }
+
+      const members = await validateOwnedGroup(metadata);
+      if (members.length === 0) {
+        return;
+      }
+      if (Date.now() >= deadline) {
+        throw new ProcessManagerError(
+          `Unable to signal owned process group ${metadata.pgid} with ${signal} before the shutdown deadline.`,
+          { cause: error instanceof Error ? error : undefined },
+        );
+      }
+      await sleep(Math.min(POLL_INTERVAL_MS, deadline - Date.now()));
     }
   }
 }
@@ -140,16 +167,17 @@ async function terminateOwnedGroup(
   metadata: ManagedProcessMetadata,
   softGraceMs: number,
   absoluteDeadlineMs: number,
+  signalProcessGroup: SignalProcessGroup,
 ): Promise<void> {
   let members = await validateOwnedGroup(metadata);
   if (members.length === 0) {
     return;
   }
 
-  signalGroup(metadata.pgid, 'SIGTERM');
   const startedAt = Date.now();
   const hardKillAt = startedAt + softGraceMs;
   const deadline = startedAt + absoluteDeadlineMs;
+  await signalOwnedGroup(metadata, 'SIGTERM', deadline, signalProcessGroup);
   let hardKillSent = false;
 
   while (Date.now() < deadline) {
@@ -159,12 +187,12 @@ async function terminateOwnedGroup(
       return;
     }
     if (!hardKillSent && Date.now() >= hardKillAt) {
-      signalGroup(metadata.pgid, 'SIGKILL');
+      await signalOwnedGroup(metadata, 'SIGKILL', deadline, signalProcessGroup);
       hardKillSent = true;
     }
   }
 
-  signalGroup(metadata.pgid, 'SIGKILL');
+  await signalOwnedGroup(metadata, 'SIGKILL', deadline, signalProcessGroup);
   await sleep(POLL_INTERVAL_MS);
   members = await validateOwnedGroup(metadata);
   if (members.length > 0) {
@@ -308,6 +336,7 @@ export class ManagedProcess {
         this.metadata,
         this.options.softGraceMs,
         this.options.absoluteDeadlineMs,
+        this.options.signalProcessGroup,
       );
 
       if (state === 'completed') {
@@ -341,7 +370,12 @@ export class ProcessManager {
   private readonly options: RequiredManagerOptions;
   private readonly jobs = new Set<ManagedProcess>();
 
-  constructor(options: ProcessManagerOptions) {
+  constructor(
+    options: ProcessManagerOptions,
+    signalProcessGroup: SignalProcessGroup = (pgid, signal) => {
+      process.kill(-pgid, signal);
+    },
+  ) {
     this.options = {
       statePath: options.statePath,
       outputBytes: options.outputBytes ?? DEFAULT_OUTPUT_BYTES,
@@ -351,6 +385,7 @@ export class ProcessManager {
       processScanFallbackMs: options.processScanFallbackMs ?? WATCHDOG_PROCESS_SCAN_FALLBACK_MS,
       softGraceMs: options.softGraceMs ?? SHUTDOWN_SOFT_GRACE_MS,
       absoluteDeadlineMs: options.absoluteDeadlineMs ?? SHUTDOWN_ABSOLUTE_DEADLINE_MS,
+      signalProcessGroup,
     };
   }
 
@@ -488,6 +523,7 @@ export class ProcessManager {
         startupMetadata,
         this.options.softGraceMs,
         this.options.absoluteDeadlineMs,
+        this.options.signalProcessGroup,
       ).catch(() => undefined);
       throw error;
     }

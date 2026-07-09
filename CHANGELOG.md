@@ -530,3 +530,37 @@ second URL generation: 2
 owner password after both changes/reopen: valid
 production eligible: false
 ```
+
+### T12.1 — transient process-group signal hardening
+
+- Promoted the previously intermittent negative-PGID `SIGKILL` `EPERM` into a release-blocking subtask before T13 and amended the canonical plan and specification accordingly.
+- Added deterministic real-process regressions for one transient `EPERM` and persistent `EPERM` while a managed target ignores `SIGTERM`.
+- Required RED reproduced the raw `kill EPERM` escape from the former single-attempt signal helper. The persistent case also proved the error was not wrapped at the owned-group boundary.
+- Replaced direct signaling with one minimal owned-group helper. `ESRCH` remains already-gone; any `EPERM` revalidates the recorded wrapper PID/start-time/executable identity and current group membership before retry; retries use only the existing absolute shutdown deadline; persistent failure rejects without widening the signal target.
+- Preserved cancellation state and complete descendant cleanup. Test-only forced cleanup prevents intentional fail-closed cases from leaking processes.
+- Preserved a concurrent-agent refinement that replaces process-global `process.kill` monkeypatching with one optional group-signal function on `ProcessManager`; simplified its draft one-purpose system-call interface to the single function required by the tests.
+- A concurrent agent supplied the initial retry implementation during review. Its extra fixed three-retry policy was removed because the existing absolute deadline is the approved and sufficient bound.
+- Targeted EPERM validation passes 2/2; process-manager/watchdog validation passes 12/12; full typecheck, 145/145 tests, and build pass. A delayed external process-table scan is empty.
+
+Evidence:
+
+```text
+node --test --test-name-pattern='EPERM' dist/test/process-manager.test.js
+PASS (2/2)
+
+node --test dist/test/process-manager.test.js dist/test/watchdog.test.js
+PASS (12/12)
+
+npm run typecheck
+PASS
+npm test
+PASS (145/145)
+npm run build
+PASS
+
+ten consecutive ProcessManager runs
+PASS (90/90 test executions)
+
+post-suite process scan
+<no output>
+```

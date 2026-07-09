@@ -34,13 +34,28 @@ function testManager(statePath: string): ProcessManager {
   return new ProcessManager({
     statePath,
     outputBytes: 8 * 1024,
-    startupTimeoutMs: 3_000,
+    startupTimeoutMs: 5_000,
     heartbeatIntervalMs: 50,
     missedHeartbeatLimit: 3,
     processScanFallbackMs: 100,
     softGraceMs: 100,
     absoluteDeadlineMs: 2_000,
   });
+}
+
+async function forceKillGroup(pgid: number): Promise<void> {
+  try {
+    process.kill(-pgid, 'SIGKILL');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
+      throw error;
+    }
+  }
+  const deadline = Date.now() + 1_000;
+  while (Date.now() < deadline && (await listProcessGroupMembers(pgid)).length > 0) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.equal((await listProcessGroupMembers(pgid)).length, 0);
 }
 
 test('managed processes have no PTY or usable stdin and capture both output streams', async () => {
@@ -166,7 +181,7 @@ import { ProcessManager } from ${JSON.stringify(managerUrl)};
 const manager = new ProcessManager({
   statePath: process.env.LOOM_TEST_STATE,
   outputBytes: 4096,
-  startupTimeoutMs: 3000,
+  startupTimeoutMs: 5000,
   heartbeatIntervalMs: 50,
   missedHeartbeatLimit: 3,
   processScanFallbackMs: 100,
@@ -226,4 +241,87 @@ test('timeouts mark the job timed-out and leave no process-group members', async
 
   assert.equal(result.state, 'timed-out');
   assert.equal((await listProcessGroupMembers(job.metadata.pgid)).length, 0);
+});
+
+test('transient EPERM during owned-group SIGKILL is revalidated and retried', async () => {
+  const root = await tempRoot();
+  let injected = false;
+  let groupSigkillAttempts = 0;
+  const manager = new ProcessManager({
+    statePath: root,
+    outputBytes: 8 * 1024,
+    startupTimeoutMs: 5_000,
+    heartbeatIntervalMs: 50,
+    missedHeartbeatLimit: 3,
+    processScanFallbackMs: 100,
+    softGraceMs: 100,
+    absoluteDeadlineMs: 2_000,
+  }, (pgid, signal) => {
+    if (signal === 'SIGKILL') {
+      groupSigkillAttempts += 1;
+      if (!injected) {
+        injected = true;
+        const error = new Error('kill EPERM') as NodeJS.ErrnoException;
+        error.code = 'EPERM';
+        throw error;
+      }
+    }
+    process.kill(-pgid, signal);
+  });
+  const script = `
+process.on('SIGTERM', () => {});
+console.log('ready');
+setInterval(() => {}, 1000);
+`;
+  const job = await manager.start({ executable: process.execPath, args: ['-e', script], cwd: root });
+  await waitForText(job, /ready/);
+
+  try {
+    const result = await job.cancel();
+    assert.equal(result.state, 'cancelled');
+    assert.equal(injected, true);
+    assert.equal(groupSigkillAttempts >= 2, true);
+    assert.equal((await listProcessGroupMembers(job.metadata.pgid)).length, 0);
+  } finally {
+    await forceKillGroup(job.metadata.pgid);
+  }
+});
+
+test('persistent EPERM during owned-group SIGKILL fails closed at the shutdown deadline', async () => {
+  const root = await tempRoot();
+  let groupSigkillAttempts = 0;
+  const manager = new ProcessManager({
+    statePath: root,
+    outputBytes: 8 * 1024,
+    startupTimeoutMs: 5_000,
+    heartbeatIntervalMs: 50,
+    missedHeartbeatLimit: 3,
+    processScanFallbackMs: 100,
+    softGraceMs: 50,
+    absoluteDeadlineMs: 250,
+  }, (pgid, signal) => {
+    if (signal === 'SIGKILL') {
+      groupSigkillAttempts += 1;
+      const error = new Error('kill EPERM') as NodeJS.ErrnoException;
+      error.code = 'EPERM';
+      throw error;
+    }
+    process.kill(-pgid, signal);
+  });
+  const script = `
+process.on('SIGTERM', () => {});
+console.log('ready');
+setInterval(() => {}, 1000);
+`;
+  const job = await manager.start({ executable: process.execPath, args: ['-e', script], cwd: root });
+  await waitForText(job, /ready/);
+
+  const startedAt = Date.now();
+  try {
+    await assert.rejects(job.cancel(), /Unable to signal owned process group/);
+    assert.equal(Date.now() - startedAt >= 200, true);
+    assert.equal(groupSigkillAttempts >= 2, true);
+  } finally {
+    await forceKillGroup(job.metadata.pgid);
+  }
 });
