@@ -42,24 +42,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, and the complete 214/214 Node 22 gate.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, the complete 214/214 Node 22 gate, and implementation commit `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated for T15.4 so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the Node 22 compatibility state.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Regenerated after T15.4 implementation commit `5ee5dd9524940fd87432f4727178fbfdbeecb08e` so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the finalized compatibility state.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** T15.2, T15.3, and T15.4.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the T15.4 Node 22 compatibility fix, CI matrix, exact local gates, current commit state, remaining external blockers, and the next live-test command.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Records completed T15.4 implementation SHA `5ee5dd9524940fd87432f4727178fbfdbeecb08e`, clean post-commit state, exact local gates, remaining external blockers, and the owner's next live-test command.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -80,8 +80,8 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records the T15.4 compatibility state.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records completed implementation SHA `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.

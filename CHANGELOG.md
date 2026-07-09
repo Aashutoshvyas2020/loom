@@ -884,3 +884,9 @@ npm run typecheck: PASS
 npm test: PASS (214/214)
 npm run build: PASS
 ```
+
+### T15.4 — implementation commit recorded
+
+- Committed the Node 22 lifecycle correction, explicit Cloudflared abort timing, Node 22/26 macOS CI, regenerated audit dossier, and synchronized governance at `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
+- The repository was clean immediately after the implementation commit.
+- The next action is the owner's real foreground launch and connector test; no push, publication, or deployment has occurred.

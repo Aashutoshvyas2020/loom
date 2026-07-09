@@ -1,10 +1,12 @@
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 22:54 PDT
+**Date and local time:** 2026-07-08 22:58 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**Base SHA before T15.4:** `440978bc15a17f6c0233d93a88648ae3bcd8a167`
-**Current task:** T15.4 supported-runtime compatibility and public CI
+**Completed T15.4 implementation SHA:** `5ee5dd9524940fd87432f4727178fbfdbeecb08e`
+**Repository state after implementation commit:** clean
+**Current task:** T15.4 complete; next action is the owner's real foreground launch and connector test
+**Last completed gate:** Node 22 and active-runtime typecheck, 214/214 tests, build, exact 75-file map, 90-file package inspection, staged secret scan, and empty Loom-owned residue scan
 **Pushed or published:** no
 
 ## Required startup command
@@ -87,17 +89,10 @@ Browser behavior was not expanded during T15.4. The existing browser implementat
 - `src/browser/backend.ts`
 - `src/cloudflare.ts`
 
-## Next commands
+## Exact next command: owner live test
 
 ```bash
-cd /Users/aashu/loom
-npm ci
-npm run typecheck
-npm test
-npm run build
-npx -y -p node@22 -c 'node -v; npm run typecheck && npm test && npm run build'
-npm pack --dry-run --json
-git status --short
+cd /Users/aashu/loom && npm run build && node dist/src/cli.js launch --yolo
 ```
 
-After those pass and the T15.4 commit is recorded, the next human action is a real local launch test followed by G5/G6 connector testing. Do not push, publish, deploy, or claim production certification until the user explicitly authorizes it and the external evidence exists.
+The owner should now exercise the foreground launch, copy the printed public `/mcp` endpoint, authorize through the owner-password flow, and call the core MCP tools. G5/G6 evidence must still be collected before a production-certification claim. Do not push, publish, or deploy until the user explicitly authorizes it.

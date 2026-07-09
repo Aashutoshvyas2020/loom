@@ -914,24 +914,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, and the complete 214/214 Node 22 gate.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, the complete 214/214 Node 22 gate, and implementation commit `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated for T15.4 so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the Node 22 compatibility state.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Regenerated after T15.4 implementation commit `5ee5dd9524940fd87432f4727178fbfdbeecb08e` so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the finalized compatibility state.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** T15.2, T15.3, and T15.4.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the T15.4 Node 22 compatibility fix, CI matrix, exact local gates, current commit state, remaining external blockers, and the next live-test command.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Records completed T15.4 implementation SHA `5ee5dd9524940fd87432f4727178fbfdbeecb08e`, clean post-commit state, exact local gates, remaining external blockers, and the owner's next live-test command.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -952,8 +952,8 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records the T15.4 compatibility state.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records completed implementation SHA `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
@@ -1465,13 +1465,13 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ## Exact tracked-tree and repository statistics
 
-- Audit baseline parent commit: `440978bc15a17f6c0233d93a88648ae3bcd8a167`
+- Audit baseline implementation commit: `5ee5dd9524940fd87432f4727178fbfdbeecb08e`
 - Branch: `planning/loom-v1-cavekit`
 - Files represented in this dossier assembly: `75`
 - TypeScript production modules: `26`
 - TypeScript test modules: `22`
-- Total repository bytes represented, excluding generated dossier self-bytes: `1106174`
-- Total repository lines represented, excluding generated dossier self-lines: `27742`
+- Total repository bytes represented, excluding generated dossier self-bytes: `1107090`
+- Total repository lines represented, excluding generated dossier self-lines: `27743`
 
 The dossier’s own final SHA-256 cannot be embedded inside itself without creating a recursive change. All other rows record the bytes present at assembly time.
 
@@ -1481,13 +1481,13 @@ The dossier’s own final SHA-256 cannot be embedded inside itself without creat
 | `.gitignore` | 66 | 6 | `844fc62152e4f94e2438711eedd8f2c37b1e99999adbc408451a9b3bc521e055` |
 | `AGENTS.md` | 2010 | 33 | `fac305e7f7ab4f2e4521f5fcd5b75152bfbe880ca49dba2c8a9896aa49dd052d` |
 | `ALGORITHM.md` | 887 | 17 | `a51c91e490dbdd2e56b345a59bfa8b7dae571172a9d170ee47188361b212e4fb` |
-| `CHANGELOG.md` | 63566 | 886 | `1bc612a1f8b470512b1cadd90792190110dad1fab13a76ea6659c9b377383d2f` |
+| `CHANGELOG.md` | 64015 | 892 | `250cb7c3abd770a7a9d8da6e2cba8f5badb83361fc59978e1ce33abdea81cec7` |
 | `EXTERNAL_AUDIT.md` | generated | generated | self-referential; compute after generation |
-| `HANDOFF.md` | 4187 | 103 | `a23f16b1d768ba913515ad0f032e16f90f2687b596fe06afdbfaa52615877365` |
+| `HANDOFF.md` | 4423 | 98 | `6c3ff51015ed75005fee01ce68288712f7652749b4316a73a56906a76864143b` |
 | `LICENSE` | 1071 | 21 | `2d69eab09385ed19112c2338c5e1ab27d5f4dbff3a04569df38201e03c2cd26a` |
 | `NOTICE` | 1103 | 19 | `406e2befe8ef0d8493f4309922e7303b2ef030074b91a300e551aa3b9f37666d` |
 | `README.md` | 8766 | 211 | `48d9cedb8f6bb831f45f35cdba15796dcb258b251338b5f89fa1be5495a977bc` |
-| `REPO_MAP.md` | 53395 | 591 | `52d06b3cfe90a6ef221a5e813999c059940609a28d11d7a0788d38a318617941` |
+| `REPO_MAP.md` | 53626 | 591 | `61b238c5483744ea6226076880ce1c560c60286bb62e2db0ef64f05c7d2552e9` |
 | `SPEC.md` | 15622 | 79 | `73b0428a170363e96330aceda2e7300add93c6f67a888d9db35314b25a4af4e0` |
 | `docs/DEVELOPMENT.md` | 7427 | 201 | `7f5326ade05681754572f79a27ad17b1ed5257c3c3e0071dc5d2955ecb0759ff` |
 | `docs/OPERATOR.md` | 9911 | 251 | `f86eafb19a47d6a6782a9c5867dc0fa46c566789f12b8c57357b07b3c4c5ad89` |
@@ -3979,9 +3979,9 @@ Store sanitized evidence under `docs/release-evidence/` and index it in `docs/re
 
 ### Embedded source: `REPO_MAP.md`
 
-- Bytes: `53395`
+- Bytes: `53626`
 - Lines: `591`
-- SHA-256: `52d06b3cfe90a6ef221a5e813999c059940609a28d11d7a0788d38a318617941`
+- SHA-256: `61b238c5483744ea6226076880ce1c560c60286bb62e2db0ef64f05c7d2552e9`
 
 ~~~~~markdown
 # Loom Repository Map
@@ -4028,24 +4028,24 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Human-readable implementation and evidence history.
 - **Success check:** Updated in every repository-changing commit with actual command, test, package, and certification-boundary evidence.
 - **Current assessment:** PASS
-- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, and the complete 214/214 Node 22 gate.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Records the Node 22 RED cancellation counts, the referenced-timer correction, targeted 19/19 and 30/30 results, the complete 214/214 Node 22 gate, and implementation commit `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 
 ### `EXTERNAL_AUDIT.md`
 - **Purpose:** One self-contained external expert audit dossier covering the complete product, architecture, security model, control flows, implementation chronology, evidence boundaries, every tracked path, generated source/test inventories, and verbatim governing documents.
 - **Success check:** Executable documentation tests require the mandatory audit sections, exact seven tools, human-review/no-proof boundary, and representation of every path documented by this repository map; generated inventories and embedded source snapshots must match the current tracked state.
 - **Current assessment:** PASS
-- **Evidence:** Regenerated for T15.4 so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the Node 22 compatibility state.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Regenerated after T15.4 implementation commit `5ee5dd9524940fd87432f4727178fbfdbeecb08e` so the embedded changelog, handoff, repository map, 75-file inventory, 214-test inventory, CI workflow, and all 22 canonical-source hashes reflect the finalized compatibility state.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** T15.2, T15.3, and T15.4.
 
 ### `HANDOFF.md`
 - **Purpose:** Exact resumable state, commands, failures, blockers, SHA, and next action.
 - **Success check:** Contains every field required by plan Section 25 and an executable next command.
 - **Current assessment:** PASS
-- **Evidence:** Records the T15.4 Node 22 compatibility fix, CI matrix, exact local gates, current commit state, remaining external blockers, and the next live-test command.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Records completed T15.4 implementation SHA `5ee5dd9524940fd87432f4727178fbfdbeecb08e`, clean post-commit state, exact local gates, remaining external blockers, and the owner's next live-test command.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 ### `LICENSE`
 - **Purpose:** MIT license for Loom source distribution.
@@ -4066,8 +4066,8 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 - **Purpose:** Exhaustive tracked-file ledger with ownership, checks, assessment, and evidence.
 - **Success check:** Extracted path headings exactly match `git ls-files | sort` after staging, with no undocumented tracked files.
 - **Current assessment:** PASS
-- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records the T15.4 compatibility state.
-- **Last meaningful change:** T15.4 supported-runtime compatibility, 2026-07-08.
+- **Evidence:** Remains exhaustive for all 75 tracked files, including the public Node 22/26 CI workflow, and records completed implementation SHA `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
+- **Last meaningful change:** T15.4 implementation-commit finalization, 2026-07-08.
 - **Owning task or gate:** All tasks; current T15.4.
 ### `SPEC.md`
 - **Purpose:** Approved behavioral, security, dependency, command, packaging, and release contract.
@@ -4579,9 +4579,9 @@ This map is exhaustive for the tracked governance baseline. Validate it against 
 
 ### Embedded source: `CHANGELOG.md`
 
-- Bytes: `63566`
-- Lines: `886`
-- SHA-256: `1bc612a1f8b470512b1cadd90792190110dad1fab13a76ea6659c9b377383d2f`
+- Bytes: `64015`
+- Lines: `892`
+- SHA-256: `250cb7c3abd770a7a9d8da6e2cba8f5badb83361fc59978e1ce33abdea81cec7`
 
 ~~~~~markdown
 # Changelog
@@ -5470,22 +5470,30 @@ npm run typecheck: PASS
 npm test: PASS (214/214)
 npm run build: PASS
 ```
+
+### T15.4 — implementation commit recorded
+
+- Committed the Node 22 lifecycle correction, explicit Cloudflared abort timing, Node 22/26 macOS CI, regenerated audit dossier, and synchronized governance at `5ee5dd9524940fd87432f4727178fbfdbeecb08e`.
+- The repository was clean immediately after the implementation commit.
+- The next action is the owner's real foreground launch and connector test; no push, publication, or deployment has occurred.
 ~~~~~
 
 ### Embedded source: `HANDOFF.md`
 
-- Bytes: `4187`
-- Lines: `103`
-- SHA-256: `a23f16b1d768ba913515ad0f032e16f90f2687b596fe06afdbfaa52615877365`
+- Bytes: `4423`
+- Lines: `98`
+- SHA-256: `6c3ff51015ed75005fee01ce68288712f7652749b4316a73a56906a76864143b`
 
 ~~~~~markdown
 # Loom Implementation Handoff
 
-**Date and local time:** 2026-07-08 22:54 PDT
+**Date and local time:** 2026-07-08 22:58 PDT
 **Checkout path:** `/Users/aashu/loom`
 **Branch:** `planning/loom-v1-cavekit`
-**Base SHA before T15.4:** `440978bc15a17f6c0233d93a88648ae3bcd8a167`
-**Current task:** T15.4 supported-runtime compatibility and public CI
+**Completed T15.4 implementation SHA:** `5ee5dd9524940fd87432f4727178fbfdbeecb08e`
+**Repository state after implementation commit:** clean
+**Current task:** T15.4 complete; next action is the owner's real foreground launch and connector test
+**Last completed gate:** Node 22 and active-runtime typecheck, 214/214 tests, build, exact 75-file map, 90-file package inspection, staged secret scan, and empty Loom-owned residue scan
 **Pushed or published:** no
 
 ## Required startup command
@@ -5568,20 +5576,13 @@ Browser behavior was not expanded during T15.4. The existing browser implementat
 - `src/browser/backend.ts`
 - `src/cloudflare.ts`
 
-## Next commands
+## Exact next command: owner live test
 
 ```bash
-cd /Users/aashu/loom
-npm ci
-npm run typecheck
-npm test
-npm run build
-npx -y -p node@22 -c 'node -v; npm run typecheck && npm test && npm run build'
-npm pack --dry-run --json
-git status --short
+cd /Users/aashu/loom && npm run build && node dist/src/cli.js launch --yolo
 ```
 
-After those pass and the T15.4 commit is recorded, the next human action is a real local launch test followed by G5/G6 connector testing. Do not push, publish, deploy, or claim production certification until the user explicitly authorizes it and the external evidence exists.
+The owner should now exercise the foreground launch, copy the printed public `/mcp` endpoint, authorize through the owner-password flow, and call the core MCP tools. G5/G6 evidence must still be collected before a production-certification claim. Do not push, publish, or deploy until the user explicitly authorizes it.
 ~~~~~
 
 ### Embedded source: `docs/release-evidence/README.md`
