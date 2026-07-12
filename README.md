@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/loom-logo-light.png" alt="Loom" width="140">
+  <img src="docs/assets/loom-logo.png" alt="Loom" width="140">
 </p>
 
 <h1 align="center">Loom</h1>
@@ -28,7 +28,7 @@ From this checkout:
 npm ci
 npm run build
 npm pack --silent
-npm install -g ./loommcp-cli-2.0.0.tgz
+npm install -g ./loommcp-cli-2.0.2.tgz
 loom init
 loom launch
 ```

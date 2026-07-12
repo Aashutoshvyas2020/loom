@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2
+
+- Replaced the previous generic mark with the final black-and-white Loom logo across the GitHub and npm release surfaces.
+- Added the logo asset to the published package and corrected the checkout tarball example to `2.0.2`.
+
 ## 2.0.1
 
 - `loom init` and `loom doctor` now flag Bash, `cloudflared`, and `pbcopy` as external dependencies with purpose, status, and install guidance.
