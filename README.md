@@ -1,93 +1,90 @@
-# Loom
+<p align="center">
+  <img src="public/logo.png" alt="Loom logo" width="180">
+</p>
 
-Loom is a foreground-only, single-owner MCP server for macOS. It exposes unrestricted noninteractive terminal execution, local file tools, skill and memory catalogs, and a dedicated Playwright browser to an authenticated MCP client only while the owner is visibly running:
+<h1 align="center">Loom</h1>
+
+<p align="center">
+  Foreground-only, single-owner MCP server for macOS.
+</p>
+
+<p align="center">
+  Loom exposes exactly seven bounded tools to an authenticated MCP client while the owner is visibly running the app.
+</p>
+
+> **FULL COMPUTER ACCESS ENABLED.** Sharing the owner password or authorizing an untrusted client is equivalent to giving away this macOS account.
+
+## What Loom does
+
+- `loom_terminal` for unrestricted noninteractive terminal jobs.
+- `loom_read` for local file, directory, text, binary, and image reads.
+- `loom_write` for atomic writes inside approved roots.
+- `loom_edit` for exact-match edits inside approved roots.
+- `loom_skills` for skill discovery and activation.
+- `loom_memory` for Loom-owned session memory.
+- `loom_browser` for a dedicated Playwright Chromium profile.
+
+Loom is intentionally simple at the product edge:
+
+- no launch daemon
+- no login item
+- no hidden background supervisor
+- no cloud control plane
+- no workspace sandbox
+- no command approval layer
+
+Stopping the foreground process ends public access and cleans Loom-owned processes.
+
+## Quick start
 
 ```bash
 loom launch --yolo
 ```
 
-> **FULL COMPUTER ACCESS ENABLED — sharing the owner password or authorizing an untrusted client is equivalent to giving away this macOS account.**
+That starts the foreground server, prints the owner password on first launch, and opens the public MCP endpoint through the configured tunnel.
 
-Loom has no launch daemon, login item, hidden background supervisor, cloud control plane, workspace sandbox, command approval layer, path allowlist, PTY, or usable stdin. Stopping the foreground process ends public access and cleans Loom-owned processes.
-
-## Support floor
-
-- macOS 14 or newer
-- Node.js 22 or newer
-- A direct local terminal for unrestricted launch and credential reset
-- Cloudflare access for a production Named Tunnel
-- An eligible ChatGPT workspace/account with custom MCP or developer-mode support for real connector certification
-
-Windows and Linux are not release targets for Loom v1.
-
-## Install from source
+If you already have the repository:
 
 ```bash
-git clone <your Loom repository URL>
-cd loom
 npm ci
 npm run typecheck
 npm test
 npm run build
 npm link
+loom launch --yolo
 ```
 
-No browser is downloaded by `npm install`. Browser installation is explicit:
-
-```bash
-loom setup browser
-```
-
-The pinned Chromium build is installed under `~/.loom/browser/`, verified by revision, architecture-specific SHA-256, and a real wrapper-owned launch. Loom uses a separate persistent profile under `~/.loom/browser-profile/`; it never attaches to the normal Chrome profile.
-
-## Install a packed build
-
-Create and inspect a package without publishing it:
+If you want the packed artifact instead:
 
 ```bash
 npm pack --dry-run
 npm pack
-```
-
-Install the generated tarball into a clean prefix or globally:
-
-```bash
 npm install -g ./loom-mcp-0.1.0.tgz
 loom --version
 loom --help
 ```
 
-Publication and deployment are separate explicit actions. The repository does not push or publish automatically.
+## Requirements
 
-## Commands
+- macOS 14 or newer
+- Node.js 22 or newer
+- A direct local terminal for unrestricted launch and credential reset
+- Cloudflare access for a production Named Tunnel
+- A ChatGPT workspace or account with custom MCP or developer-mode support for connector certification
 
-```text
-loom launch --yolo
-loom setup browser
-loom auth reset
-loom config check
-loom config reset
-loom --version
-loom --help
-```
+Windows and Linux are not release targets for Loom v1.
 
-Plain `loom launch` deliberately refuses to start unrestricted access.
+## Launch flow
 
-## First launch
+`loom launch --yolo` is the only supported public entrypoint. Plain `loom launch` deliberately refuses to start unrestricted access.
 
-```bash
-loom launch --yolo
-```
-
-Launch requires `/dev/tty`. Loom prints the full-access warning there. On the first installation only, it also prints the generated owner password in red. Store that password securely. It is never shown in the dashboard, status block, audit log, or remote MCP response.
-
-The owner password is persistent. Restarts, Quick Tunnel URL changes, Named Tunnel hostname changes, token refresh, browser reset, configuration reset, and package upgrades do not rotate it. To rotate it explicitly:
+On first launch, Loom prints the full-access warning and the generated owner password in red. Store that password securely. The password is persistent across restarts, tunnel URL changes, token refresh, browser reset, config reset, and package upgrades until you rotate it explicitly.
 
 ```bash
 loom auth reset
 ```
 
-That command requires local terminal confirmation, revokes OAuth state, and preserves non-auth state.
+The CLI reset command requires local terminal confirmation, revokes OAuth state, and preserves non-auth state.
 
 ## Tunnel modes
 
@@ -99,11 +96,11 @@ Quick Tunnel is for setup and temporary testing only. It produces a changing `ht
 https://<label>.trycloudflare.com/mcp
 ```
 
-Quick mode is always shown as `Production: no`. Loom refuses Quick mode while `~/.cloudflared/config.yaml` or `config.yml` exists because those files can change Cloudflared semantics. A changed Quick URL invalidates endpoint-bound OAuth state but does not rotate the owner password.
+Quick mode always shows `Production: no`. Loom refuses Quick mode while `~/.cloudflared/config.yaml` or `config.yml` exists because those files can change Cloudflared semantics.
 
 ### Named Tunnel
 
-Named Tunnel is the production path. Configure a stable HTTPS hostname, tunnel name, and current tunnel credential JSON. Loom also validates the current private Cloudflare origin certificate, verifies account/name/UUID/secret consistency, and launches an explicit ephemeral-origin mapping to the actual loopback MCP port. It never falls back to Quick Tunnel.
+Named Tunnel is the production path. Configure a stable HTTPS hostname, tunnel name, and current tunnel credential JSON.
 
 Example `~/.loom/config.json`:
 
@@ -120,27 +117,27 @@ Example `~/.loom/config.json`:
 }
 ```
 
-The public MCP resource is exactly:
+The public MCP resource is:
 
 ```text
 https://loom.example.com/mcp
 ```
 
-Named mode can be production-eligible only after Cloudflared reports a registered connection. Real DNS routing, connector persistence, and ChatGPT compatibility require external certification; deterministic local tests do not prove them.
+Named mode can be production-eligible only after Cloudflared reports a registered connection. Real DNS routing, connector persistence, and ChatGPT compatibility require external certification.
 
-## Browser behavior
+## Browser
 
-When the verified pinned browser is installed, Loom starts it through the same wrapper/watchdog process boundary as terminal and Cloudflared, using the dedicated persistent profile. When the browser manifest is missing or corrupt, Loom starts in browser-unavailable mode and leaves the other six tools available. Run:
+Loom uses a dedicated persistent Playwright Chromium profile under `~/.loom/browser-profile/`. It does not attach to the normal Chrome profile.
+
+If the browser manifest is missing or corrupt, Loom starts in browser-unavailable mode and keeps the other six tools available.
 
 ```bash
 loom setup browser
 ```
 
-to install or repair the browser.
-
 ## Runtime status
 
-After every required component is ready, Loom prints one status block containing:
+When the required components are ready, Loom prints one status block containing:
 
 - MCP state
 - browser state
@@ -153,52 +150,50 @@ After every required component is ready, Loom prints one status block containing
 - production eligibility
 - the full-access warning
 
-Loom also requests opening the single-use authenticated dashboard bootstrap URL locally. Failure to open the browser is nonfatal; copy the printed dashboard URL into a local browser while it remains valid.
-
-Runtime ownership files are private:
-
-```text
-~/.loom/runtime/current.json
-~/.loom/runtime/loom.lock
-```
-
-They are removed only after cleanup and exact ownership checks succeed. Replacement, deadline, or cleanup uncertainty preserves them fail-closed for diagnosis.
+Loom also requests opening the single-use authenticated dashboard bootstrap URL locally. If the browser does not open, copy the printed URL into a local browser while it is still valid.
 
 ## Stop Loom
 
-Press `Ctrl+C`, send `SIGTERM`, or use the dashboard stop action. Loom rejects new terminal jobs, cancels terminal process groups, closes the managed browser, stops Cloudflared, terminates MCP public access, closes the dashboard, drains the audit queue, and removes owned runtime state and lock after cleanup certainty.
+Use any of these:
 
-Closing the foreground terminal also ends access through the parent-death watchdog. A forced parent-death case is part of local process testing, but external public-access termination remains part of release certification.
+```text
+Ctrl+C
+SIGTERM
+dashboard stop
+```
 
-## Configuration and recovery
+Loom rejects new terminal jobs, cancels terminal process groups, closes the managed browser, stops Cloudflared, terminates MCP public access, closes the dashboard, drains the audit queue, and removes owned runtime state and lock after cleanup certainty.
 
-Validate configuration without modifying it:
+Closing the foreground terminal also ends access through the parent-death watchdog.
+
+## Configuration
+
+Validate config without changing it:
 
 ```bash
 loom config check
 ```
 
-Preserve invalid bytes and write private defaults after local confirmation:
+Reset config with local confirmation:
 
 ```bash
 loom config reset
 ```
 
-The dashboard may write validated tunnel and extra-root settings for the next launch. It may also rescan catalogs, restart the dedicated browser, reveal the private audit folder locally, revoke all OAuth state without rotating the owner password, or stop Loom.
+The dashboard can also write validated tunnel and extra-root settings, rescan catalogs, restart the browser, reveal the private audit folder locally, rotate the owner password, revoke OAuth state, or stop Loom.
 
-## ChatGPT connector boundary
+## Security
 
-Loom implements standard endpoint-bound OAuth and Streamable HTTP MCP. The protected resource is the exact public `/mcp` URL. Availability and naming of custom MCP/developer-mode controls are external to this repository and may differ by ChatGPT workspace or account. Do not claim successful ChatGPT integration until the real G5/G6 evidence in `docs/RELEASE_CERTIFICATION.md` has been collected.
+- Filesystem access is constrained to configured roots.
+- Private-network and unsafe browser URLs are blocked.
+- Browser actions use accessibility snapshot references, not arbitrary selectors.
+- Terminal inputs have no caller-controlled environment injection.
+- Explicitly dangerous terminal commands are rejected.
+- Every twentieth tool call refreshes the bundled operating-skill reminder for that authenticated MCP session.
 
-## Unrestricted-agent risk
+This is powerful local access. Only connect clients you trust.
 
-Loom authenticates the remote client; it does not make that client, its model, or the content it reads trustworthy. A browser page, local file, skill, or saved memory can contain prompt injection that persuades an authorized agent to call another Loom tool. Browser snapshots, file contents, terminal output, screenshots, skills, and memory returned through MCP may leave this Mac and be processed or retained by the authorized remote client or LLM provider.
-
-The dedicated persistent browser profile keeps cookies and logged-in sessions across Loom restarts. Loom memory also persists, and `loom auth reset` does not clear either one. HTTP navigation to localhost and the private network is allowed, so an authorized or manipulated client can reach services that trust local network position. Use a dedicated macOS account when possible, start Loom from a minimal environment, avoid logging sensitive accounts into its browser profile, and treat every tool result as untrusted content.
-
-Containment is local-only: the dashboard and foreground stop control bind to this Mac. There is no separate remote kill service. See the operator and security guides before enabling YOLO mode.
-
-## Security and operations
+## Docs
 
 - [Operator guide](docs/OPERATOR.md)
 - [Security model](docs/SECURITY.md)
@@ -206,6 +201,6 @@ Containment is local-only: the dashboard and foreground stop control bind to thi
 - [Release certification](docs/RELEASE_CERTIFICATION.md)
 - [Release evidence index](docs/release-evidence/README.md)
 
-## License and notices
+## License
 
 Loom source is licensed under the MIT License. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Chromium and Cloudflared are separately distributed third-party components and retain their own licenses and trademarks.
