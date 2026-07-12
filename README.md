@@ -12,7 +12,7 @@
   Loom exposes exactly seven bounded tools to an authenticated MCP client while the owner is visibly running the app.
 </p>
 
-> **FULL COMPUTER ACCESS ENABLED.** Sharing the owner password or authorizing an untrusted client is equivalent to giving away this macOS account.
+> FULL COMPUTER ACCESS ENABLED — sharing the owner password or authorizing an untrusted client is equivalent to giving away this macOS account.
 
 ## What Loom does
 

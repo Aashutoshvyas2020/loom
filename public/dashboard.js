@@ -5,6 +5,11 @@ const actionResult = document.querySelector('#action-result');
 const refreshButton = document.querySelector('#refresh-status');
 const configInput = document.querySelector('#config-json');
 const saveConfigButton = document.querySelector('#save-config');
+const ownerPasswordPanel = document.querySelector('#owner-password-panel');
+const ownerPasswordValue = document.querySelector('#owner-password-value');
+const dismissOwnerPasswordButton = document.querySelector('#dismiss-owner-password');
+
+let pendingOwnerPassword = null;
 
 function requireElement(element, label) {
   if (element === null) {
@@ -16,6 +21,18 @@ function requireElement(element, label) {
 function setBusy(button, busy) {
   button.disabled = busy;
   button.setAttribute('aria-busy', busy ? 'true' : 'false');
+}
+
+function clearOwnerPassword() {
+  pendingOwnerPassword = null;
+  requireElement(ownerPasswordValue, 'owner-password-value').textContent = '';
+  requireElement(ownerPasswordPanel, 'owner-password-panel').hidden = true;
+}
+
+function showOwnerPassword(ownerPassword) {
+  pendingOwnerPassword = ownerPassword;
+  requireElement(ownerPasswordValue, 'owner-password-value').textContent = ownerPassword;
+  requireElement(ownerPasswordPanel, 'owner-password-panel').hidden = false;
 }
 
 async function readJson(response) {
@@ -31,6 +48,7 @@ async function readJson(response) {
 }
 
 async function refreshStatus() {
+  clearOwnerPassword();
   const status = requireElement(statusElement, 'runtime-status');
   const connection = requireElement(connectionElement, 'connection-state');
   try {
@@ -81,10 +99,18 @@ for (const button of document.querySelectorAll('button[data-action]')) {
     setBusy(button, true);
     result.textContent = `Running ${action}…`;
     try {
-      await invokeAction(action, {});
-      result.textContent = `${action} completed.`;
-      if (action !== 'stop_loom') {
-        await refreshStatus();
+      const actionResponse = await invokeAction(action, {});
+      if (action === 'rotate_owner_password') {
+        if (typeof actionResponse.ownerPassword !== 'string' || actionResponse.ownerPassword.length === 0) {
+          throw new Error('Dashboard rotation response did not include a new owner password.');
+        }
+        showOwnerPassword(actionResponse.ownerPassword);
+        result.textContent = 'Owner password rotated. Copy it now; it clears on refresh or dismissal.';
+      } else {
+        result.textContent = `${action} completed.`;
+        if (action !== 'stop_loom') {
+          await refreshStatus();
+        }
       }
     } catch (error) {
       result.textContent = error instanceof Error ? error.message : String(error);
@@ -113,6 +139,19 @@ requireElement(saveConfigButton, 'save-config').addEventListener('click', async 
     result.textContent = error instanceof Error ? error.message : String(error);
   } finally {
     setBusy(button, false);
+  }
+});
+
+requireElement(dismissOwnerPasswordButton, 'dismiss-owner-password').addEventListener('click', () => {
+  clearOwnerPassword();
+  requireElement(actionResult, 'action-result').textContent = 'Owner password cleared from the dashboard.';
+});
+
+window.addEventListener('pagehide', clearOwnerPassword);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && pendingOwnerPassword !== null) {
+    clearOwnerPassword();
   }
 });
 

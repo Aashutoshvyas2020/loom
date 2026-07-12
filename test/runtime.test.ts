@@ -418,6 +418,7 @@ async function createIntegratedRuntime(
       restartBrowser: async () => undefined,
       revealAuditFolder: async () => undefined,
       updateConfig: async () => undefined,
+      rotateOwnerPassword: async () => ({ ownerPassword: 'unused-runtime-password' }),
       revokeAllOAuth: async () => undefined,
       stopLoom: async () => { await runtime?.stop('dashboard'); },
     },

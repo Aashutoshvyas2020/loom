@@ -20,6 +20,7 @@ export interface DashboardActions {
   restartBrowser(): Promise<void>;
   revealAuditFolder(): Promise<void>;
   updateConfig(input: unknown): Promise<void>;
+  rotateOwnerPassword(): Promise<{ ownerPassword: string }>;
   revokeAllOAuth(): Promise<void>;
   stopLoom(): Promise<void>;
 }
@@ -276,6 +277,7 @@ export class LoomDashboardServer {
       'restart_browser',
       'reveal_audit_folder',
       'update_config',
+      'rotate_owner_password',
       'revoke_all_oauth',
       'stop_loom',
     ] as const;
@@ -286,6 +288,7 @@ export class LoomDashboardServer {
           return;
         }
         try {
+          const responseBody: { ok: true; ownerPassword?: string } = { ok: true };
           switch (actionName) {
             case 'rescan_catalog':
               await this.actions.rescanCatalog();
@@ -299,6 +302,9 @@ export class LoomDashboardServer {
             case 'update_config':
               await this.actions.updateConfig(request.body);
               break;
+            case 'rotate_owner_password':
+              responseBody.ownerPassword = (await this.actions.rotateOwnerPassword()).ownerPassword;
+              break;
             case 'revoke_all_oauth':
               await this.actions.revokeAllOAuth();
               break;
@@ -306,7 +312,7 @@ export class LoomDashboardServer {
               await this.actions.stopLoom();
               break;
           }
-          response.json({ ok: true });
+          response.json(responseBody);
         } catch {
           response.status(500).json({ error: 'Dashboard action failed.' });
         }

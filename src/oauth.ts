@@ -94,7 +94,7 @@ export interface ExchangeAuthorizationCodeInput {
   clientId: string;
   clientSecret?: string;
   redirectUri: string;
-  resource: string;
+  resource?: string;
   codeVerifier: string;
 }
 
@@ -102,7 +102,7 @@ export interface RefreshAccessTokenInput {
   refreshToken: string;
   clientId: string;
   clientSecret?: string;
-  resource: string;
+  resource?: string;
   scopes?: string[];
 }
 
@@ -675,13 +675,13 @@ export class AuthStore {
 
   exchangeAuthorizationCode(input: ExchangeAuthorizationCodeInput): Promise<OAuthTokenResponse> {
     return this.exclusive(() => this.mutate(async (state) => {
-      const resource = this.requireExactResource(state, input.resource);
       this.requireClientAuthentication(state, input.clientId, input.clientSecret);
       const codeHash = sha256(input.code);
       const code = state.authorizationCodes[codeHash];
       if (code === undefined) {
         throw new OAuthError('Authorization code is invalid or has already been used.', 'invalid_grant');
       }
+      const resource = this.requireExactResource(state, input.resource ?? code.resource);
       this.validateCodeRecord(state, code, input.clientId, input.redirectUri, resource, input.codeVerifier);
       delete state.authorizationCodes[codeHash];
       return this.issueTokens(state, code.clientId, code.scopes, resource);
@@ -690,13 +690,13 @@ export class AuthStore {
 
   refreshAccessToken(input: RefreshAccessTokenInput): Promise<OAuthTokenResponse> {
     return this.exclusive(() => this.mutate(async (state) => {
-      const resource = this.requireExactResource(state, input.resource);
       this.requireClientAuthentication(state, input.clientId, input.clientSecret);
       const refreshHash = sha256(input.refreshToken);
       const refresh = state.refreshTokens[refreshHash];
       if (refresh === undefined) {
         throw new OAuthError('Refresh token is invalid or has already been used.', 'invalid_grant');
       }
+      const resource = this.requireExactResource(state, input.resource ?? refresh.resource);
       this.validateTokenRecord(state, refresh, resource);
       if (refresh.clientId !== input.clientId) {
         throw new OAuthError('Refresh token is bound to another client.', 'invalid_grant');

@@ -30,8 +30,14 @@
         <button type="button" data-action="rescan_catalog">Rescan catalog</button>
         <button type="button" data-action="restart_browser">Restart browser</button>
         <button type="button" data-action="reveal_audit_folder">Reveal audit folder</button>
+        <button type="button" data-action="rotate_owner_password" class="danger">Rotate owner password</button>
         <button type="button" data-action="revoke_all_oauth">Revoke all OAuth</button>
         <button type="button" data-action="stop_loom" class="danger">Stop Loom</button>
+      </div>
+      <div id="owner-password-panel" class="secret-panel" hidden>
+        <p class="secret-warning">New owner password. Copy it now. It clears on refresh or dismissal.</p>
+        <code id="owner-password-value"></code>
+        <button type="button" id="dismiss-owner-password">Dismiss password</button>
       </div>
       <p id="action-result" role="status" aria-live="polite"></p>
     </section>

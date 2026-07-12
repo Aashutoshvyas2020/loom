@@ -329,6 +329,10 @@ test('standard HTTP OAuth registration, authorization, exchange, refresh, and re
     authorizationPage.headers.get('content-security-policy') ?? '',
     /frame-ancestors 'none'/,
   );
+  assert.match(
+    authorizationPage.headers.get('content-security-policy') ?? '',
+    /form-action 'self' https:\/\/client\.example/,
+  );
   const authorizationHtml = await authorizationPage.text();
   const transactionId = /name="transaction_id" value="([^"]+)"/.exec(authorizationHtml)?.[1];
   assert.ok(transactionId);
@@ -390,8 +394,9 @@ test('standard HTTP OAuth registration, authorization, exchange, refresh, and re
     scope: string;
     token_type: string;
   };
-  assert.equal(tokens.token_type, 'Bearer');
+  assert.equal(tokens.token_type, 'bearer');
   assert.equal(tokens.scope, 'loom:tools');
+  assert.equal('resource' in tokens, false);
 
   const refreshResponse = await fetch(`${server.origin}/oauth/token`, {
     method: 'POST',
@@ -497,7 +502,6 @@ test('dynamic registration supports DevSpace-compatible public clients without a
       client_id: registration.client_id,
       redirect_uri: registration.redirect_uris[0]!,
       code_verifier: verifier,
-      resource,
     }),
   });
   assert.equal(tokenResponse.status, 200);
@@ -510,7 +514,6 @@ test('dynamic registration supports DevSpace-compatible public clients without a
       grant_type: 'refresh_token',
       refresh_token: tokens.refresh_token,
       client_id: registration.client_id,
-      resource,
     }),
   });
   assert.equal(refreshResponse.status, 200);

@@ -44,7 +44,7 @@ All ordinary tool content is intentionally returned to the authorized remote MCP
 
 `loom launch --yolo` is the only unrestricted launch path. The mode cannot be enabled through configuration, environment variables, aliases, or plain `loom launch`.
 
-Launch requires a direct local `/dev/tty`, macOS 14 or newer, and Node.js 22 or newer. Loom prints the full-access warning locally. A newly generated owner password is displayed only on that local terminal.
+Launch requires a direct local `/dev/tty`, macOS 14 or newer, and Node.js 22 or newer. Loom prints the full-access warning locally. A first-install owner password is displayed only on that local terminal.
 
 There is no launchd job, login item, auto-start, or detached long-lived Loom daemon.
 
@@ -56,7 +56,9 @@ The owner password is a persistent installation credential stored only as a scry
 loom auth reset
 ```
 
-The reset command requires direct local confirmation. It rotates the owner credential and revokes OAuth state. Restarts, Quick Tunnel changes, Named Tunnel changes, browser reset, configuration reset, refresh-token rotation, and package upgrades do not rotate it.
+or the authenticated local dashboard rotate action.
+
+The CLI reset command requires direct local confirmation. The dashboard path returns the replacement password only in that single POST response and must not make it fetchable by later GET or status calls. Both paths rotate the owner credential and revoke OAuth state. Restarts, Quick Tunnel changes, Named Tunnel changes, browser reset, configuration reset, refresh-token rotation, and package upgrades do not rotate it.
 
 Never share the password with a client, collaborator, support contact, or advertiser. Authorizing an untrusted client is equivalent to granting that client the enabled macOS account capabilities. Loom v1 has no MFA. The stable Named Tunnel hostname is an address, not a secret or authentication factor; assume it can be discovered.
 
@@ -190,14 +192,14 @@ Audit is not tamper-proof against the same macOS user or an authorized remote cl
 
 The dashboard and foreground stop controls are local-only. Loom has no independent remote kill service. If the owner is away from the Mac and an authorized session becomes malicious, immediate containment requires another trusted access path to that Mac or physical access. The compromised client itself is not a trusted recovery channel.
 
-The owner password is shown on the local terminal. Terminal scrollback, shell recording, screen sharing, and screenshots can retain it. Clear or protect those surfaces after first launch or reset.
+The owner password can be shown on the local terminal or once in the authenticated local dashboard after a rotation. Terminal scrollback, browser screenshots, shell recording, screen sharing, and copied page contents can retain it. Clear or protect those surfaces after first launch or reset.
 
 ## Incident response
 
 1. Stop Loom with `Ctrl+C` or terminate the foreground process.
 2. Verify no Loom-owned wrapper, terminal, browser, or Cloudflared process remains.
 3. Inspect `runtime/current.json`, `runtime/loom.lock`, and private audit files.
-4. Rotate the owner password with `loom auth reset` if authorization may have been exposed.
+4. Rotate the owner password with `loom auth reset` or the authenticated local dashboard if authorization may have been exposed.
 5. Do not treat reset as full remediation: it does not clear memory, skills, browser cookies/profile state, downloads, screenshots, shell profiles, scheduled jobs, or files written by the client. Review or remove those separately while Loom is stopped.
 6. Revoke or replace Cloudflare credentials if tunnel credentials may have been exposed.
 7. Preserve state and logs before manual cleanup when ownership files were intentionally retained fail-closed, while recognizing that the local audit cannot prove which commands or content were used.

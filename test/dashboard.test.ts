@@ -44,6 +44,7 @@ test('dashboard bootstrap lifetime is unaffected by wall-clock jumps', async (t)
       restartBrowser: async () => undefined,
       revealAuditFolder: async () => undefined,
       updateConfig: async () => undefined,
+      rotateOwnerPassword: async () => ({ ownerPassword: 'unused-dashboard-password' }),
       revokeAllOAuth: async () => undefined,
       stopLoom: async () => undefined,
     },
@@ -70,6 +71,7 @@ test('dashboard bootstrap is loopback-only, single-use, strict-headered, session
       restartBrowser: async () => { actions.push(['restart_browser', null]); },
       revealAuditFolder: async () => { actions.push(['reveal_audit_folder', null]); },
       updateConfig: async (input) => { actions.push(['update_config', input]); },
+      rotateOwnerPassword: async () => ({ ownerPassword: 'unused-dashboard-password' }),
       revokeAllOAuth: async () => { actions.push(['revoke_all_oauth', null]); },
       stopLoom: async () => { actions.push(['stop_loom', null]); },
     },
@@ -143,6 +145,57 @@ test('dashboard bootstrap is loopback-only, single-use, strict-headered, session
   ]]);
 });
 
+test('dashboard rotates the owner password only through the action response body', async (t) => {
+  let rotations = 0;
+  const server = new LoomDashboardServer({
+    status: async () => ({ phase: 'ready', ownerPassword: 'must-not-leak' }),
+    actions: {
+      rescanCatalog: async () => undefined,
+      restartBrowser: async () => undefined,
+      revealAuditFolder: async () => undefined,
+      updateConfig: async () => undefined,
+      rotateOwnerPassword: async () => {
+        rotations += 1;
+        return { ownerPassword: 'rotated-owner-password' };
+      },
+      revokeAllOAuth: async () => undefined,
+      stopLoom: async () => undefined,
+    },
+  });
+  await server.listen();
+  t.after(() => server.close());
+
+  const bootstrap = await fetch(server.createBootstrapUrl(), { redirect: 'manual' });
+  const cookie = cookieFrom(bootstrap);
+  const dashboard = await fetch(`${server.origin}/dashboard`, { headers: { cookie } });
+  const csrf = csrfFrom(await dashboard.text());
+
+  const rotate = await fetch(`${server.origin}/api/actions/rotate_owner_password`, {
+    method: 'POST',
+    headers: {
+      cookie,
+      origin: server.origin,
+      'content-type': 'application/json',
+      'x-loom-csrf': csrf,
+    },
+    body: JSON.stringify({}),
+  });
+  assert.equal(rotate.status, 200);
+  assert.deepEqual(await rotate.json(), {
+    ok: true,
+    ownerPassword: 'rotated-owner-password',
+  });
+  assert.equal(rotations, 1);
+
+  const status = await fetch(`${server.origin}/api/status`, { headers: { cookie } });
+  assert.equal(status.status, 200);
+  const statusBody = await status.json() as Record<string, unknown>;
+  assert.equal(statusBody.ownerPassword, '[REDACTED]');
+
+  const missing = await fetch(`${server.origin}/api/owner-password`, { headers: { cookie } });
+  assert.equal(missing.status, 404);
+});
+
 test('dashboard rejects incorrect Host and exposes only allowlisted actions', async (t) => {
   const server = new LoomDashboardServer({
     status: async () => ({ phase: 'ready' }),
@@ -151,6 +204,7 @@ test('dashboard rejects incorrect Host and exposes only allowlisted actions', as
       restartBrowser: async () => undefined,
       revealAuditFolder: async () => undefined,
       updateConfig: async () => undefined,
+      rotateOwnerPassword: async () => ({ ownerPassword: 'unused-dashboard-password' }),
       revokeAllOAuth: async () => undefined,
       stopLoom: async () => undefined,
     },

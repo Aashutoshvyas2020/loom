@@ -156,10 +156,11 @@ The dashboard binds only to loopback. Loom generates a 256-bit, five-second, sin
 - restart the dedicated browser
 - reveal the private audit folder locally
 - validate and save next-launch tunnel/extra-root configuration
+- rotate the owner password and reveal the replacement once in the local page response
 - revoke all OAuth state without rotating the owner password
 - stop Loom
 
-It never shows the owner password, terminal commands, environment values, OAuth tokens, browser typed values, or file content.
+It never shows the current owner password, terminal commands, environment values, OAuth tokens, browser typed values, or file content. A newly rotated replacement is shown only once in the authenticated local page and clears on refresh or dismissal.
 
 ## Stop
 
@@ -187,7 +188,7 @@ Private runtime files:
 loom auth reset
 ```
 
-This requires local confirmation, rotates the owner password, increments OAuth generation, and revokes registered clients, pending authorizations, codes, access tokens, and refresh tokens. Auth reset does not delete browser state, memory, skills, audit history, downloads, screenshots, shell profiles, scheduled jobs, or general configuration. It is credential revocation, not complete incident remediation.
+This requires local confirmation, rotates the owner password, increments OAuth generation, and revokes registered clients, pending authorizations, codes, access tokens, and refresh tokens. The authenticated local dashboard can perform the same credential rotation while Loom is running and shows the replacement only in that single POST response. Neither path deletes browser state, memory, skills, audit history, downloads, screenshots, shell profiles, scheduled jobs, or general configuration. It is credential revocation, not complete incident remediation.
 
 Tunnel URL or hostname changes never rotate the owner password.
 
@@ -198,7 +199,7 @@ The dashboard and foreground stop controls are local-only. Loom has no separate 
 After stopping Loom:
 
 1. Verify public access and Loom-owned processes are gone.
-2. Rotate the owner password and revoke Cloudflare credentials when relevant.
+2. Rotate the owner password from the local dashboard or with `loom auth reset`, and revoke Cloudflare credentials when relevant.
 3. Inspect `~/.loom/memory/`, configured skill roots, shell profile files, launch agents, cron/scheduled jobs, and files modified by the client.
 4. Decide whether to remove or archive `~/.loom/browser-profile/` and `~/.loom/downloads/`; browser cookies, downloads, and screenshots persist until the operator removes them.
 5. Treat audit as a coarse activity record, not forensic proof. Commands, output, page text, file content, and typed values are deliberately omitted, and an authorized shell client can modify local logs.

@@ -487,6 +487,7 @@ test('Cloudflared launch re-verifies the executable and injects fixed direct arg
   const root = await tempRoot('loom-cloudflared-launch-');
   const executable = path.join(root, 'fake cloudflared');
   const argsPath = path.join(root, 'args.json');
+  const clientConfigPath = path.join(root, 'cloudflared-client.yml');
   await writeFile(executable, `#!/usr/bin/env node
 const fs = require('node:fs');
 if (process.argv[2] === '--version') {
@@ -521,6 +522,8 @@ setInterval(() => {}, 1000);
       }
     }
     assert.deepEqual(args, [
+      '--config',
+      clientConfigPath,
       'tunnel',
       '--no-autoupdate',
       '--metrics',
@@ -530,6 +533,8 @@ setInterval(() => {}, 1000);
       'value with spaces',
     ]);
     assert.equal(job.metadata.targetExecutablePath, executable);
+    assert.equal(await readFile(clientConfigPath, 'utf8'), 'no-autoupdate: true\n');
+    assert.equal((await stat(clientConfigPath)).mode & 0o777, 0o600);
   } finally {
     await job.cancel();
   }

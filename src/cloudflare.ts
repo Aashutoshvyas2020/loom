@@ -15,6 +15,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { assertNoSymlinkComponents, resolveUserPath } from './paths.js';
+import { atomicWriteFile } from './atomic-file.js';
 import { AuditLogger } from './audit.js';
 import {
   MAX_FILE_BYTES_PER_ROOT,
@@ -1515,6 +1516,7 @@ export class QuickTunnelManager {
 
 function validateTunnelArgs(args: string[]): void {
   const reserved = [
+    '--config',
     '--metrics',
     '--no-autoupdate',
     '--autoupdate-freq',
@@ -1533,10 +1535,14 @@ function validateTunnelArgs(args: string[]): void {
 export async function startCloudflared(options: StartCloudflaredOptions) {
   validateTunnelArgs(options.args);
   const verified = await verifyCloudflaredExecutable(options);
+  const clientConfigPath = path.join(options.cwd, 'cloudflared-client.yml');
+  await atomicWriteFile(clientConfigPath, 'no-autoupdate: true\n', { createParents: true });
   return options.processManager.start({
     executable: verified.executablePath,
     cwd: options.cwd,
     args: [
+      '--config',
+      clientConfigPath,
       'tunnel',
       '--no-autoupdate',
       '--metrics',

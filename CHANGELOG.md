@@ -2,6 +2,17 @@
 
 All notable implementation and governance changes are recorded here with command evidence.
 
+## 2026-07-09
+
+### ChatGPT OAuth callback CSP compatibility
+
+- Matched DevSpace's browser-form plus `302` callback flow while preserving Loom's authorization security headers.
+- The authorization page now permits form redirects only to the registered callback origin, allowing ChatGPT to receive the authorization code and exchange it for tokens.
+- RED: the OAuth integration test proved the original `form-action 'self'` policy omitted the registered callback origin.
+- GREEN: `npm run typecheck`, `npm test` (217 passing), and `npm run build` passed.
+- Real named-tunnel DCR marker persisted across a same-host restart; the temporary marker was revoked afterward without rotating the owner password.
+- External ChatGPT verification remains pending until the approved test network is active.
+
 ## 2026-07-07
 
 ### T0 — repository initialization (in progress)

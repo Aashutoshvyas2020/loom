@@ -1061,16 +1061,17 @@ async function openMacOsTarget(
   }
 }
 
-async function auditedAction(
+async function auditedAction<T>(
   audit: AuditLogger,
   operation: string,
-  action: () => Promise<void>,
-): Promise<void> {
+  action: () => Promise<T>,
+): Promise<T> {
   const receipt = await audit.recordMutationStart(operation, {});
   let status: AuditFinishStatus = 'error';
   try {
-    await action();
+    const result = await action();
     status = 'ok';
+    return result;
   } finally {
     await audit.recordFinish(receipt, status);
   }
@@ -1199,6 +1200,10 @@ export async function createDefaultForegroundRuntime(
             tunnel: payload.tunnel,
             extraRoots: payload.extraRoots,
           });
+        }),
+        rotateOwnerPassword: async () => auditedAction(audit!, 'dashboard.owner.rotate', async () => {
+          const result = await opened.store.resetOwnerCredential();
+          return { ownerPassword: result.ownerPassword };
         }),
         revokeAllOAuth: async () => auditedAction(audit!, 'dashboard.oauth.revoke_all', async () => {
           await opened.store.revokeAllOAuth();

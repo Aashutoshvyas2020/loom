@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Server as HttpServer } from 'node:http';
 import { once } from 'node:events';
+import { appendFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 
 import { getOAuthProtectedResourceMetadataUrl } from '@modelcontextprotocol/sdk/server/auth/router.js';
@@ -159,12 +160,12 @@ function oauthFailure(response: Response, error: unknown): void {
   });
 }
 
-function setAuthorizationSecurityHeaders(response: Response): Response {
+function setAuthorizationSecurityHeaders(response: Response, redirectOrigin?: string): Response {
   return response
     .set('Cache-Control', 'no-store')
     .set(
       'Content-Security-Policy',
-      "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      `default-src 'none'; style-src 'unsafe-inline'; form-action 'self'${redirectOrigin === undefined ? '' : ` ${redirectOrigin}`}; base-uri 'none'; frame-ancestors 'none'`,
     )
     .set('X-Frame-Options', 'DENY')
     .set('X-Content-Type-Options', 'nosniff')
@@ -198,10 +199,9 @@ function tokenResponse(tokens: Awaited<ReturnType<AuthStore['exchangeAuthorizati
   return {
     access_token: tokens.accessToken,
     refresh_token: tokens.refreshToken,
-    token_type: tokens.tokenType,
+    token_type: 'bearer',
     expires_in: tokens.expiresIn,
     scope: tokens.scopes.join(' '),
-    resource: tokens.resource,
   };
 }
 
@@ -374,6 +374,22 @@ export class LoomMcpHttpServer {
   }
 
   private configureRoutes(): void {
+    const tracePath = process.env.LOOM_OAUTH_TRACE_PATH;
+    if (tracePath !== undefined && tracePath.length > 0) {
+      this.app.use((request, response, next) => {
+        const pathname = request.path;
+        if (pathname === MCP_PATH
+          || pathname.startsWith('/oauth/')
+          || pathname.startsWith('/.well-known/')) {
+          response.once('finish', () => {
+            const line = `${new Date().toISOString()} ${request.method} ${pathname} ${response.statusCode}\n`;
+            void appendFile(tracePath, line, { mode: 0o600 }).catch(() => undefined);
+          });
+        }
+        next();
+      });
+    }
+
     this.app.use((request, response, next) => {
       const hostHeader = request.headers.host;
       let hostname: string;
@@ -497,15 +513,17 @@ export class LoomMcpHttpServer {
           throw new OAuthError('S256 PKCE is required.', 'invalid_request');
         }
         const state = optionalString(query.state);
+        const redirectUri = requiredString(query.redirect_uri, 'redirect_uri');
         const transaction = await this.authStore.createAuthorizationTransaction({
           clientId: requiredString(query.client_id, 'client_id'),
-          redirectUri: requiredString(query.redirect_uri, 'redirect_uri'),
+          redirectUri,
           scopes: scopeList(query.scope) ?? ['loom:tools'],
           resource: requiredString(query.resource, 'resource'),
           ...(state === undefined ? {} : { state }),
           codeChallenge: requiredString(query.code_challenge, 'code_challenge'),
           codeChallengeMethod: 'S256',
         });
+        setAuthorizationSecurityHeaders(response, new URL(redirectUri).origin);
         response.type('html').send(authorizationForm(transaction.transactionId));
       } catch (error) {
         oauthFailure(response, error);
@@ -546,12 +564,13 @@ export class LoomMcpHttpServer {
         const grantType = requiredString(body.grant_type, 'grant_type');
         if (grantType === 'authorization_code') {
           const clientSecret = optionalString(body.client_secret);
+          const resource = optionalString(body.resource);
           const tokens = await this.authStore.exchangeAuthorizationCode({
             code: requiredString(body.code, 'code'),
             clientId: requiredString(body.client_id, 'client_id'),
             ...(clientSecret === undefined ? {} : { clientSecret }),
             redirectUri: requiredString(body.redirect_uri, 'redirect_uri'),
-            resource: requiredString(body.resource, 'resource'),
+            ...(resource === undefined ? {} : { resource }),
             codeVerifier: requiredString(body.code_verifier, 'code_verifier'),
           });
           response.set('Cache-Control', 'no-store').json(tokenResponse(tokens));
@@ -560,11 +579,12 @@ export class LoomMcpHttpServer {
         if (grantType === 'refresh_token') {
           const scopes = scopeList(body.scope);
           const clientSecret = optionalString(body.client_secret);
+          const resource = optionalString(body.resource);
           const tokens = await this.authStore.refreshAccessToken({
             refreshToken: requiredString(body.refresh_token, 'refresh_token'),
             clientId: requiredString(body.client_id, 'client_id'),
             ...(clientSecret === undefined ? {} : { clientSecret }),
-            resource: requiredString(body.resource, 'resource'),
+            ...(resource === undefined ? {} : { resource }),
             ...(scopes === undefined ? {} : { scopes }),
           });
           response.set('Cache-Control', 'no-store').json(tokenResponse(tokens));
