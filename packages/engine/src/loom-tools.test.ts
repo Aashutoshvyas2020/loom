@@ -62,7 +62,10 @@ describe("Loom MCP surface", () => {
       openWorldHint: false,
       destructiveHint: false,
     });
-    expect(listed.tools.find((tool) => tool.name === "loom_terminal")?.inputSchema.properties).not.toHaveProperty("environment");
+    const terminalTool = listed.tools.find((tool) => tool.name === "loom_terminal");
+    expect(terminalTool?.inputSchema.properties).not.toHaveProperty("environment");
+    expect((terminalTool?.inputSchema.properties?.action as any)?.enum).toEqual(["start", "poll", "input", "cancel", "repo"]);
+    expect(listed.tools.find((tool) => tool.name === "loom_read")?.inputSchema.properties).toHaveProperty("asArtifact");
   });
 
   it("dispatches real files and returns hard tool failures", async () => {
@@ -79,6 +82,20 @@ describe("Loom MCP surface", () => {
       loomVersion: "2.0.0",
       toolCallCount: 2,
     });
+    const artifact: any = await client.callTool({ name: "loom_read", arguments: { path, asArtifact: true } });
+    const link = artifact.content.find((entry: any) => entry.type === "resource_link");
+    expect(link).toMatchObject({ type: "resource_link", name: "note.txt", mimeType: "text/plain", size: 5 });
+    const resource: any = await client.readResource({ uri: link.uri });
+    expect(Buffer.from(resource.contents[0].blob, "base64").toString("utf8")).toBe("hello");
+
+    const blocked: any = await client.callTool({ name: "loom_terminal", arguments: { action: "start", command: "sudo rm -rf /", cwd: root } });
+    expect(blocked.isError).toBe(true);
+    expect(blocked.structuredContent).toMatchObject({
+      ok: false,
+      action: "start",
+      data: { code: "LOOM_DANGEROUS_COMMAND", rule: "privilege-escalation" },
+    });
+
     const denied: any = await client.callTool({ name: "loom_read", arguments: { path: "/etc/hosts" } });
     expect(denied.isError).toBe(true);
   });

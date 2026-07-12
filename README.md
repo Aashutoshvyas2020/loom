@@ -28,7 +28,7 @@ From this checkout:
 npm ci
 npm run build
 npm pack --silent
-npm install -g ./loommcp-cli-2.0.2.tgz
+npm install -g ./loommcp-cli-2.0.4.tgz
 loom init
 loom launch
 ```
@@ -54,8 +54,8 @@ After an automatic update, Loom exits so the next launch runs the new version.
 
 ## Seven tools
 
-- `loom_terminal` — bounded asynchronous shell jobs with explicit-danger blocking.
-- `loom_read` — bounded text, binary, and image reads with unchanged-repeat suppression.
+- `loom_terminal` — bounded shell jobs, real PTY/stdin interaction, cleaned output, repository checks, and explicit-danger blocking.
+- `loom_read` — bounded text, binary, and image reads with unchanged-repeat suppression and optional downloadable artifact links.
 - `loom_write` — atomic writes inside approved roots.
 - `loom_edit` — exact-match edits inside approved roots.
 - `loom_skills` — discover and activate bundled or local skills.
@@ -65,6 +65,12 @@ After an automatic update, Loom exits so the next launch runs the new version.
 All tool contracts use strict input/output schemas, owner OAuth, accurate safety
 annotations, bounded model-visible results, and per-session skill-hook counters.
 Consequential browser clicks require a short-lived prepare/commit approval.
+
+Interactive terminal jobs start with `action: "start"` and `interactive: true`; send input with `action: "input"`. Polling strips ANSI and spinner noise by default, while `finalOnly: true` waits for the completed result and `rawOutput: true` preserves the original stream.
+
+Use `loom_read` with `asArtifact: true` to return a downloadable MCP resource link. Browser screenshots include the same artifact link automatically.
+
+Use `loom_terminal` with `action: "repo"` and `repoAction: "status"`, `"diff"`, `"branches"`, or `"release_check"` for structured Git and release context.
 
 ## Connect
 

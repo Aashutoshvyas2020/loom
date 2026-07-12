@@ -5,8 +5,16 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist", "bundled-skills"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bundled-skills"
+  ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build": "npm run clean && tsc -p tsconfig.build.json",
@@ -16,6 +24,12 @@
     "verify:privacy": "vitest run src/files.test.ts",
     "verify:security": "vitest run src/browser-policy.test.ts src/files.test.ts src/terminal.test.ts"
   },
-  "dependencies": { "playwright": "1.61.1" },
-  "devDependencies": { "typescript": "6.0.3", "vitest": "4.1.9" }
+  "dependencies": {
+    "node-pty": "1.1.0",
+    "playwright": "1.61.1"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vitest": "4.1.9"
+  }
 }

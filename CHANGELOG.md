@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.4
+
+- Added real pseudo-terminal jobs with live stdin through `loom_terminal` actions `start` (`interactive: true`) and `input`.
+- Cleaned ANSI, carriage-return, spinner, and backspace noise by default; added `rawOutput` and `finalOnly` polling controls.
+- Added downloadable MCP artifact resources for browser screenshots and `loom_read` calls with `asArtifact: true`.
+- Returned structured safety failures with the exact blocking rule, reason, and matched command segment.
+- Added first-class repository actions for status, diff, branches, and release readiness without shell-parsing Git output manually.
+
 ## 2.0.3
 
 - Added a cached npm version check on `loom` startup.
@@ -21,8 +29,9 @@
 - `packages/loom-v2/src/session-hook.ts` — per-authenticated-session twentieth-call skill refresh.
 - `packages/loom-v2/src/bundled-skills.ts` — bounded Ponytail, Using Superpowers, and Caveman reminder.
 - `packages/loom-v2/src/files.ts` — bounded text, binary, image, write, and edit operations.
-- `packages/loom-v2/src/terminal.ts` — bounded jobs, process-group shutdown, and explicit-danger guard.
+- `packages/loom-v2/src/terminal.ts` — bounded jobs, PTY/stdin interaction, cleaned output, repository checks, process-group shutdown, and explicit-danger guard.
 - `packages/loom-v2/src/browser.ts` — dedicated Playwright Chromium profile.
+- `packages/engine/src/artifacts.ts` — private bounded artifact storage behind MCP resource links.
 - `packages/loom-v2/src/skills.ts` — compact skill discovery and activation.
 - `packages/loom-v2/src/memory.ts` — Loom-owned memory catalog.
 - `src/loom-tools.ts` — MCP registration and dispatch.

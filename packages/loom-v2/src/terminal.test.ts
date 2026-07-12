@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -31,7 +32,19 @@ describe("terminal danger rail", () => {
       "dd if=/dev/zero of=/dev/disk0",
       "shutdown -h now",
       ":(){ :|:& };:",
-    ]) expect(() => assertSafeCommand(command)).toThrow(/explicitly dangerous/i);
+    ]) expect(() => assertSafeCommand(command)).toThrow(/safety rule/i);
+
+    try {
+      assertSafeCommand("sudo rm -rf /");
+      throw new Error("expected command to be blocked");
+    } catch (error: any) {
+      expect(error).toMatchObject({
+        code: "LOOM_DANGEROUS_COMMAND",
+        rule: "privilege-escalation",
+        reason: "privilege escalation",
+      });
+      expect(error.matched).toMatch(/sudo/i);
+    }
   });
 });
 
@@ -44,6 +57,48 @@ describe("LoomTerminal", () => {
     expect(result.content[0].text).toContain("out");
     expect(result.content[0].text).toContain("err");
     expect(result.structuredContent).toMatchObject({ state: "exited", exitCode: 0 });
+  });
+
+  it("accepts stdin for running jobs and supports interactive pseudo-terminal mode", async () => {
+    const { root, terminal } = await fixture();
+    const started = await terminal.start({
+      command: "if test -t 0; then printf 'tty\\n'; fi; read value; printf 'got:%s\\n' \"$value\"",
+      cwd: root,
+      interactive: true,
+    });
+    await terminal.input({ jobId: started.structuredContent.jobId, text: "hello\n" });
+    const result = await terminal.poll({ jobId: started.structuredContent.jobId, waitMs: 2_000, finalOnly: true });
+    expect(result.structuredContent).toMatchObject({ state: "exited", cleaned: true });
+    expect(result.content[0].text).toContain("tty");
+    expect(result.content[0].text).toContain("got:hello");
+  });
+
+  it("cleans terminal controls by default and can withhold output until completion", async () => {
+    const { root, terminal } = await fixture();
+    const started = await terminal.start({ command: "printf '\\033[31mred\\033[0m\\rblue\\n'; sleep 0.1; printf done", cwd: root });
+    const withheld = await terminal.poll({ jobId: started.structuredContent.jobId, finalOnly: true });
+    expect(withheld.structuredContent).toMatchObject({ state: "running", outputWithheld: true, cursor: 0 });
+    const result = await terminal.poll({ jobId: started.structuredContent.jobId, finalOnly: true, waitMs: 2_000 });
+    expect(result.content[0].text).toContain("blue");
+    expect(result.content[0].text).toContain("done");
+    expect(result.content[0].text).not.toContain("\\u001b");
+  });
+
+  it("returns structured repository and release context", async () => {
+    const { root, terminal } = await fixture();
+    execFileSync("git", ["init", "-b", "main"], { cwd: root });
+    execFileSync("git", ["config", "user.email", "loom@example.com"], { cwd: root });
+    execFileSync("git", ["config", "user.name", "Loom Test"], { cwd: root });
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "fixture", version: "1.2.3", private: false }));
+    execFileSync("git", ["add", "."], { cwd: root });
+    execFileSync("git", ["commit", "-m", "initial"], { cwd: root });
+    execFileSync("git", ["tag", "v1.2.3"], { cwd: root });
+
+    const status = await terminal.repo({ cwd: root, repoAction: "status" });
+    expect(status.structuredContent).toMatchObject({ branch: "main", dirty: false, packageName: "fixture", packageVersion: "1.2.3" });
+    const release = await terminal.repo({ cwd: root, repoAction: "release_check" });
+    expect(release.structuredContent.blockers).toContain("origin remote is missing");
+    expect(release.content[0].text).toContain("Release check blocked");
   });
 
   it("cancels an owned command and reports the terminal state", async () => {

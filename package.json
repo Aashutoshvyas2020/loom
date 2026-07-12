@@ -1,6 +1,6 @@
 {
   "name": "loommcp-cli",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "private": false,
   "description": "Model-independent local runtime for files, terminal, memory, skills, browser control, and remote MCP access.",
   "type": "module",
@@ -52,6 +52,7 @@
     "@modelcontextprotocol/sdk": "1.29.0",
     "better-sqlite3": "12.10.0",
     "ink": "7.1.0",
+    "node-pty": "1.1.0",
     "playwright": "1.61.1",
     "react": "19.2.6",
     "semver": "7.8.4",
