@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  smoke:
+    name: Smoke (macOS)
+    runs-on: macos-latest
+
+    env:
+      LOOM_ALLOWED_ROOTS: ${{ github.workspace }}
+      LOOM_OAUTH_OWNER_TOKEN: ci-owner-token-that-is-long-enough
+      LOOM_PUBLIC_BASE_URL: http://127.0.0.1:7676
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Security and privacy tests
+        run: npm run verify:security && npm run verify:privacy
+
+      - name: Build
+        run: npm run build
+
+      - name: Package
+        run: npm run verify:package
+
+      - name: Doctor
+        run: node dist/cli.js doctor

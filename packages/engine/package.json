@@ -1,0 +1,41 @@
+{
+  "name": "@loom-local/engine",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "exports": { ".": { "types": "./dist/server.d.ts", "default": "./dist/server.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json && node -e \"require('node:fs').chmodSync('dist/cli.js', 0o755)\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "npm run build --workspace @loom-local/loom-v2",
+    "test": "tsx src/config.test.ts && tsx src/roots.test.ts && tsx src/oauth-store.test.ts && tsx src/cli.test.ts && vitest run src/external-dependencies.test.ts src/loom-tools.test.ts src/tui.test.tsx",
+    "lint": "npm run typecheck",
+    "verify:privacy": "vitest run src/loom-tools.test.ts",
+    "verify:security": "tsx src/oauth-store.test.ts && vitest run src/loom-tools.test.ts"
+  },
+  "dependencies": {
+    "@clack/prompts": "1.5.1",
+    "@loom-local/loom-v2": "2.0.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "better-sqlite3": "12.10.0",
+    "ink": "7.1.0",
+    "react": "19.2.6",
+    "semver": "7.8.4",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/express": "5.0.6",
+    "@types/node": "26.1.0",
+    "@types/react": "19.2.17",
+    "@types/semver": "7.7.1",
+    "ink-testing-library": "4.0.0",
+    "tsx": "4.22.4",
+    "typescript": "6.0.3",
+    "vitest": "4.1.9"
+  }
+}
