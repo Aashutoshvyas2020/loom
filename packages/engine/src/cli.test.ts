@@ -3,8 +3,9 @@ import { execFileSync, spawn } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { handleStartupUpdate } from "./update.js";
 
-const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+const packageJson = JSON.parse(readFileSync(new URL("../../../package.json", import.meta.url), "utf8")) as {
   version: string;
 };
 
@@ -43,6 +44,58 @@ assert.equal(
   join(configDir, "skills"),
 );
 
+execFileSync("node", ["--import", "tsx", "src/cli.ts", "config", "set", "autoUpdate", "true"], {
+  encoding: "utf8",
+  env: { ...process.env, LOOM_CONFIG_DIR: configDir },
+});
+const persistedConfig = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as { autoUpdate?: boolean };
+assert.equal(persistedConfig.autoUpdate, true);
+
+const updateDir = mkdtempSync(join(tmpdir(), "loom-cli-update-test-"));
+const updateBin = join(updateDir, "bin");
+const npmArgsPath = join(updateDir, "npm-args.txt");
+const fakeNpm = join(updateBin, "npm");
+mkdirSync(updateBin);
+writeFileSync(fakeNpm, `#!/bin/sh\nprintf '%s' "$*" > "$LOOM_TEST_NPM_ARGS"\n`);
+chmodSync(fakeNpm, 0o700);
+const updateOutput = execFileSync("node", ["--import", "tsx", "src/cli.ts", "update"], {
+  encoding: "utf8",
+  env: {
+    ...process.env,
+    PATH: `${updateBin}:${process.env.PATH ?? ""}`,
+    LOOM_CONFIG_DIR: updateDir,
+    LOOM_TEST_NPM_ARGS: npmArgsPath,
+  },
+});
+assert.equal(readFileSync(npmArgsPath, "utf8"), "update -g loommcp-cli");
+assert.match(updateOutput, /Loom updated successfully/);
+
+const updateCheckDir = mkdtempSync(join(tmpdir(), "loom-cli-update-check-test-"));
+const updateNotices: string[] = [];
+const originalConsoleError = console.error;
+console.error = (...args: unknown[]) => { updateNotices.push(args.map(String).join(" ")); };
+try {
+  assert.equal(await handleStartupUpdate("1.0.0", false, {
+    ...process.env,
+    LOOM_CONFIG_DIR: updateCheckDir,
+    LOOM_UPDATE_REGISTRY_URL: "data:application/json,%7B%22version%22%3A%229.0.0%22%7D",
+  }), false);
+} finally {
+  console.error = originalConsoleError;
+}
+assert.match(updateNotices.join("\n"), /npm update -g loommcp-cli/);
+
+const autoUpdateDir = mkdtempSync(join(tmpdir(), "loom-cli-auto-update-test-"));
+const autoUpdateArgsPath = join(autoUpdateDir, "npm-args.txt");
+assert.equal(await handleStartupUpdate("1.0.0", true, {
+  ...process.env,
+  PATH: `${updateBin}:${process.env.PATH ?? ""}`,
+  LOOM_CONFIG_DIR: autoUpdateDir,
+  LOOM_TEST_NPM_ARGS: autoUpdateArgsPath,
+  LOOM_UPDATE_REGISTRY_URL: "data:application/json,%7B%22version%22%3A%229.0.0%22%7D",
+}), true);
+assert.equal(readFileSync(autoUpdateArgsPath, "utf8"), "update -g loommcp-cli");
+
 const launchDir = mkdtempSync(join(tmpdir(), "loom-cli-launch-test-"));
 const binDir = join(launchDir, "bin");
 const tunnelArgsPath = join(launchDir, "tunnel-args.txt");
@@ -64,6 +117,7 @@ try {
       LOOM_ALLOWED_ROOTS: launchDir,
       LOOM_OAUTH_OWNER_TOKEN: "test-owner-token-that-is-long-enough",
       LOOM_PUBLIC_BASE_URL: "https://loom.example.com",
+      LOOM_DISABLE_UPDATE_CHECK: "1",
       LOOM_TEST_TUNNEL_ARGS: tunnelArgsPath,
     },
   });
@@ -92,6 +146,7 @@ const launched = spawn("node", ["--import", "tsx", "src/cli.ts", "launch"], {
     LOOM_ALLOWED_ROOTS: shutdownDir,
     LOOM_OAUTH_OWNER_TOKEN: "test-owner-token-that-is-long-enough",
     LOOM_PUBLIC_BASE_URL: "https://loom.example.com",
+    LOOM_DISABLE_UPDATE_CHECK: "1",
     LOOM_TEST_TUNNEL_PID: shutdownPidPath,
   },
 });

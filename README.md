@@ -36,6 +36,22 @@ loom launch
 `loom launch` starts the local server, named tunnel, and terminal dashboard.
 The dashboard prints the public `/mcp` endpoint and owner password.
 
+## Updates
+
+Loom checks npm for a newer version when it starts, with a 12-hour local cache. By default it only prints the update command:
+
+```bash
+npm update -g loommcp-cli
+```
+
+You can also run `loom update`. To install updates automatically before launch, enable:
+
+```bash
+loom config set autoUpdate true
+```
+
+After an automatic update, Loom exits so the next launch runs the new version.
+
 ## Seven tools
 
 - `loom_terminal` — bounded asynchronous shell jobs with explicit-danger blocking.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.3
+
+- Added a cached npm version check on `loom` startup.
+- Added `loom update` and the documented `npm update -g loommcp-cli` path.
+- Added opt-in automatic updates with `loom config set autoUpdate true`; Loom exits after updating so the next launch uses the new code.
+
 ## 2.0.2
 
 - Replaced the previous generic mark with the final black-and-white Loom logo across the GitHub and npm release surfaces.

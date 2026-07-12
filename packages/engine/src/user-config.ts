@@ -17,6 +17,7 @@ export interface LoomUserConfig {
   publicBaseUrl?: string | null;
   allowedHosts?: string[];
   stateDir?: string;
+  autoUpdate?: boolean;
 }
 
 export interface LoomAuthConfig {

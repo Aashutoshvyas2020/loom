@@ -20,8 +20,9 @@ import {
 import { expandHomePath } from "./roots.js";
 import { renderLoomDashboard } from "./tui.js";
 import { inspectExternalDependencies } from "./external-dependencies.js";
+import { clearUpdateCache, handleStartupUpdate, runNpmUpdate } from "./update.js";
 
-type Command = "serve" | "launch" | "init" | "doctor" | "config" | "skill" | "help" | "version";
+type Command = "serve" | "launch" | "init" | "doctor" | "config" | "skill" | "update" | "help" | "version";
 const require = createRequire(import.meta.url);
 const SUPPORTED_NODE_RANGE = ">=22 <27";
 
@@ -30,6 +31,11 @@ async function main(argv: string[]): Promise<void> {
 
   const [rawCommand, ...args] = argv;
   const command = normalizeCommand(rawCommand);
+
+  if (command === "serve" || command === "launch") {
+    const files = loadLoomFiles();
+    if (await handleStartupUpdate(readPackageVersion(), files.config.autoUpdate === true)) return;
+  }
 
   switch (command) {
     case "serve":
@@ -52,6 +58,11 @@ async function main(argv: string[]): Promise<void> {
     case "skill":
       runSkillCommand(args);
       return;
+    case "update":
+      runNpmUpdate();
+      clearUpdateCache();
+      console.log("Loom updated successfully. Run `loom launch` again.");
+      return;
     case "help":
       printHelp();
       return;
@@ -64,7 +75,7 @@ async function main(argv: string[]): Promise<void> {
 function normalizeCommand(command: string | undefined): Command {
   if (!command || command === "serve" || command === "start") return "serve";
   if (command === "launch") return "launch";
-  if (command === "init" || command === "doctor" || command === "config" || command === "skill") return command;
+  if (command === "init" || command === "doctor" || command === "config" || command === "skill" || command === "update") return command;
   if (command === "help" || command === "--help" || command === "-h") return "help";
   if (command === "version" || command === "--version" || command === "-v") return "version";
   throw new Error(`Unknown command: ${command}`);
@@ -355,20 +366,31 @@ function runConfigCommand(args: string[]): void {
   if (subcommand !== "set") {
     throw new Error(`Unknown config command: ${subcommand}`);
   }
-  if (key !== "publicBaseUrl") {
-    throw new Error("Only `loom config set publicBaseUrl <url|null>` is supported right now.");
-  }
 
   const value = rest.join(" ").trim();
-  if (!value) {
-    throw new Error("Missing publicBaseUrl value.");
+  if (key === "publicBaseUrl") {
+    if (!value) throw new Error("Missing publicBaseUrl value.");
+    writeLoomConfig({
+      ...files.config,
+      publicBaseUrl: normalizeOptionalPublicBaseUrl(value),
+    });
+    console.log(`Updated ${files.configPath}`);
+    return;
   }
 
-  writeLoomConfig({
-    ...files.config,
-    publicBaseUrl: normalizeOptionalPublicBaseUrl(value),
-  });
-  console.log(`Updated ${files.configPath}`);
+  if (key === "autoUpdate") {
+    if (value !== "true" && value !== "false") {
+      throw new Error("autoUpdate must be `true` or `false`.");
+    }
+    writeLoomConfig({
+      ...files.config,
+      autoUpdate: value === "true",
+    });
+    console.log(`Updated ${files.configPath}`);
+    return;
+  }
+
+  throw new Error("Supported config keys: publicBaseUrl, autoUpdate.");
 }
 
 function runSkillCommand(args: string[]): void {
@@ -408,9 +430,11 @@ function printHelp(): void {
       "  loom doctor          Show config, runtime, and native dependency status",
       "  loom config get      Print persisted config",
       "  loom config set publicBaseUrl <url|null>",
+      "  loom config set autoUpdate <true|false>",
       "  loom skill init <n>  Create ~/.loom/skills/<n>/SKILL.md",
       "  loom skill list      List Loom skills",
       "  loom skill path      Print the Loom skills directory",
+      "  loom update          Update the global npm package",
       "  loom -v, --version   Print the installed version",
       "",
       "Named tunnel:",
@@ -420,12 +444,18 @@ function printHelp(): void {
 }
 
 function printVersion(): void {
-  const packageJson = require("../package.json") as { version?: unknown };
+  console.log(readPackageVersion());
+}
+
+function readPackageVersion(): string {
+  const nearby = require("../package.json") as { name?: unknown; version?: unknown };
+  const packageJson = nearby.name === "loommcp-cli"
+    ? nearby
+    : require("../../../package.json") as { version?: unknown };
   if (typeof packageJson.version !== "string") {
     throw new Error("Unable to read Loom package version.");
   }
-
-  console.log(packageJson.version);
+  return packageJson.version;
 }
 
 function normalizeOptionalPublicBaseUrl(value: string): string | null {
