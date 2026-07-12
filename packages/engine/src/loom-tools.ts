@@ -2,6 +2,7 @@ import { basename, join } from "node:path";
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { LoomArtifacts } from "./artifacts.js";
+import { LOOM_VERSION } from "./version.js";
 import {
   DangerousCommandError,
   LoomBrowser,
@@ -13,7 +14,7 @@ import {
   TOOL_DESCRIPTORS,
 } from "@loom-local/loom-v2";
 
-export const LOOM_VERSION = "2.0.0";
+export { LOOM_VERSION };
 export const LOOM_TOOL_NAMES = TOOL_DESCRIPTORS.map((tool) => tool.name);
 
 export interface LoomRuntimeOptions {

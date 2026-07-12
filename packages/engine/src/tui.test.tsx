@@ -2,6 +2,7 @@ import React from "react";
 import { render } from "ink-testing-library";
 import { describe, expect, it, vi } from "vitest";
 import { LoomDashboard } from "./tui.js";
+import { LOOM_VERSION } from "./version.js";
 
 describe("Loom terminal dashboard", () => {
   it("renders a compact operational dashboard", async () => {
@@ -30,7 +31,7 @@ describe("Loom terminal dashboard", () => {
     );
     const output = view.lastFrame() ?? "";
     expect(output).toContain("LOOM / LOCAL MCP");
-    expect(output).toContain("v2.0.0");
+    expect(output).toContain(`v${LOOM_VERSION}`);
     expect(output).toContain("https://loom.example.com/mcp");
     expect(output).toContain("owner-secret");
     expect(output).toContain("Tunnel    connecting — wait before using ChatGPT");

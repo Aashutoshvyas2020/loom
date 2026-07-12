@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.5
+
+- Removed hardcoded `2.0.0` runtime metadata. The dashboard, MCP responses, server identity, health endpoint, startup update check, and `loom --version` now all resolve the installed `loommcp-cli` package version from one source.
+
 ## 2.0.4
 
 - Added real pseudo-terminal jobs with live stdin through `loom_terminal` actions `start` (`interactive: true`) and `input`.
@@ -32,6 +36,7 @@
 - `packages/loom-v2/src/terminal.ts` — bounded jobs, PTY/stdin interaction, cleaned output, repository checks, process-group shutdown, and explicit-danger guard.
 - `packages/loom-v2/src/browser.ts` — dedicated Playwright Chromium profile.
 - `packages/engine/src/artifacts.ts` — private bounded artifact storage behind MCP resource links.
+- `packages/engine/src/version.ts` — single installed-package version source for CLI, dashboard, MCP, and HTTP metadata.
 - `packages/loom-v2/src/skills.ts` — compact skill discovery and activation.
 - `packages/loom-v2/src/memory.ts` — Loom-owned memory catalog.
 - `src/loom-tools.ts` — MCP registration and dispatch.

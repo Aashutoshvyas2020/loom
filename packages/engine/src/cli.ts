@@ -21,6 +21,7 @@ import { expandHomePath } from "./roots.js";
 import { renderLoomDashboard } from "./tui.js";
 import { inspectExternalDependencies } from "./external-dependencies.js";
 import { clearUpdateCache, handleStartupUpdate, runNpmUpdate } from "./update.js";
+import { LOOM_VERSION } from "./version.js";
 
 type Command = "serve" | "launch" | "init" | "doctor" | "config" | "skill" | "update" | "help" | "version";
 const require = createRequire(import.meta.url);
@@ -34,7 +35,7 @@ async function main(argv: string[]): Promise<void> {
 
   if (command === "serve" || command === "launch") {
     const files = loadLoomFiles();
-    if (await handleStartupUpdate(readPackageVersion(), files.config.autoUpdate === true)) return;
+    if (await handleStartupUpdate(LOOM_VERSION, files.config.autoUpdate === true)) return;
   }
 
   switch (command) {
@@ -444,18 +445,7 @@ function printHelp(): void {
 }
 
 function printVersion(): void {
-  console.log(readPackageVersion());
-}
-
-function readPackageVersion(): string {
-  const nearby = require("../package.json") as { name?: unknown; version?: unknown };
-  const packageJson = nearby.name === "loommcp-cli"
-    ? nearby
-    : require("../../../package.json") as { version?: unknown };
-  if (typeof packageJson.version !== "string") {
-    throw new Error("Unable to read Loom package version.");
-  }
-  return packageJson.version;
+  console.log(LOOM_VERSION);
 }
 
 function normalizeOptionalPublicBaseUrl(value: string): string | null {

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
-import { createLoomMcpServer, LoomToolRuntime } from "./loom-tools.js";
+import { createLoomMcpServer, LoomToolRuntime, LOOM_VERSION } from "./loom-tools.js";
 
 const runtimes: LoomToolRuntime[] = [];
 const roots: string[] = [];
@@ -79,7 +79,7 @@ describe("Loom MCP surface", () => {
       action: "read",
       message: "Read 5 bytes",
       data: { text: "hello", bytes: 5, totalBytes: 5, encoding: "utf8" },
-      loomVersion: "2.0.0",
+      loomVersion: LOOM_VERSION,
       toolCallCount: 2,
     });
     const artifact: any = await client.callTool({ name: "loom_read", arguments: { path, asArtifact: true } });

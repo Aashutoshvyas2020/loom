@@ -12,6 +12,7 @@ import { loadConfig, type ServerConfig } from "./config.js";
 import { logEvent, requestIp, requestPath, sessionIdPrefix } from "./logger.js";
 import { createLoomMcpServer, LoomToolRuntime } from "./loom-tools.js";
 import { SingleUserOAuthProvider } from "./oauth-provider.js";
+import { LOOM_VERSION } from "./version.js";
 
 type Transport = StreamableHTTPServerTransport;
 
@@ -90,7 +91,7 @@ export function createServer(config = loadConfig()): RunningServer {
 
   app.get("/healthz", (req, res) => {
     if (!["localhost", "127.0.0.1", "::1"].includes(req.hostname)) return void res.sendStatus(404);
-    res.json({ ok: true, name: "loom", version: "2.0.0" });
+    res.json({ ok: true, name: "loom", version: LOOM_VERSION });
   });
 
   app.all("/mcp", async (req, res) => {
