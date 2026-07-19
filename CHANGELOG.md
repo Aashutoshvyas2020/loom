@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Added the authenticated `loom_agents` tool with child-free OpenAI-compatible coding subagents.
+- Added launch-dashboard `e` setup for endpoint, API key, and model, with private `0600` provider storage.
+- Added bounded durable agent jobs, cursor output, cancellation/restart interruption, transient retries, and empty-response failure handling.
+- Made launch prove local port ownership before starting Cloudflare, supervise transient tunnel exits with bounded backoff, and keep the local server alive during tunnel recovery.
+- Added private rotating runtime and Cloudflare logs, explicit stale MCP-session diagnostics, and log paths to `loom doctor`.
+- Made signal shutdown await server cleanup, suppress the Ink dashboard outside a real terminal, and label public reachability separately from client-session readiness.
+- Restored ChatGPT OAuth callbacks by allowing only the validated redirect origin in `form-action`, and simplified the authorization page styling.
+- Removed MCP artifact links so image reads and browser screenshots stay model-visible without triggering ChatGPT file-materialization approval.
+- Refreshes the bundled skill reminder every ten MCP calls and gives ChatGPT and subagents default Ponytail, Caveman, Cavekit, coding-guardrail, and durable-memory guidance; ChatGPT alone receives the adapted behavior prompt.
+- Added a private global agent-maintained `MEMORY.md` with cross-runtime locking, bounded exact edits, frozen validated subagent snapshots, tenth-call maintenance reminders, safe-path enforcement, migration coverage, and focused memory, MCP, and agent tests.
+- Added exact provider-reported subagent tokens to the launch dashboard, retained only the six latest tool calls, and added `l` to open runtime and Cloudflare logs separately.
+
 ## 2.0.5
 
 - Removed hardcoded `2.0.0` runtime metadata. The dashboard, MCP responses, server identity, health endpoint, startup update check, and `loom --version` now all resolve the installed `loommcp-cli` package version from one source.
@@ -29,20 +43,21 @@
 
 ## Current file map
 
-- `packages/loom-v2/src/tool-descriptors.ts` — exact seven public Loom tool contracts.
-- `packages/loom-v2/src/session-hook.ts` — per-authenticated-session twentieth-call skill refresh.
-- `packages/loom-v2/src/bundled-skills.ts` — bounded Ponytail, Using Superpowers, and Caveman reminder.
+- `packages/loom-v2/src/tool-descriptors.ts` — eight public Loom tool contracts.
+- `packages/loom-v2/src/session-hook.ts` — per-authenticated-session tenth-call skill refresh.
+- `packages/loom-v2/src/bundled-skills.ts` — shared coding guardrails, ChatGPT-only behavior, and default Ponytail, Using Superpowers, Caveman, and Cavekit guidance.
 - `packages/loom-v2/src/files.ts` — bounded text, binary, image, write, and edit operations.
 - `packages/loom-v2/src/terminal.ts` — bounded jobs, PTY/stdin interaction, cleaned output, repository checks, process-group shutdown, and explicit-danger guard.
 - `packages/loom-v2/src/browser.ts` — dedicated Playwright Chromium profile.
-- `packages/engine/src/artifacts.ts` — private bounded artifact storage behind MCP resource links.
 - `packages/engine/src/version.ts` — single installed-package version source for CLI, dashboard, MCP, and HTTP metadata.
 - `packages/loom-v2/src/skills.ts` — compact skill discovery and activation.
-- `packages/loom-v2/src/memory.ts` — Loom-owned memory catalog.
-- `src/loom-tools.ts` — MCP registration and dispatch.
-- `src/oauth-provider.ts` / `src/oauth-store.ts` — owner OAuth, anti-clickjacking headers, and refresh-family replay revocation.
-- `src/server.ts` — authenticated HTTP MCP transport for seven tools.
-- `src/tui.tsx` — foreground terminal dashboard with readiness, runtime metrics, recent activity, and copy controls.
+- `packages/loom-v2/src/memory.ts` — private global `MEMORY.md`, cross-runtime atomic exact edits, safe-path storage, legacy migration, and 16 KiB validation.
+- `packages/engine/src/agent-provider.ts` — safe private provider storage, bounded OpenAI-compatible client, and usage accounting.
+- `packages/engine/src/agents.ts` — child-free agent queue, serialized lifecycle/persistence, frozen memory injection, token accounting, and tenth-call guidance.
+- `packages/engine/src/loom-tools.ts` — MCP registration and dispatch.
+- `packages/engine/src/oauth-provider.ts` / `packages/engine/src/oauth-store.ts` — owner OAuth, anti-clickjacking headers, and refresh-family replay revocation.
+- `packages/engine/src/server.ts` — authenticated HTTP MCP transport for eight tools.
+- `packages/engine/src/tui.tsx` — foreground terminal dashboard with readiness, agent-token metrics, six-call activity, agent setup, copy controls, and external log opening.
 - `scripts/build-cli.mjs` — bundles internal Loom code into the standalone CLI.
 - `scripts/verify-package.mjs` — proves clean tarball install and `loom launch` outside the checkout.
 

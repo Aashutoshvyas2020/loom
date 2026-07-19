@@ -121,6 +121,11 @@ export function createServer(config = loadConfig()): RunningServer {
       if (sessionId) {
         transport = transports.get(sessionId);
         if (!transport) {
+          logEvent(config.logging, "warn", "mcp_request_rejected", {
+            requestId,
+            reason: "unknown_session_id",
+            sessionIdPrefix: sessionIdPrefix(sessionId),
+          });
           sendJsonRpcError(res, 404, -32000, "Unknown MCP session");
           return;
         }
@@ -138,9 +143,16 @@ export function createServer(config = loadConfig()): RunningServer {
         transport.onclose = () => {
           const closedSessionId = transport?.sessionId;
           if (closedSessionId) transports.delete(closedSessionId);
+          logEvent(config.logging, "info", "mcp_session_closed", {
+            sessionIdPrefix: sessionIdPrefix(closedSessionId),
+          });
         };
         await createLoomMcpServer(loomRuntime).connect(transport);
       } else {
+        logEvent(config.logging, "warn", "mcp_request_rejected", {
+          requestId,
+          reason: "missing_session_id",
+        });
         sendJsonRpcError(res, 400, -32000, "No valid MCP session");
         return;
       }

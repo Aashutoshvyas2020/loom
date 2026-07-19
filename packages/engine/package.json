@@ -19,7 +19,7 @@
     "build": "npm run clean && tsc -p tsconfig.build.json && node -e \"require('node:fs').chmodSync('dist/cli.js', 0o755)\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "pretest": "npm run build --workspace @loom-local/loom-v2",
-    "test": "tsx src/config.test.ts && tsx src/roots.test.ts && tsx src/oauth-store.test.ts && tsx src/cli.test.ts && vitest run src/external-dependencies.test.ts src/loom-tools.test.ts src/tui.test.tsx",
+    "test": "tsx src/config.test.ts && tsx src/roots.test.ts && tsx src/oauth-store.test.ts && tsx src/cli.test.ts && vitest run src/agent-provider.test.ts src/agents.test.ts src/external-dependencies.test.ts src/logger.test.ts src/loom-tools.test.ts src/tui.test.tsx",
     "lint": "npm run typecheck",
     "verify:privacy": "vitest run src/loom-tools.test.ts",
     "verify:security": "tsx src/oauth-store.test.ts && vitest run src/loom-tools.test.ts"

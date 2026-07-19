@@ -2,7 +2,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
 import { stdin as input, stdout as output } from "node:process";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import * as prompts from "@clack/prompts";
 import { satisfies } from "semver";
 import { loadConfig, normalizePublicBaseUrl } from "./config.js";
@@ -18,7 +18,9 @@ import {
   type LoomUserConfig,
 } from "./user-config.js";
 import { expandHomePath } from "./roots.js";
-import { renderLoomDashboard } from "./tui.js";
+import { renderLoomDashboard, type LoomDashboardStats } from "./tui.js";
+import { AgentProviderStore, canonicalizeAgentEndpoint } from "./agent-provider.js";
+import { logEvent, prepareLogFile } from "./logger.js";
 import { inspectExternalDependencies } from "./external-dependencies.js";
 import { clearUpdateCache, handleStartupUpdate, runNpmUpdate } from "./update.js";
 import { LOOM_VERSION } from "./version.js";
@@ -26,6 +28,8 @@ import { LOOM_VERSION } from "./version.js";
 type Command = "serve" | "launch" | "init" | "doctor" | "config" | "skill" | "update" | "help" | "version";
 const require = createRequire(import.meta.url);
 const SUPPORTED_NODE_RANGE = ">=22 <27";
+const TUNNEL_RESTART_LIMIT = 3;
+const TUNNEL_STABLE_MS = 60_000;
 
 async function main(argv: string[]): Promise<void> {
   assertSupportedNode();
@@ -216,40 +220,86 @@ async function launch(args: string[]): Promise<void> {
 
   const ownerToken = loadLoomFiles().auth.ownerToken?.trim() ?? process.env.LOOM_OAUTH_OWNER_TOKEN;
   const server = await startServer({ ...process.env, LOOM_TRUST_PROXY: "1" }, { handleSignals: false, quiet: true });
-  const tunnel = spawn("cloudflared", ["tunnel", "run", tunnelName], {
-    stdio: ["ignore", "ignore", "ignore"],
-  });
+  const tunnelLogPath = join(config.stateDir, "cloudflared.log");
 
   let stopping = false;
+  let tunnel: ChildProcess | undefined;
+  let agentProviderConfigured = server.stats().agentProviderConfigured;
   let shutdownPromise: Promise<void> | undefined;
   let dashboard: ReturnType<typeof renderLoomDashboard> | undefined;
   const shutdown = () => shutdownPromise ??= (async () => {
     stopping = true;
-    await Promise.all([server.close(), stopChild(tunnel, "cloudflared")]);
+    await Promise.all([server.close(), tunnel ? stopChild(tunnel, "cloudflared") : Promise.resolve()]);
   })();
+  const renderDashboard = () => {
+    if (!input.isTTY || !output.isTTY) return;
+    dashboard = renderLoomDashboard({
+      endpoint: new URL("/mcp", config.publicBaseUrl).toString(),
+      ownerPassword: ownerToken,
+      startedAt: Date.now(),
+      getStats: () => ({ ...server.stats(), agentProviderConfigured }),
+      onConfigureAgent: async () => {
+        dashboard?.unmount();
+        try {
+          agentProviderConfigured = await configureAgentProvider(config.stateDir);
+        } finally {
+          if (!stopping) renderDashboard();
+        }
+      },
+      onOpenLogs: async () => {
+        const logPaths = [config.logging.filePath, tunnelLogPath].filter((path): path is string => Boolean(path));
+        await Promise.all(logPaths.map(openLogFile));
+      },
+      onQuit: shutdown,
+    });
+  };
 
-  dashboard = renderLoomDashboard({
-    endpoint: new URL("/mcp", config.publicBaseUrl).toString(),
-    ownerPassword: ownerToken,
-    startedAt: Date.now(),
-    getStats: server.stats,
-    onQuit: shutdown,
-  });
+  renderDashboard();
 
   const stopFromSignal = () => { void shutdown().finally(() => dashboard?.unmount()); };
   process.once("SIGINT", stopFromSignal);
   process.once("SIGTERM", stopFromSignal);
   process.once("SIGHUP", stopFromSignal);
 
-  const tunnelDone = new Promise<void>((resolve, reject) => {
-    tunnel.once("error", (error) => reject(new Error(`cloudflared could not start: ${error.message}`)));
-    tunnel.once("exit", (code, signal) => {
-      if (code === 0 || (stopping && signal) || signal === "SIGTERM" || signal === "SIGINT") resolve();
-      else reject(new Error(`cloudflared exited with code ${code ?? signal}`));
-    });
-  });
+  let consecutiveFailures = 0;
+  const runTunnel = async (): Promise<void> => {
+    while (!stopping) {
+      const startedAt = Date.now();
+      prepareLogFile(tunnelLogPath);
+      tunnel = spawn("cloudflared", ["tunnel", "--loglevel", "info", "--logfile", tunnelLogPath, "run", tunnelName], {
+        stdio: ["ignore", "ignore", "ignore"],
+      });
+      logEvent(config.logging, "info", "tunnel_started", { tunnelName, pid: tunnel.pid, logPath: tunnelLogPath });
+      const result = await new Promise<{ code: number | null; signal: NodeJS.Signals | null; error?: Error }>((resolvePromise) => {
+        let settled = false;
+        const finish = (value: { code: number | null; signal: NodeJS.Signals | null; error?: Error }) => {
+          if (settled) return;
+          settled = true;
+          resolvePromise(value);
+        };
+        tunnel?.once("error", (error) => finish({ code: null, signal: null, error }));
+        tunnel?.once("exit", (code, signal) => finish({ code, signal }));
+      });
+      tunnel = undefined;
+      if (stopping) return;
+      consecutiveFailures = Date.now() - startedAt >= TUNNEL_STABLE_MS ? 1 : consecutiveFailures + 1;
+      logEvent(config.logging, "warn", "tunnel_exited", {
+        tunnelName,
+        code: result.code,
+        signal: result.signal,
+        error: result.error?.message,
+        consecutiveFailures,
+      });
+      if (consecutiveFailures > TUNNEL_RESTART_LIMIT) {
+        throw new Error(result.error?.message ?? `cloudflared exited with code ${result.code ?? result.signal}`);
+      }
+      const delayMs = 250 * 2 ** (consecutiveFailures - 1);
+      logEvent(config.logging, "warn", "tunnel_restarting", { tunnelName, attempt: consecutiveFailures + 1, delayMs });
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, delayMs));
+    }
+  };
   try {
-    await tunnelDone;
+    await runTunnel();
   } finally {
     if (stopping) await shutdownPromise;
     else {
@@ -267,6 +317,16 @@ async function stopChild(child: ChildProcess, name: string): Promise<void> {
   if (!await waitForExit(child, 2_000)) throw new Error(`${name} did not exit`);
 }
 
+async function openLogFile(filePath: string): Promise<void> {
+  prepareLogFile(filePath);
+  await new Promise<void>((resolvePromise, reject) => {
+    const child = spawn("/usr/bin/open", [filePath], { stdio: "ignore" });
+    child.once("spawn", resolvePromise);
+    child.once("error", reject);
+    child.unref();
+  });
+}
+
 async function waitForExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
   if (child.exitCode !== null || child.signalCode !== null) return true;
   return new Promise((resolve) => {
@@ -279,7 +339,7 @@ async function waitForExit(child: ChildProcess, timeoutMs: number): Promise<bool
 async function startServer(
   env: NodeJS.ProcessEnv,
   options: { handleSignals: boolean; quiet?: boolean },
-): Promise<{ close(): Promise<void>; stats(): { activeTerminalJobs: number; browserTabs: number; skills: number; memories: number; sessions: number; toolCalls: number; toolErrors: number; recentActivity: string[] } }> {
+): Promise<{ close(): Promise<void>; stats(): LoomDashboardStats }> {
   const sqliteStatus = checkSqliteNative();
   if (sqliteStatus !== "ok") {
     throw new Error(
@@ -295,38 +355,59 @@ async function startServer(
 
   const { createServer } = await import("./server.js");
   const config = loadConfig(env);
+  if (options.quiet) config.logging.consoleOutput = false;
   const { app, close, stats } = createServer(config);
-  const httpServer = app.listen(config.port, config.host, () => {
-    if (!options.quiet) {
-      console.log(`loom listening on http://${config.host}:${config.port}/mcp`);
-      console.log(`public base url: ${config.publicBaseUrl}`);
-      console.log(`allowed roots: ${config.allowedRoots.join(", ")}`);
-      console.log(`allowed hosts: ${config.allowedHosts.join(", ")}`);
-      if (config.allowedHosts.includes("*")) console.warn("warning: Host header allowlist is disabled");
-      console.log("auth: Owner password approval required");
-      console.log(`logging: ${config.logging.level} ${config.logging.format}`);
-    }
-  });
-
-  const shutdown = () => {
-    httpServer.close(() => {
-      close();
-      process.exit(0);
+  const httpServer = app.listen(config.port, config.host);
+  try {
+    await new Promise<void>((resolvePromise, reject) => {
+      const listening = () => {
+        httpServer.off("error", failed);
+        resolvePromise();
+      };
+      const failed = (error: Error) => {
+        httpServer.off("listening", listening);
+        reject(error);
+      };
+      httpServer.once("listening", listening);
+      httpServer.once("error", failed);
     });
-  };
+  } catch (error) {
+    logEvent(config.logging, "error", "server_listen_failed", { host: config.host, port: config.port, error: error instanceof Error ? error.message : String(error) });
+    await close().catch(() => undefined);
+    throw error;
+  }
+  logEvent(config.logging, "info", "server_started", { host: config.host, port: config.port, publicBaseUrl: config.publicBaseUrl });
+  if (!options.quiet) {
+    console.log(`loom listening on http://${config.host}:${config.port}/mcp`);
+    console.log(`public base url: ${config.publicBaseUrl}`);
+    console.log(`allowed roots: ${config.allowedRoots.join(", ")}`);
+    console.log(`allowed hosts: ${config.allowedHosts.join(", ")}`);
+    if (config.allowedHosts.includes("*")) console.warn("warning: Host header allowlist is disabled");
+    console.log("auth: Owner password approval required");
+    console.log(`logging: ${config.logging.level} ${config.logging.format} ${config.logging.filePath}`);
+  }
+
+  let closing: Promise<void> | undefined;
+  const closeServer = () => closing ??= new Promise<void>((resolvePromise, reject) => {
+    if (!httpServer.listening) return resolvePromise();
+    httpServer.close((error) => error ? reject(error) : resolvePromise());
+    httpServer.closeAllConnections();
+  }).then(close).then(() => {
+    logEvent(config.logging, "info", "server_stopped", { host: config.host, port: config.port });
+  });
+  const shutdown = () => { void closeServer().catch((error) => {
+    logEvent(config.logging, "error", "server_shutdown_failed", { error: error instanceof Error ? error.message : String(error) });
+    process.exitCode = 1;
+  }); };
   if (options.handleSignals) {
     process.once("SIGINT", shutdown);
     process.once("SIGTERM", shutdown);
     process.once("SIGHUP", shutdown);
   }
 
-  let closing: Promise<void> | undefined;
   return {
     stats,
-    close: () => closing ??= new Promise<void>((resolve, reject) => {
-      httpServer.close((error) => error ? reject(error) : resolve());
-      httpServer.closeAllConnections();
-    }).then(close),
+    close: closeServer,
   };
 }
 
@@ -350,9 +431,39 @@ async function runDoctor(): Promise<void> {
     console.log(`Public MCP URL: ${new URL("/mcp", config.publicBaseUrl).toString()}`);
     console.log(`Allowed roots: ${config.allowedRoots.join(", ")}`);
     console.log(`Allowed hosts: ${config.allowedHosts.join(", ")}`);
+    console.log(`Runtime log: ${config.logging.filePath}`);
+    console.log(`Tunnel log: ${join(config.stateDir, "cloudflared.log")}`);
   } catch (error) {
     console.log(`Config status: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+async function configureAgentProvider(stateDirectory: string): Promise<boolean> {
+  const store = new AgentProviderStore({ stateDirectory });
+  const current = await store.read();
+  prompts.intro("Loom agent setup");
+  const endpoint = await textPrompt({
+    message: current ? `Provider endpoint (Enter keeps ${current.endpoint})` : "Provider endpoint",
+    placeholder: current?.endpoint ?? "https://provider.example/v1",
+    defaultValue: current?.endpoint ?? "",
+    validate: (value) => {
+      try {
+        canonicalizeAgentEndpoint(value?.trim() ?? "");
+        return undefined;
+      } catch { return "Use HTTPS, or HTTP on loopback, with a /v1-compatible path."; }
+    },
+  });
+  const apiKey = await passwordPrompt(current ? "Provider API key (Enter keeps the saved key)" : "Provider API key", current?.apiKey ?? "");
+  const model = await textPrompt({
+    message: current ? `Default model (Enter keeps ${current.model})` : "Default model",
+    placeholder: current?.model ?? "coding-model",
+    defaultValue: current?.model ?? "",
+    validate: (value) => value?.trim() ? undefined : "Enter a model name.",
+  });
+  const status = await store.configure({ endpoint, apiKey, model });
+  prompts.note(`Endpoint: ${status.endpoint}\nModel: ${status.model}\nAPI key: stored privately`, "Agent provider configured");
+  prompts.outro("Press e again to update it.");
+  return status.configured;
 }
 
 function runConfigCommand(args: string[]): void {
@@ -468,6 +579,16 @@ async function textPrompt(options: TextPromptOptions): Promise<string> {
   if (prompts.isCancel(result)) throw new SetupCancelledError();
   const value = String(result).trim();
   return value || options.defaultValue;
+}
+
+async function passwordPrompt(message: string, defaultValue: string): Promise<string> {
+  const result = await prompts.password({
+    message,
+    mask: "*",
+    validate: (value) => value?.trim() || defaultValue ? undefined : "Enter an API key.",
+  });
+  if (prompts.isCancel(result)) throw new SetupCancelledError();
+  return String(result).trim() || defaultValue;
 }
 
 function validatePort(value: string | undefined): string | undefined {

@@ -250,22 +250,51 @@ async function testAuthorizationPageHeaders(stateDir: string): Promise<void> {
       client_name: "ChatGPT",
     });
     assert.ok(client);
+    const authorization = {
+      redirectUri,
+      codeChallenge: "challenge",
+      scopes: ["loom"],
+      state: "state-123",
+      resource: mcpUrl,
+    };
     const headers = new Map<string, string>();
+    let body = "";
     const response = {
       req: { method: "GET" },
       status() { return this; },
       setHeader(name: string, value: string) { headers.set(name.toLowerCase(), value); return this; },
-      send() { return this; },
+      send(value: string) { body = value; return this; },
     };
-    await provider.authorize(client, {
-      redirectUri,
-      codeChallenge: "challenge",
-      scopes: ["loom"],
-      resource: mcpUrl,
-    }, response as never);
+    await provider.authorize(client, authorization, response as never);
     assert.equal(headers.get("x-frame-options"), "DENY");
-    assert.match(headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+    const csp = headers.get("content-security-policy") ?? "";
+    assert.match(csp, /frame-ancestors 'none'/);
+    assert.match(csp, /form-action 'self' https:\/\/chatgpt\.com/);
+    assert.doesNotMatch(csp, /connector_platform_oauth_redirect/);
     assert.equal(headers.get("referrer-policy"), "no-referrer");
+    assert.match(body, /<title>Connect Loom<\/title>/);
+    assert.match(body, /input:focus-visible/);
+    assert.doesNotMatch(body, /<script/i);
+
+    let redirectStatus: number | undefined;
+    let redirectLocation: string | undefined;
+    const postResponse = {
+      req: { method: "POST", body: { owner_token: oauthConfig.ownerToken } },
+      setHeader() { return this; },
+      redirect(status: number, location: string) {
+        redirectStatus = status;
+        redirectLocation = location;
+        return this;
+      },
+    };
+    await provider.authorize(client, authorization, postResponse as never);
+    assert.equal(redirectStatus, 302);
+    const callback = new URL(redirectLocation!);
+    const registeredCallback = new URL(redirectUri);
+    assert.equal(callback.origin, registeredCallback.origin);
+    assert.equal(callback.pathname, registeredCallback.pathname);
+    assert.match(callback.searchParams.get("code") ?? "", /^code-/);
+    assert.equal(callback.searchParams.get("state"), authorization.state);
   } finally {
     provider.close();
   }

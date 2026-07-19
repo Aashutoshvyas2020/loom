@@ -10,7 +10,7 @@ projects through Loom.
 - Git
 - Bash (`bash` on `PATH`)
 - Cloudflare CLI (`cloudflared`) for `loom launch`
-- macOS `pbcopy` for dashboard copy shortcuts; optional elsewhere
+- macOS `pbcopy` and `open` for dashboard copy and log shortcuts; optional elsewhere
 - a public HTTPS URL that forwards to the local Loom server
 
 `loom init` checks these external dependencies, shows missing install guidance,
@@ -123,7 +123,27 @@ loom doctor
 ```
 
 The doctor command reports the resolved config, Node version, Node ABI, platform,
-Git, Bash, public URL, allowed hosts, and SQLite native dependency status.
+Git, Bash, public URL, allowed hosts, SQLite native dependency status, and the
+active runtime and tunnel log paths.
+
+## Configure Subagents
+
+Start `loom launch`, then press `e` in the dashboard. Enter the OpenAI-compatible
+provider endpoint (`https://.../v1`, or loopback HTTP for a local provider), API
+key, and default model. Loom stores the provider record privately under:
+
+```text
+~/.local/share/loom/agents/provider.json
+```
+
+The MCP client can then call `loom_agents` with an explicit task. Each subagent
+inherits the configured Loom roots and coding tools, but cannot create another
+subagent. Use `status`, `start`, `poll`, `message`, `cancel`, `list`, `read`, and
+`delete` for lifecycle control.
+
+The dashboard counts exact tokens reported by this provider, keeps six recent
+tool calls, and opens `loom.log` plus `cloudflared.log` with `l`. ChatGPT's own
+conversation-token count is not exposed to MCP and is not included.
 
 ## Running From A Local Checkout
 

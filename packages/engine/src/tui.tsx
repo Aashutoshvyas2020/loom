@@ -12,6 +12,13 @@ export interface LoomDashboardStats {
   toolCalls: number;
   toolErrors: number;
   recentActivity: string[];
+  activeAgents?: number;
+  queuedAgents?: number;
+  retainedAgents?: number;
+  agentProviderConfigured?: boolean;
+  agentTokens?: number;
+  chatgptTokens?: number;
+  totalTokens?: number;
 }
 
 export interface LoomDashboardProps {
@@ -20,6 +27,8 @@ export interface LoomDashboardProps {
   startedAt: number;
   checkHealth?(endpoint: string): Promise<boolean>;
   getStats(): LoomDashboardStats;
+  onConfigureAgent?(): void | Promise<void>;
+  onOpenLogs?(): void | Promise<void>;
   onQuit(): void | Promise<void>;
 }
 
@@ -90,6 +99,14 @@ export function LoomDashboard(props: LoomDashboardProps) {
       clipboard.stdin.end(props.ownerPassword);
       setNote("password copied");
     }
+    if (input === "e" && lifecycle === "running" && props.onConfigureAgent) {
+      setNote("opening agent setup");
+      void Promise.resolve().then(() => props.onConfigureAgent?.()).catch((error) => setNote(`agent setup failed: ${error instanceof Error ? error.message : String(error)}`));
+    }
+    if (input === "l" && props.onOpenLogs) {
+      setNote("opening logs");
+      void Promise.resolve().then(() => props.onOpenLogs?.()).catch((error) => setNote(`log open failed: ${error instanceof Error ? error.message : String(error)}`));
+    }
   });
 
   return (
@@ -97,14 +114,14 @@ export function LoomDashboard(props: LoomDashboardProps) {
       <Box justifyContent="space-between">
         <Text bold color="cyan">LOOM / LOCAL MCP</Text>
         <Text color={lifecycle === "terminated" ? "red" : lifecycle === "terminating" ? "yellow" : tunnelReady ? "green" : "yellow"}>
-          {lifecycle === "terminated" ? "■ TERMINATED" : lifecycle === "terminating" ? "◌ TERMINATING" : tunnelReady ? "● READY" : "◌ CONNECTING"}  v{LOOM_VERSION}
+          {lifecycle === "terminated" ? "■ TERMINATED" : lifecycle === "terminating" ? "◌ TERMINATING" : tunnelReady ? "● PUBLIC READY" : "◌ CONNECTING"}  v{LOOM_VERSION}
         </Text>
       </Box>
       <Text dimColor>{"─".repeat(68)}</Text>
       <Text bold color="cyan">CONNECTION</Text>
       <Text>Endpoint  {props.endpoint}</Text>
       <Text>Password  {props.ownerPassword ?? "already configured"}</Text>
-      <Text color={lifecycle === "terminated" ? "red" : tunnelReady ? "green" : "yellow"}>Tunnel    {lifecycle === "terminated" ? "terminated — all Loom processes stopped" : lifecycle === "terminating" ? "stopping all Loom processes" : tunnelReady ? "ready" : "connecting — wait before using ChatGPT"}</Text>
+      <Text color={lifecycle === "terminated" ? "red" : tunnelReady ? "green" : "yellow"}>Public    {lifecycle === "terminated" ? "terminated — all Loom processes stopped" : lifecycle === "terminating" ? "stopping all Loom processes" : tunnelReady ? "reachable — connector session is separate" : "connecting — wait before connecting ChatGPT"}</Text>
       <Text>Uptime    {seconds}s</Text>
       <Text> </Text>
       <Text bold color="cyan">RUNTIME</Text>
@@ -113,21 +130,30 @@ export function LoomDashboard(props: LoomDashboardProps) {
           <Text>Sessions  {stats.sessions}</Text>
           <Text>Calls     {stats.toolCalls}</Text>
           <Text>Errors    {stats.toolErrors}</Text>
+          <Text>Agent tok {formatCount(stats.agentTokens ?? 0)}</Text>
+          <Text>ChatGPT tok {formatCount(stats.chatgptTokens ?? 0)}</Text>
+          <Text>Total tok {formatCount(stats.totalTokens ?? stats.agentTokens ?? 0)}</Text>
         </Box>
         <Box flexDirection="column">
           <Text>Jobs {stats.activeTerminalJobs}  Tabs {stats.browserTabs}</Text>
           <Text>Skills {stats.skills}  Memory {stats.memories}</Text>
+          <Text>Agents {stats.activeAgents ?? 0} active / {stats.queuedAgents ?? 0} queued</Text>
+          <Text>Provider  {stats.agentProviderConfigured ? "ready" : "not set"}</Text>
         </Box>
       </Box>
       <Text> </Text>
       <Text bold color="cyan">RECENT ACTIVITY</Text>
-      {(stats.recentActivity.length ? stats.recentActivity : ["No tool calls yet"]).map((activity) => (
-        <Text key={activity}>  {activity}</Text>
+      {(stats.recentActivity.slice(0, 6).length ? stats.recentActivity.slice(0, 6) : ["No tool calls yet"]).map((activity, index) => (
+        <Text key={`${index}:${activity}`}>  {activity}</Text>
       ))}
       <Text dimColor>{"─".repeat(68)}</Text>
-      <Text dimColor>q quit  c endpoint  p password{note ? `  · ${note}` : ""}</Text>
+      <Text dimColor>q quit  c endpoint  p password  e agents  l logs  tok≈estimate{note ? `  · ${note}` : ""}</Text>
     </Box>
   );
+}
+
+function formatCount(value: number): string {
+  return Math.max(0, Math.trunc(value)).toLocaleString("en-US");
 }
 
 export function renderLoomDashboard(props: LoomDashboardProps): Instance {

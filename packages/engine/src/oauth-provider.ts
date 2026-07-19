@@ -72,18 +72,25 @@ function formHtml(params: {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Connect Loom</title>
     <style>
-      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
-      main { max-width: 440px; margin: 12vh auto; padding: 32px; background: #111827; border: 1px solid #334155; border-radius: 18px; box-shadow: 0 24px 80px rgba(0,0,0,.35); }
-      h1 { margin: 0 0 12px; font-size: 28px; }
-      p { line-height: 1.5; color: #cbd5e1; }
-      dl { padding: 16px; background: #020617; border-radius: 12px; }
-      dt { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
-      dd { margin: 4px 0 12px; word-break: break-word; }
-      label { display: block; margin: 18px 0 8px; font-weight: 600; }
-      input { box-sizing: border-box; width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #475569; background: #020617; color: #e2e8f0; font-size: 16px; }
-      button { margin-top: 18px; width: 100%; border: 0; border-radius: 10px; padding: 12px 14px; font-weight: 700; color: #020617; background: #38bdf8; cursor: pointer; }
-      .error { color: #fecaca; background: #7f1d1d; border-radius: 10px; padding: 10px 12px; }
-      .warning { color: #fde68a; }
+      :root { color-scheme: light dark; --bg: #f5f5f7; --panel: #fff; --text: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7; --field: #fff; --button: #1d1d1f; --button-text: #fff; --error: #b42318; --error-bg: #fff1f0; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #000; --panel: #1c1c1e; --text: #f5f5f7; --muted: #a1a1a6; --line: #3a3a3c; --field: #2c2c2e; --button: #f5f5f7; --button-text: #1d1d1f; --error: #ffb4ab; --error-bg: #401410; } }
+      * { box-sizing: border-box; }
+      body { min-height: 100vh; display: grid; place-items: center; margin: 0; padding: 24px; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+      main { width: min(100%, 400px); padding: 32px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; }
+      h1 { margin: 0 0 10px; font-size: 28px; letter-spacing: -.02em; }
+      p { margin: 0 0 22px; color: var(--muted); line-height: 1.5; }
+      dl { margin: 0 0 24px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+      dt { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+      dd { margin: 4px 0 14px; word-break: break-word; }
+      dd:last-child { margin-bottom: 0; }
+      label { display: block; margin-bottom: 8px; font-weight: 600; }
+      input { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--text); font: inherit; }
+      input:focus { border-color: var(--text); }
+      input:focus-visible { outline: 3px solid #2997ff; outline-offset: 2px; }
+      button { width: 100%; margin-top: 16px; padding: 12px 14px; border: 0; border-radius: 10px; background: var(--button); color: var(--button-text); font: inherit; font-weight: 650; cursor: pointer; }
+      button:focus-visible { outline: 3px solid #2997ff; outline-offset: 2px; }
+      .error { margin-bottom: 20px; padding: 10px 12px; border-radius: 10px; background: var(--error-bg); color: var(--error); }
+      .warning { color: var(--muted); }
     </style>
   </head>
   <body>
@@ -111,8 +118,9 @@ function requestedScopesAllowed(requested: string[], supported: string[]): boole
   return requested.every((scope) => supported.includes(scope));
 }
 
-function setAuthorizationPageHeaders(res: Response): void {
-  res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
+function setAuthorizationPageHeaders(res: Response, redirectUri: string): void {
+  const redirectOrigin = new URL(redirectUri).origin;
+  res.setHeader("Content-Security-Policy", `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${redirectOrigin}; frame-ancestors 'none'; base-uri 'none'`);
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("Cache-Control", "no-store");
@@ -139,7 +147,7 @@ export class SingleUserOAuthProvider implements OAuthServerProvider {
     params: AuthorizationParams,
     res: Response,
   ): Promise<void> {
-    setAuthorizationPageHeaders(res);
+    setAuthorizationPageHeaders(res, params.redirectUri);
     if (!params.resource || !checkResourceAllowed({ requestedResource: params.resource, configuredResource: this.resourceServerUrl })) {
       throw new InvalidRequestError("Invalid or missing OAuth resource");
     }

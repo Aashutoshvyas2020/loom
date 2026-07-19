@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { createServer as createHttpServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { handleStartupUpdate } from "./update.js";
@@ -50,6 +52,19 @@ execFileSync("node", ["--import", "tsx", "src/cli.ts", "config", "set", "autoUpd
 });
 const persistedConfig = JSON.parse(readFileSync(join(configDir, "config.json"), "utf8")) as { autoUpdate?: boolean };
 assert.equal(persistedConfig.autoUpdate, true);
+
+const doctorOutput = execFileSync("node", ["--import", "tsx", "src/cli.ts", "doctor"], {
+  encoding: "utf8",
+  env: {
+    ...process.env,
+    LOOM_CONFIG_DIR: configDir,
+    LOOM_STATE_DIR: configDir,
+    LOOM_ALLOWED_ROOTS: configDir,
+    LOOM_OAUTH_OWNER_TOKEN: "test-owner-token-that-is-long-enough",
+  },
+});
+assert.match(doctorOutput, new RegExp(`Runtime log: ${join(configDir, "loom\\.log")}`));
+assert.match(doctorOutput, new RegExp(`Tunnel log: ${join(configDir, "cloudflared\\.log")}`));
 
 const updateDir = mkdtempSync(join(tmpdir(), "loom-cli-update-test-"));
 const updateBin = join(updateDir, "bin");
@@ -101,31 +116,37 @@ const binDir = join(launchDir, "bin");
 const tunnelArgsPath = join(launchDir, "tunnel-args.txt");
 const fakeCloudflared = join(binDir, "cloudflared");
 mkdirSync(binDir);
-writeFileSync(fakeCloudflared, `#!/bin/sh\nprintf '%s' "$*" > "$LOOM_TEST_TUNNEL_ARGS"\n`);
+writeFileSync(fakeCloudflared, `#!/bin/sh\nprintf '%s' "$*" > "$LOOM_TEST_TUNNEL_ARGS"\ntrap 'exit 0' TERM INT\nwhile :; do sleep 1; done\n`);
 chmodSync(fakeCloudflared, 0o700);
-
-let launchError: unknown;
-try {
-  execFileSync("node", ["--import", "tsx", "src/cli.ts", "launch"], {
-    cwd: new URL("..", import.meta.url),
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      PATH: `${binDir}:${process.env.PATH ?? ""}`,
-      PORT: "47676",
-      LOOM_CONFIG_DIR: launchDir,
-      LOOM_ALLOWED_ROOTS: launchDir,
-      LOOM_OAUTH_OWNER_TOKEN: "test-owner-token-that-is-long-enough",
-      LOOM_PUBLIC_BASE_URL: "https://loom.example.com",
-      LOOM_DISABLE_UPDATE_CHECK: "1",
-      LOOM_TEST_TUNNEL_ARGS: tunnelArgsPath,
-    },
-  });
-} catch (error) {
-  launchError = error;
+const argsLaunch = spawn("node", ["--import", "tsx", "src/cli.ts", "launch"], {
+  cwd: new URL("..", import.meta.url),
+  stdio: ["ignore", "pipe", "pipe"],
+  env: {
+    ...process.env,
+    PATH: `${binDir}:${process.env.PATH ?? ""}`,
+    PORT: "47676",
+    LOOM_CONFIG_DIR: launchDir,
+    LOOM_STATE_DIR: launchDir,
+    LOOM_ALLOWED_ROOTS: launchDir,
+    LOOM_OAUTH_OWNER_TOKEN: "test-owner-token-that-is-long-enough",
+    LOOM_PUBLIC_BASE_URL: "https://loom.example.com",
+    LOOM_DISABLE_UPDATE_CHECK: "1",
+    LOOM_TEST_TUNNEL_ARGS: tunnelArgsPath,
+  },
+});
+let argsLaunchOutput = "";
+argsLaunch.stdout?.on("data", (chunk) => { argsLaunchOutput += chunk.toString(); });
+argsLaunch.stderr?.on("data", (chunk) => { argsLaunchOutput += chunk.toString(); });
+for (let attempt = 0; attempt < 500 && !existsSync(tunnelArgsPath) && argsLaunch.exitCode === null; attempt += 1) {
+  await new Promise((resolve) => setTimeout(resolve, 20));
 }
-assert.equal(launchError, undefined, "loom launch should use the default named tunnel");
-assert.equal(readFileSync(tunnelArgsPath, "utf8"), "tunnel run loom");
+assert.equal(existsSync(tunnelArgsPath), true, `loom launch should use the default named tunnel: ${argsLaunchOutput}`);
+argsLaunch.kill("SIGTERM");
+const argsLaunchExit = await new Promise<number | null>((resolve) => argsLaunch.once("exit", resolve));
+assert.equal(argsLaunchExit, 0, `loom launch should shut down cleanly: ${argsLaunchOutput}`);
+assert.doesNotMatch(argsLaunchOutput, /Raw mode is not supported/, "non-interactive launch must not render the TUI");
+assert.doesNotMatch(argsLaunchOutput, /"event":"server_started"/, "launch diagnostics belong in the private log, not behind the dashboard");
+assert.equal(readFileSync(tunnelArgsPath, "utf8"), `tunnel --loglevel info --logfile ${join(launchDir, "cloudflared.log")} run loom`);
 
 const shutdownDir = mkdtempSync(join(tmpdir(), "loom-cli-shutdown-test-"));
 const shutdownBin = join(shutdownDir, "bin");
@@ -143,6 +164,7 @@ const launched = spawn("node", ["--import", "tsx", "src/cli.ts", "launch"], {
     PATH: `${shutdownBin}:${process.env.PATH ?? ""}`,
     PORT: "47677",
     LOOM_CONFIG_DIR: shutdownDir,
+    LOOM_STATE_DIR: shutdownDir,
     LOOM_ALLOWED_ROOTS: shutdownDir,
     LOOM_OAUTH_OWNER_TOKEN: "test-owner-token-that-is-long-enough",
     LOOM_PUBLIC_BASE_URL: "https://loom.example.com",
@@ -163,3 +185,74 @@ const launchedExit = await new Promise<{ code: number | null; signal: NodeJS.Sig
 assert.deepEqual(launchedExit, { code: 0, signal: null }, "launcher shutdown should succeed after forced tunnel cleanup");
 const tunnelPid = Number(readFileSync(shutdownPidPath, "utf8"));
 assert.throws(() => process.kill(tunnelPid, 0), "tunnel process should be gone");
+
+const occupiedDir = mkdtempSync(join(tmpdir(), "loom-cli-occupied-test-"));
+const occupiedBin = join(occupiedDir, "bin");
+const occupiedMarker = join(occupiedDir, "tunnel-started");
+mkdirSync(occupiedBin);
+writeFileSync(join(occupiedBin, "cloudflared"), `#!/bin/sh\nprintf started > "$LOOM_TEST_TUNNEL_MARKER"\n`);
+chmodSync(join(occupiedBin, "cloudflared"), 0o700);
+const occupiedServer = createHttpServer();
+await new Promise<void>((resolve) => occupiedServer.listen(0, "127.0.0.1", resolve));
+const occupiedPort = (occupiedServer.address() as AddressInfo).port;
+const occupiedLaunch = spawn("node", ["--import", "tsx", "src/cli.ts", "launch"], {
+  cwd: new URL("..", import.meta.url),
+  stdio: ["ignore", "pipe", "pipe"],
+  env: {
+    ...process.env,
+    PATH: `${occupiedBin}:${process.env.PATH ?? ""}`,
+    PORT: String(occupiedPort),
+    LOOM_CONFIG_DIR: occupiedDir,
+    LOOM_STATE_DIR: occupiedDir,
+    LOOM_ALLOWED_ROOTS: occupiedDir,
+    LOOM_OAUTH_OWNER_TOKEN: "test-owner-token-that-is-long-enough",
+    LOOM_PUBLIC_BASE_URL: "https://loom.example.com",
+    LOOM_DISABLE_UPDATE_CHECK: "1",
+    LOOM_TEST_TUNNEL_MARKER: occupiedMarker,
+  },
+});
+const occupiedExit = await new Promise<number | null>((resolve) => occupiedLaunch.once("exit", resolve));
+await new Promise<void>((resolve, reject) => occupiedServer.close((error) => error ? reject(error) : resolve()));
+assert.notEqual(occupiedExit, 0, "occupied local port should fail launch");
+assert.equal(existsSync(occupiedMarker), false, "port ownership must be proven before cloudflared starts");
+
+const retryDir = mkdtempSync(join(tmpdir(), "loom-cli-tunnel-retry-test-"));
+const retryBin = join(retryDir, "bin");
+const retryCountPath = join(retryDir, "tunnel-count");
+mkdirSync(retryBin);
+writeFileSync(join(retryBin, "cloudflared"), `#!/bin/sh\ncount=0\nif [ -f "$LOOM_TEST_TUNNEL_COUNT" ]; then read count < "$LOOM_TEST_TUNNEL_COUNT"; fi\ncount=$((count + 1))\nprintf '%s' "$count" > "$LOOM_TEST_TUNNEL_COUNT"\nif [ "$count" -eq 1 ]; then exit 1; fi\ntrap 'exit 0' TERM INT\nwhile :; do sleep 1; done\n`);
+chmodSync(join(retryBin, "cloudflared"), 0o700);
+const portProbe = createHttpServer();
+await new Promise<void>((resolve) => portProbe.listen(0, "127.0.0.1", resolve));
+const retryPort = (portProbe.address() as AddressInfo).port;
+await new Promise<void>((resolve, reject) => portProbe.close((error) => error ? reject(error) : resolve()));
+const retryLaunch = spawn("node", ["--import", "tsx", "src/cli.ts", "launch"], {
+  cwd: new URL("..", import.meta.url),
+  stdio: ["ignore", "pipe", "pipe"],
+  env: {
+    ...process.env,
+    PATH: `${retryBin}:${process.env.PATH ?? ""}`,
+    PORT: String(retryPort),
+    LOOM_CONFIG_DIR: retryDir,
+    LOOM_STATE_DIR: retryDir,
+    LOOM_ALLOWED_ROOTS: retryDir,
+    LOOM_OAUTH_OWNER_TOKEN: "test-owner-token-that-is-long-enough",
+    LOOM_PUBLIC_BASE_URL: "https://loom.example.com",
+    LOOM_DISABLE_UPDATE_CHECK: "1",
+    LOOM_TEST_TUNNEL_COUNT: retryCountPath,
+  },
+});
+let retryHealthy = false;
+for (let attempt = 0; attempt < 300 && retryLaunch.exitCode === null; attempt += 1) {
+  if (existsSync(retryCountPath) && Number(readFileSync(retryCountPath, "utf8")) >= 2) {
+    try {
+      retryHealthy = (await fetch(`http://127.0.0.1:${retryPort}/healthz`)).ok;
+      if (retryHealthy) break;
+    } catch { /* server is still starting */ }
+  }
+  await new Promise((resolve) => setTimeout(resolve, 20));
+}
+if (retryLaunch.exitCode === null) retryLaunch.kill("SIGTERM");
+await new Promise<void>((resolve) => retryLaunch.exitCode === null ? retryLaunch.once("exit", () => resolve()) : resolve());
+assert.equal(Number(readFileSync(retryCountPath, "utf8")), 2, "one transient cloudflared exit should restart once");
+assert.equal(retryHealthy, true, "local server must stay healthy while cloudflared restarts");

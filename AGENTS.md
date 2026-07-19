@@ -1,6 +1,6 @@
 # Loom
 
-Loom exposes exactly seven authenticated MCP tools: terminal, read, write, edit, skills, memory, and a dedicated browser.
+Loom exposes eight authenticated MCP tools: terminal, agents, read, write, edit, skills, memory, and a dedicated browser.
 
 - Keep configured roots narrow.
 - Treat terminal access as full local-user execution, not a sandbox.

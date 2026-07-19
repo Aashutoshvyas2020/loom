@@ -18,3 +18,12 @@ Run `loom init`, then `loom launch`. Files live at `~/.loom/config.json` and `~/
 | `LOOM_TRUST_PROXY` | `0`; `loom launch` enables loopback trust |
 
 OAuth TTL overrides: `LOOM_OAUTH_ACCESS_TOKEN_TTL_SECONDS`, `LOOM_OAUTH_REFRESH_TOKEN_TTL_SECONDS`, `LOOM_OAUTH_SCOPES`, and `LOOM_OAUTH_ALLOWED_REDIRECT_HOSTS`.
+
+## Diagnostics
+
+Run `loom doctor` to print the active URLs, dependencies, roots, and log paths.
+
+- `~/.local/share/loom/loom.log` — private JSON server, request, MCP-session, and tunnel-lifecycle events.
+- `~/.local/share/loom/cloudflared.log` — private Cloudflare Tunnel diagnostics.
+
+Loom keeps one 5 MiB rotated copy (`.1`). An `unknown_session_id` event means the public server is alive but the client is using a stale MCP session; reconnect the Loom connector instead of restarting the server.

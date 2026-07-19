@@ -14,7 +14,7 @@ export class SessionSkillHook {
     this.#counts.set(sessionId, callCount);
     return {
       callCount,
-      reminder: callCount % 20 === 0 ? BUNDLED_SKILL_REMINDER : undefined,
+      reminder: callCount % 10 === 0 ? BUNDLED_SKILL_REMINDER : undefined,
     };
   }
 

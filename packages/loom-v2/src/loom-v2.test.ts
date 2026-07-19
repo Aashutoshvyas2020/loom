@@ -9,13 +9,14 @@ async function optionalModule<T>(path: string, fallback: T): Promise<T> {
 }
 
 describe("Loom V2 tool contract", () => {
-  it("advertises exactly the seven Loom tools with complete schemas", async () => {
+  it("advertises the complete Loom tool surface with complete schemas", async () => {
     const module = await optionalModule<{ TOOL_DESCRIPTORS?: unknown[] }>("./tool-descriptors.js", {});
     const descriptors = module.TOOL_DESCRIPTORS ?? [];
     const names = descriptors.map((descriptor: any) => descriptor.name);
 
     expect(names).toEqual([
       "loom_terminal",
+      "loom_agents",
       "loom_read",
       "loom_write",
       "loom_edit",
@@ -42,25 +43,45 @@ describe("Loom V2 tool contract", () => {
     expect(browser.inputSchema.properties.action.enum).not.toContain("evaluate");
     expect(browser.inputSchema.properties.action.enum).toContain("prepare");
     expect(browser.inputSchema.properties.action.enum).toContain("commit");
+
+    const memory = (descriptors as any[]).find((descriptor) => descriptor.name === "loom_memory");
+    expect(memory.inputSchema.properties.action.enum).toEqual(["read", "add", "replace", "remove"]);
+    expect(memory.inputSchema.properties).toHaveProperty("content");
+    expect(memory.inputSchema.properties).toHaveProperty("oldText");
+    expect(memory.inputSchema.properties).toHaveProperty("newText");
+    expect(memory.inputSchema.properties.content).toMatchObject({ minLength: 1, maxLength: 16_384 });
+    expect(memory.inputSchema.properties.oldText).toMatchObject({ minLength: 1, maxLength: 16_384 });
+    expect(memory.inputSchema.properties.newText).toMatchObject({ maxLength: 16_384 });
+    expect(memory.inputSchema.properties.newText).not.toHaveProperty("minLength");
+    expect(memory.inputSchema.properties).not.toHaveProperty("id");
+    expect(memory.inputSchema.properties).not.toHaveProperty("title");
+    expect(memory.inputSchema.properties).not.toHaveProperty("query");
+
+    const agents = (descriptors as any[]).find((descriptor) => descriptor.name === "loom_agents");
+    expect(agents.inputSchema.properties).not.toHaveProperty("system");
   });
 
-  it("injects bundled operating skills every twentieth call per authenticated session", async () => {
+  it("injects bundled operating skills every tenth call per authenticated session", async () => {
     const module = await optionalModule<any>("./session-hook.js", {});
     const hook = module.SessionSkillHook ? new module.SessionSkillHook() : undefined;
 
-    for (let call = 1; call < 20; call += 1) {
+    for (let call = 1; call < 10; call += 1) {
       expect(hook?.record("session-a")).toMatchObject({ callCount: call, reminder: undefined });
     }
     expect(hook?.record("session-b")).toMatchObject({ callCount: 1, reminder: undefined });
 
-    const twentieth = hook?.record("session-a");
-    expect(twentieth).toMatchObject({ callCount: 20, reminder: expect.any(String) });
-    expect(twentieth.reminder).toContain("Ponytail");
-    expect(twentieth.reminder).toContain("Using Superpowers");
-    expect(twentieth.reminder).toContain("Caveman");
+    const tenth = hook?.record("session-a");
+    expect(tenth).toMatchObject({ callCount: 10, reminder: expect.any(String) });
+    expect(tenth.reminder).toContain("Ponytail");
+    expect(tenth.reminder).toContain("Using Superpowers");
+    expect(tenth.reminder).toContain("Caveman");
+    expect(tenth.reminder).toContain("Cavekit");
+    expect(tenth.reminder).toContain("Think Before Coding");
+    expect(tenth.reminder).toContain("MEMORY.md");
+    expect(tenth.reminder).toMatch(/durable|reusable/);
 
-    for (let call = 21; call < 40; call += 1) hook?.record("session-a");
-    expect(hook?.record("session-a")).toMatchObject({ callCount: 40, reminder: expect.any(String) });
+    for (let call = 11; call < 20; call += 1) hook?.record("session-a");
+    expect(hook?.record("session-a")).toMatchObject({ callCount: 20, reminder: expect.any(String) });
   });
 
   it("returns requested text and images in model-visible content", async () => {

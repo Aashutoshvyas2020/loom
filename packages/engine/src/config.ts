@@ -84,6 +84,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const derivedHosts = ["localhost", "127.0.0.1", "::1", host, new URL(publicBaseUrl).hostname, ...(files.config.allowedHosts ?? [])];
   const requestedHosts = env.LOOM_ALLOWED_HOSTS ? list(env.LOOM_ALLOWED_HOSTS, []) : derivedHosts;
   const allowedHosts = requestedHosts.includes("*") ? ["*"] : Array.from(new Set(requestedHosts.filter(Boolean)));
+  const stateDir = resolve(expandHomePath(env.LOOM_STATE_DIR ?? files.config.stateDir ?? join(homedir(), ".local", "share", "loom")));
 
   return {
     host,
@@ -91,7 +92,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     publicBaseUrl,
     allowedRoots,
     allowedHosts,
-    stateDir: resolve(expandHomePath(env.LOOM_STATE_DIR ?? files.config.stateDir ?? join(homedir(), ".local", "share", "loom"))),
+    stateDir,
     skillPaths: Array.from(new Set([loomSkillsDir(env), ...list(env.LOOM_SKILL_PATHS, []).map((path) => resolve(expandHomePath(path)))])),
     oauth: {
       ownerToken: secret(env.LOOM_OAUTH_OWNER_TOKEN ?? files.auth.ownerToken),
@@ -105,6 +106,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
       format: logFormat(env.LOOM_LOG_FORMAT),
       requests: enabled(env.LOOM_LOG_REQUESTS, true),
       trustProxy: enabled(env.LOOM_TRUST_PROXY),
+      filePath: join(stateDir, "loom.log"),
     },
   };
 }
