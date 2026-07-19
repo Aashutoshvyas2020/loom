@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 — 2026-07-18
 
 - Added the authenticated `loom_agents` tool with child-free OpenAI-compatible coding subagents.
 - Added launch-dashboard `e` setup for endpoint, API key, and model, with private `0600` provider storage.
@@ -12,7 +12,7 @@
 - Removed MCP artifact links so image reads and browser screenshots stay model-visible without triggering ChatGPT file-materialization approval.
 - Refreshes the bundled skill reminder every ten MCP calls and gives ChatGPT and subagents default Ponytail, Caveman, Cavekit, coding-guardrail, and durable-memory guidance; ChatGPT alone receives the adapted behavior prompt.
 - Added a private global agent-maintained `MEMORY.md` with cross-runtime locking, bounded exact edits, frozen validated subagent snapshots, tenth-call maintenance reminders, safe-path enforcement, migration coverage, and focused memory, MCP, and agent tests.
-- Added exact provider-reported subagent tokens to the launch dashboard, retained only the six latest tool calls, and added `l` to open runtime and Cloudflare logs separately.
+- Added deterministic token estimates for provider responses that omit usage metadata, ChatGPT-visible MCP traffic, and the combined launch-dashboard total; retained only the six latest tool calls and added `l` to open runtime and Cloudflare logs separately.
 
 ## 2.0.5
 
