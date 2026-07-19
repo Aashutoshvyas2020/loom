@@ -1,6 +1,6 @@
 {
   "name": "loommcp-cli",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": false,
   "description": "Model-independent local runtime for files, terminal, memory, skills, browser control, and remote MCP access.",
   "type": "module",

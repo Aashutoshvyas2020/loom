@@ -28,7 +28,7 @@ From this checkout:
 npm ci
 npm run build
 npm pack --silent
-npm install -g ./loommcp-cli-2.1.0.tgz
+npm install -g ./loommcp-cli-2.1.1.tgz
 loom init
 loom launch
 ```

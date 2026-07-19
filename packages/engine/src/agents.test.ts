@@ -2,7 +2,7 @@ import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { BUNDLED_SKILL_REMINDER, LoomMemory, MEMORY_MAINTENANCE_REMINDER } from "@loom-local/loom-v2";
+import { BUNDLED_SKILL_REMINDER, LoomMemory, LoomSkills, MEMORY_MAINTENANCE_REMINDER } from "@loom-local/loom-v2";
 import { AgentProviderStore, type AgentCompletionInput, type AgentCompletionResult } from "./agent-provider.js";
 import { AgentService, type AgentInputSchema, type AgentToolResult } from "./agents.js";
 
@@ -16,11 +16,14 @@ async function setup(options: {
   const state = join(root, ".state");
   const providerStore = new AgentProviderStore({ stateDirectory: state });
   const memory = new LoomMemory(join(state, "memory"));
+  const skills = new LoomSkills([]);
+  await skills.rescan();
   await providerStore.configure({ endpoint: "http://127.0.0.1:8080/v1", apiKey: "test-key", model: "coding-model" });
   const service = new AgentService({
     stateDirectory: state,
     allowedRoots: [root],
     memory,
+    skills,
     providerStore,
     dispatcher: options.dispatcher ?? (async () => ({ content: [{ type: "text", text: "tool complete" }] })),
     toolDefinitions: [
@@ -32,7 +35,7 @@ async function setup(options: {
     sleep: async (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
   });
   await service.initialize();
-  return { root, state, providerStore, memory, service };
+  return { root, state, providerStore, memory, skills, service };
 }
 
 async function waitForTerminal(service: AgentService, agentId: string): Promise<any> {
@@ -171,6 +174,33 @@ describe("child-free Loom agent service", () => {
       expect((await service.read({ agentId: started.agentId })).transcript).toEqual(expect.arrayContaining([
         expect.objectContaining({ role: "tool", name: "loom_write" }),
       ]));
+      expect(root).toContain("loom-agents-");
+    } finally {
+      await service.shutdown();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("injects ChatGPT-selected skills and reasoning into a subagent", async () => {
+    const calls: AgentCompletionInput[] = [];
+    const { root, service } = await setup({
+      complete: async (input) => {
+        calls.push(structuredClone(input));
+        return { text: "Done.", toolCalls: [], model: "coding-model" };
+      },
+    });
+    try {
+      const started = await service.start({
+        task: "Implement the smallest correct fix.",
+        skills: ["bundled:ponytail"],
+        reasoning: "high",
+      });
+      expect((await waitForTerminal(service, started.agentId)).state).toBe("completed");
+      expect(calls[0]?.system).toContain("[Selected Loom skill: Ponytail]");
+      expect(calls[0]?.system).toContain("smallest correct solution");
+      expect(calls[0]?.system).toContain("[Reasoning level: high]");
+      const agent = await service.read({ agentId: started.agentId });
+      expect(agent).toMatchObject({ reasoning: "high", selectedSkills: ["bundled:ponytail"] });
       expect(root).toContain("loom-agents-");
     } finally {
       await service.shutdown();

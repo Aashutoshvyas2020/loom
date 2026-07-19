@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.1.1 — 2026-07-18
+
+- Lets ChatGPT choose up to three validated Loom skill IDs for each subagent; Loom injects the selected skill text into that agent only.
+- Adds deliberate low, medium, and high subagent reasoning guidance, persists both selections with the job, and tells ChatGPT when each level is appropriate.
+
 ## 2.1.0 — 2026-07-18
 
 - Added the authenticated `loom_agents` tool with child-free OpenAI-compatible coding subagents.

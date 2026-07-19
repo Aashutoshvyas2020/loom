@@ -32,6 +32,8 @@ describe("Loom MCP surface", () => {
     expect(CHATGPT_INSTRUCTIONS).toContain("[ChatGPT behavior]");
     expect(CHATGPT_INSTRUCTIONS).toContain("Think Before Coding");
     expect(CHATGPT_INSTRUCTIONS).toContain("Cavekit");
+    expect(CHATGPT_INSTRUCTIONS).toContain("loom_agents.skills");
+    expect(CHATGPT_INSTRUCTIONS).toContain("loom_agents.reasoning");
     expect(CHATGPT_INSTRUCTIONS).toContain("preserve existing user changes");
     expect(CHATGPT_INSTRUCTIONS).not.toContain("commentary channel");
     expect(CHATGPT_INSTRUCTIONS).not.toContain("apply_patch");
@@ -81,6 +83,8 @@ describe("Loom MCP surface", () => {
     expect(agentsTool?.inputSchema.properties).not.toHaveProperty("system");
     expect(agentsTool?.inputSchema.properties).not.toHaveProperty("parentId");
     expect(agentsTool?.inputSchema.properties).not.toHaveProperty("detached");
+    expect(agentsTool?.inputSchema.properties?.skills).toMatchObject({ type: "array", maxItems: 3 });
+    expect((agentsTool?.inputSchema.properties?.reasoning as any)?.enum).toEqual(["low", "medium", "high"]);
     const memoryTool = listed.tools.find((tool) => tool.name === "loom_memory");
     expect((memoryTool?.inputSchema.properties?.action as any)?.enum).toEqual(["read", "add", "replace", "remove"]);
     expect(memoryTool?.inputSchema.properties).toMatchObject({

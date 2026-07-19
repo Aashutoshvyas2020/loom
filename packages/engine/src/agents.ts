@@ -20,6 +20,7 @@ import {
   CAVEKIT_DEFAULT_INSTRUCTIONS,
   ensurePrivateStateDirectory,
   LoomMemory,
+  LoomSkills,
   SHARED_CODING_GUARDRAILS,
 } from "@loom-local/loom-v2";
 
@@ -43,8 +44,12 @@ const DEFAULT_CONCURRENCY = 2;
 const EMPTY_RESPONSE_RETRIES = 2;
 const EMPTY_RESPONSE_DELAY_MS = 250;
 const MAX_REPEATED_TOOL_CALLS = 3;
+const MAX_SELECTED_SKILLS = 3;
+// ponytail: 16 KiB leaves room for Loom's fixed instructions in the 32 KiB system prompt; raise only with explicit prompt budgeting.
+const MAX_SELECTED_SKILL_BYTES = 16 * 1_024;
 
 export type AgentState = "queued" | "running" | "waiting" | "completed" | "failed" | "cancelled" | "interrupted";
+export type AgentReasoning = "low" | "medium" | "high";
 
 export interface AgentLifecycleResult {
   agentId: string;
@@ -72,6 +77,8 @@ export interface AgentReadResult extends AgentLifecycleResult {
   cwd: string;
   selectedModel: string | null;
   requestedModel: string | null;
+  selectedSkills: string[];
+  reasoning: AgentReasoning;
   turns: number;
   toolCalls: number;
   maxTurns: number;
@@ -125,6 +132,7 @@ export interface AgentServiceOptions {
   toolDefinitions: AgentToolDefinition[];
   toolSchemas: Record<string, AgentInputSchema>;
   memory?: LoomMemory;
+  skills?: LoomSkills;
   providerStore?: AgentProviderStore;
   clientFactory?: (config: AgentProviderConfig) => { complete(input: Parameters<AgentProviderClient["complete"]>[0]): Promise<AgentCompletionResult> };
   maxConcurrent?: number;
@@ -136,6 +144,8 @@ export interface AgentServiceOptions {
 export interface AgentStartInput {
   task: string;
   model?: string;
+  skills?: string[];
+  reasoning?: AgentReasoning;
   cwd?: string;
   timeoutMs?: number;
   maxTurns?: number;
@@ -183,6 +193,8 @@ interface PersistedJob {
   memorySnapshot?: string;
   requestedModel: string | null;
   selectedModel: string | null;
+  selectedSkills: string[];
+  reasoning: AgentReasoning;
   timeoutMs: number;
   maxTurns: number;
   turns: number;
@@ -239,6 +251,8 @@ const persistedJobSchema = z.object({
   }).optional(),
   requestedModel: z.string().min(1).max(512).nullable(),
   selectedModel: z.string().min(1).max(512).nullable(),
+  selectedSkills: z.array(z.string().min(1).max(512)).max(MAX_SELECTED_SKILLS).default([]),
+  reasoning: z.enum(["low", "medium", "high"]).default("medium"),
   timeoutMs: z.number().int().min(1_000).max(MAX_TIMEOUT_MS),
   maxTurns: z.number().int().min(1).max(MAX_TURNS),
   turns: z.number().int().nonnegative().max(MAX_TURNS),
@@ -271,6 +285,28 @@ function validateInteger(value: number | undefined, name: string, fallback: numb
 function validateAgentId(value: unknown): string {
   if (typeof value !== "string" || !AGENT_ID.test(value)) throw new AgentServiceError("agentId is malformed.", { code: "invalid_request" });
   return value;
+}
+
+function validateSelectedSkills(value: unknown): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > MAX_SELECTED_SKILLS) {
+    throw new AgentServiceError(`skills must contain at most ${MAX_SELECTED_SKILLS} skill IDs.`, { code: "invalid_request" });
+  }
+  const skills = value.map((id) => validateText(id, "skill ID", 512));
+  if (new Set(skills).size !== skills.length) throw new AgentServiceError("skills must not contain duplicates.", { code: "invalid_request" });
+  return skills;
+}
+
+function validateReasoning(value: unknown): AgentReasoning {
+  if (value === undefined) return "medium";
+  if (value === "low" || value === "medium" || value === "high") return value;
+  throw new AgentServiceError("reasoning must be low, medium, or high.", { code: "invalid_request" });
+}
+
+function reasoningGuidance(reasoning: AgentReasoning): string {
+  if (reasoning === "low") return "Use direct reasoning for this bounded task. Verify the result before answering.";
+  if (reasoning === "high") return "Reason deeply before changing code: inspect evidence, test assumptions, consider failure modes, and verify the exact result.";
+  return "Reason carefully enough to inspect the relevant flow, state assumptions, and verify the result without unnecessary exploration.";
 }
 
 function inside(path: string, root: string): boolean {
@@ -344,6 +380,7 @@ export class AgentService {
   readonly #toolDefinitions: AgentToolDefinition[];
   readonly #toolSchemas: Record<string, AgentInputSchema>;
   readonly #memory?: LoomMemory;
+  readonly #skills?: LoomSkills;
   readonly #providerStore: AgentProviderStore;
   readonly #clientFactory: (config: AgentProviderConfig) => { complete(input: Parameters<AgentProviderClient["complete"]>[0]): Promise<AgentCompletionResult> };
   readonly #maxConcurrent: number;
@@ -371,6 +408,7 @@ export class AgentService {
     this.#toolDefinitions = options.toolDefinitions.filter((tool) => tool.name !== "loom_agents");
     this.#toolSchemas = Object.fromEntries(Object.entries(options.toolSchemas).filter(([name]) => name !== "loom_agents"));
     this.#memory = options.memory;
+    this.#skills = options.skills;
     this.#providerStore = options.providerStore ?? new AgentProviderStore({ stateDirectory: options.stateDirectory });
     this.#clientFactory = options.clientFactory ?? ((config) => new AgentProviderClient(config));
     this.#maxConcurrent = validateInteger(options.maxConcurrent, "maxConcurrent", DEFAULT_CONCURRENCY, 1, 16);
@@ -457,6 +495,9 @@ export class AgentService {
     if (!this.#provider.configured) throw new AgentServiceError("No agent provider is configured. Configure it from the Loom TUI.", { code: "provider_not_configured" });
     const task = validateText(input.task, "task", MAX_TASK_BYTES);
     const requestedModel = input.model === undefined ? null : validateText(input.model, "model", 512);
+    const selectedSkills = validateSelectedSkills(input.skills);
+    await this.#selectedSkillInstructions(selectedSkills);
+    const reasoning = validateReasoning(input.reasoning);
     const timeoutMs = validateInteger(input.timeoutMs, "timeoutMs", DEFAULT_TIMEOUT_MS, 1_000, MAX_TIMEOUT_MS);
     const maxTurns = validateInteger(input.maxTurns, "maxTurns", MAX_TURNS, 1, MAX_TURNS);
     const cwd = await this.#canonicalCwd(input.cwd);
@@ -476,6 +517,8 @@ export class AgentService {
         system: null,
         requestedModel,
         selectedModel: null,
+        selectedSkills,
+        reasoning,
         timeoutMs,
         maxTurns,
         turns: 0,
@@ -609,6 +652,8 @@ export class AgentService {
       cwd: job.cwd,
       selectedModel: job.selectedModel,
       requestedModel: job.requestedModel,
+      selectedSkills: [...job.selectedSkills],
+      reasoning: job.reasoning,
       turns: job.turns,
       toolCalls: job.toolCalls,
       maxTurns: job.maxTurns,
@@ -799,6 +844,7 @@ export class AgentService {
         job.memorySnapshot = this.#memory ? await this.#memory.snapshot() : "";
         throwIfAborted(controller.signal);
       }
+      const selectedSkillInstructions = await this.#selectedSkillInstructions(job.selectedSkills);
       assertSafeMemoryText(job.memorySnapshot);
       await this.#persist(job);
       throwIfAborted(controller.signal);
@@ -811,6 +857,9 @@ export class AgentService {
         "Use the provided Loom tools directly. Continue until the explicit task is complete, then give a concise final answer.",
         "You may read, write, edit, run bounded terminal jobs, inspect skills, memory, and browser state.",
         "You cannot delegate to another agent. Do not invent child agents.",
+        `[Reasoning level: ${job.reasoning}]`,
+        reasoningGuidance(job.reasoning),
+        ...selectedSkillInstructions,
         BUNDLED_SKILL_REMINDER,
         SHARED_CODING_GUARDRAILS,
         CAVEKIT_DEFAULT_INSTRUCTIONS,
@@ -918,6 +967,27 @@ export class AgentService {
       await this.#sleep(EMPTY_RESPONSE_DELAY_MS * 2 ** attempt);
     }
     throw new AgentServiceError("Provider returned no completion.", { code: "empty_model_response" });
+  }
+
+  async #selectedSkillInstructions(ids: string[]): Promise<string[]> {
+    if (ids.length === 0) return [];
+    if (!this.#skills) throw new AgentServiceError("Skill selection is unavailable.", { code: "invalid_request" });
+    const selected: string[] = [];
+    for (const id of ids) {
+      try {
+        const result = await this.#skills.read(id);
+        const name = typeof result.structuredContent?.name === "string" ? result.structuredContent.name : id;
+        const content = result.content.find((entry: Record<string, unknown>) => entry.type === "text" && typeof entry.text === "string")?.text;
+        if (typeof content !== "string") throw new Error("Skill has no text content.");
+        selected.push(`[Selected Loom skill: ${name}]\n${content}`);
+      } catch (error) {
+        throw new AgentServiceError(`Selected skill is unavailable: ${id}`, { code: "invalid_request", cause: error instanceof Error ? error : undefined });
+      }
+    }
+    if (Buffer.byteLength(selected.join("\n\n"), "utf8") > MAX_SELECTED_SKILL_BYTES) {
+      throw new AgentServiceError(`Selected skills exceed ${MAX_SELECTED_SKILL_BYTES} bytes. Choose fewer or smaller skills.`, { code: "invalid_request" });
+    }
+    return selected;
   }
 
   async #executeTool(call: AgentToolCall, signal: AbortSignal): Promise<{ text: string; isError: boolean }> {
